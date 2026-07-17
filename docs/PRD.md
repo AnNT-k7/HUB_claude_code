@@ -1,6 +1,6 @@
 # Product Requirements Document (PRD) - Digital Expert Agents
 
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **Status:** Approved  
 **Author:** Senior Software Architect  
 
@@ -9,162 +9,140 @@
 ## 1. Problem Statement
 The current process for corporate loan application assessments is manually intensive, involving multiple departments (Credit, Risk, Legal, Operations, etc.), causing delays and inconsistencies. 
 
-**Digital Expert Agents** is a multi-agent AI system that automates the preliminary assessment of corporate loan applications. A central orchestrator coordinates specialized agents retrieving internal knowledge via Retrieval-Augmented Generation (RAG), utilizing tools, and collaborating using structured JSON outputs to generate a consolidated preliminary assessment. 
+**Digital Expert Agents** is a multi-agent AI system that automates the preliminary assessment of corporate loan applications. A central orchestrator coordinates specialized agents retrieving internal knowledge via Retrieval-Augmented Generation (RAG), utilizing tools, and collaborating using structured JSON outputs on a **Shared Board** to generate a consolidated preliminary assessment. 
 
 > [!IMPORTANT]
 > The system **does not** automatically approve or reject loans. It assists human banking employees by providing structured insights and executing operational tasks *only* after human verification.
 
 ---
 
-## 2. Core Features (MVP Scope)
+## 2. Core Features (MVP Scope & 3-Tier Architecture)
 
-The MVP is strictly limited to the following core capabilities:
+The MVP is structured around a strict **3-Tier Multi-Agent Pipeline**: `Tier 1: Banking Orchestrator (Deep Agent)` $\rightarrow$ `Tier 2: Specialist & Reviewer/Debate Collaboration via Shared Board` $\rightarrow$ `Tier 3: Human Verification & Operations Agent`.
 
-### 2.1. Multi-Agent Orchestration & Core Agents
-A pipeline running sequentially and in parallel: `Orchestrator` $\rightarrow$ `Specialist Agents` (parallel) $\rightarrow$ `Reviewer` $\rightarrow$ `Human Verification` $\rightarrow$ `Operations Agent`.
+### 2.1. Tier 1: Banking Orchestrator (Deep Agent)
+The `Banking Orchestrator` is a LangChain/LangGraph **Deep Agent** responsible for end-to-end cognitive control:
+*   **Understand Requirements (`Hiểu yêu cầu`):** Parses initial loan application goals, requested term sheets, and uploaded file types.
+*   **Determine Workflow (`Xác định workflow`):** Maps out the execution path based on company tier and loan complexity.
+*   **Task Decomposition (`Chia nhỏ nhiệm vụ`):** Breaks the assessment into granular analytical sub-tasks (e.g., DSCR calculation, KYC check, collateral evaluation).
+*   **Expert Agent Selection (`Chọn expert agent`):** Dispatches specific sub-tasks to the appropriate specialist agents.
+*   **Task Tracking (`Theo dõi task`):** Monitors execution status across parallel sub-agent workers.
+*   **Dynamic Re-planning (`Re-plan khi thiếu dữ liệu`):** If a specialist agent reports missing or unreadable documents, the Orchestrator pauses, re-plans, or requests specific supplementary documents.
+*   **Result Synthesis (`Tổng hợp kết quả`):** Consolidates the final state from the Shared Board into a unified assessment draft for Tier 3 verification.
 
-*   **Central Orchestrator:**
-    *   Initiates assessment runs.
-    *   Distributes tasks to specialist agents using custom tool wrappers.
-    *   Aggregates departmental reports and handles step execution retries.
-*   **Customer Relationship Agent:**
-    *   Extracts borrower details, industry, business model, and requested loan term sheet parameters (amount, interest rate, maturity).
-*   **Credit Agent:**
-    *   Analyzes balance sheet, income statement, and cash flow documents.
-    *   Calculates key credit metrics: Debt Service Coverage Ratio (DSCR), Debt-to-Equity (D/E), and Current Ratio.
-*   **Risk Management Agent:**
-    *   Evaluates industry risk factors, checks against credit policies (e.g., maximum concentration limit), and assigns a preliminary risk tier (Low, Medium, High).
-*   **Legal & Compliance Agent:**
-    *   Performs KYC verification, Sanctions list checks, and anti-money laundering (AML) screening based on provided registry inputs.
-*   **Collateral Appraisal Agent:**
-    *   Assesses collateral details (e.g., real estate, machinery) and computes the Loan-to-Value (LTV) ratio.
-*   **Reviewer Agent:**
-    *   Synthesizes individual agent outputs into a standardized JSON report.
-    *   Flags conflicting inputs (e.g., Credit Agent notices strong cash flow while Risk Agent notes industry decline).
-*   **Operations Agent:**
-    *   Executes read-only banking pre-checks and generates draft operational outputs (e.g., loan onboarding JSON and draft credit agreement PDF) only when triggered by human verification.
+### 2.2. Tier 2: Specialist Agents & Reviewer/Debate Agent (Shared Board Pattern)
+In Tier 2, specialist agents run concurrently and collaborate via a **Shared Board** (a centralized state memory / blackboard):
+*   **Shared Board:** All specialist agents post their interim outputs, calculated financial metrics, identified risks, and RAG policy citations onto the Shared Board.
+*   **Specialist Agents (Parallel Execution):**
+    *   **Credit Agent:** Analyzes financial statements, calculates Debt Service Coverage Ratio (DSCR), Current Ratio, and Leverage.
+    *   **Compliance Agent:** Verifies KYC compliance, anti-money laundering (AML) status, and sanctions screening.
+    *   **Legal Agent:** Evaluates corporate governance, articles of association, and collateral security documentation.
+*   **Reviewer Agent (Debate Agent):**
+    *   Acts as the quality controller and adversarial challenger within Tier 2.
+    *   **Error Detection & Debate (`Tìm lỗi sai & Debate`):** Inspects the Shared Board, identifies discrepancies, logical flaws, or unsupported claims across specialist outputs (e.g., Credit Agent claiming low risk while Compliance Agent flags pending regulatory litigation).
+    *   **Iterative Improvement (`Improve output`):** Critiques flawed sub-agent findings and triggers re-evaluation rounds on the Shared Board until consensus or maximum debate rounds are reached.
 
-### 2.2. Retrieval-Augmented Generation (RAG)
-*   Retrieval of internal credit guidelines, regulatory frameworks, risk assessment policies, and historical assessment templates.
-*   Source citations must link to specific sections of referenced internal guidelines.
-
-### 2.3. Frontend Dashboard (Human-in-the-Loop)
-*   **Workspace & Inbox:** View list of pending and completed loan assessments.
-*   **Assessment Details Page:** Side-by-side view showing extracted financials, calculated ratios, department agent comments with RAG citations, and conflict alerts.
-*   **Human Verification Console:** Approve, modify, or reject the agent recommendations. A text field must capture employee feedback if returning to agents.
-*   **Operational Execution Trigger:** A manual action button that dispatches a command to the `Operations Agent` to generate the final loan onboarding package.
+### 2.3. Tier 3: Human Verification & Operations Agent
+*   **Human Verification Console (Next.js UI):**
+    *   Displays the final synthesized assessment from Tier 1/Tier 2.
+    *   Shows exact agent reasoning, debate history from the Reviewer Agent, and clickable RAG policy citations.
+    *   Banking Officer reviews and selects: `Approve`, `Reject`, or `Request Revision with Feedback`.
+*   **Operations Agent (Post-Approval Execution):**
+    *   Triggered **only after explicit human approval** in Tier 3.
+    *   Executes read-only/pre-onboarding actions and generates draft onboarding packages via **Mock SHB Core Banking APIs**.
 
 ---
 
 ## 3. Out of Scope (strictly excluded from v1)
 
-The following features must not be proposed, designed, or implemented in the current scope:
 *   **Automated Decisioning:** The system will not automatically approve, reject, or disburse loans without manual human intervention.
-*   **Direct Core Banking Write-Back:** System will not execute API mutations to change records in production core banking systems (e.g., credit line creation, actual fund disbursement). It will only export structured payloads or draft PDFs.
+*   **Direct Core Banking Write-Back:** System will not execute API mutations to change records in production core banking systems. It only communicates with Mock SHB APIs or exports structured payloads/draft PDFs.
 *   **Direct Customer Communication:** The system will not send emails, SMS, or notifications directly to corporate loan applicants.
-*   **Fine-Tuning of Models:** Custom LLM fine-tuning is out of scope; all models will use standard pre-trained models via API with context/system prompt modifications.
-*   **Real-time External APIs:** External scraping of live corporate registers (e.g., SEC EDGAR, local trade registers) or live credit bureaus. All inputs must come from uploaded documents or static mock databases.
+*   **Fine-Tuning of Models:** Custom LLM fine-tuning is out of scope; all agents utilize pre-trained models via API with deep agent scaffolding.
+*   **Real-time External APIs:** External live scraping of corporate registries is out of scope; inputs come from uploaded docs or static mock databases.
 
 ---
 
-## 4. Main User Flow
+## 4. Main User Flow (3-Tier Pipeline)
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Officer as Banking Officer
     participant FE as Next.js Frontend
-    participant Orch as Orchestrator
-    participant Agents as Specialist Agents
-    participant Rev as Reviewer Agent
-    participant Ops as Operations Agent
+    participant Tier1 as Tier 1: Orchestrator (Deep Agent)
+    participant Board as Shared Board (State/DB)
+    participant Tier2 as Tier 2: Specialists & Reviewer (Debate)
+    participant Tier3 as Tier 3: Operations Agent
 
-    Officer->>FE: Upload corporate loan application docs (PDF/Excel)
-    FE->>Orch: Trigger loan assessment run (Session ID)
-    rect rgb(20, 20, 30)
-        Note over Orch, Agents: Parallel Execution Phase
-        Orch->>Agents: Delegate task payloads (w/ RAG reference keys)
-        Agents->>Orch: Return structured JSON assessments
+    Officer->>FE: Upload loan docs & trigger evaluation
+    FE->>Tier1: Initialize assessment (Session ID)
+    Tier1->>Tier1: Understand, Plan workflow & Decompose tasks
+    Tier1->>Board: Initialize Shared Board with task breakdown
+    
+    rect rgb(20, 30, 45)
+        Note over Tier1, Tier2: Tier 2: Parallel Specialists & Reviewer Debate Loop
+        Tier1->>Tier2: Dispatch parallel tasks (Credit, Compliance, Legal)
+        Tier2->>Board: Post initial findings, metrics & RAG citations
+        Tier2 (Reviewer)->>Board: Debate & find errors/contradictions in outputs
+        Tier2 (Reviewer)->>Tier2: Prompt Specialists to refine output
+        Tier2->>Board: Post improved consensus assessment
     end
-    Orch->>Rev: Synthesize assessments & find conflicts
-    Rev->>Orch: Return Consolidated Assessment JSON
-    Orch->>FE: Update UI with consolidated report
-    Officer->>FE: Review reports, RAG sources, and resolve flags
-    alt Action: Reject or Needs Revision
-        Officer->>FE: Submit revision request with feedback
-        FE->>Orch: Re-run orchestrator with human feedback
-    else Action: Approve
-        Officer->>FE: Trigger operational execution
-        FE->>Ops: Execute operations tasks
-        Ops->>FE: Return generated credit draft PDF & onboarding payload
-        FE->>Officer: Show success screen and download links
+    
+    Tier1->>Board: Read final verified state & synthesize report
+    Tier1->>FE: Present consolidated assessment & debate log
+    
+    rect rgb(30, 40, 20)
+        Note over Officer, Tier3: Tier 3: Human Verification & Operational Execution
+        Officer->>FE: Verify citations, audit debate log & Approve
+        FE->>Tier3: Trigger approved operational tasks
+        Tier3->>FE: Return generated draft agreements & onboarding JSON
     end
 ```
-
-### Step-by-Step User Journey
-
-#### Step 1: Application Ingest
-*   The Banking Officer logs in and navigates to "New Assessment".
-*   Uploads PDF files (Borrower Profile, Audited Financial Statements, Credit Request Details, Collateral Property Appraisal).
-*   System creates a record in the database with status `INGESTED`.
-
-#### Step 2: Agent Processing
-*   The system schedules the `Orchestrator`.
-*   The `Orchestrator` triggers the specialist agents in parallel:
-    *   *Credit Agent* extracts numeric tables, computes metrics, and compares DSCR against threshold (e.g., $>1.25x$).
-    *   *Risk Agent* evaluates compliance rules.
-*   The `Reviewer Agent` analyzes all agent JSON outputs and formats the unified assessment report.
-*   System sets state to `PENDING_REVIEW`.
-
-#### Step 3: Human Verification
-*   The Banking Officer reviews the "Assessment Details Page".
-*   The officer views the credit score, calculations, compliance results, and conflict flags.
-*   The officer clicks on a risk flag (e.g., "LTV exceeds 80%") and views the RAG citation citing "Section 4.2 of the Credit Policy".
-*   The officer modifies values if necessary and clicks **"Approve Assessment"**.
-
-#### Step 4: Operational Execution
-*   On approval, the system issues a command payload to the `Operations Agent`.
-*   The `Operations Agent` generates the `Draft_Credit_Agreement.pdf` and compiles the `Core_Banking_Onboarding.json` data package.
-*   The Banking Officer downloads the documents, and the assessment record moves to `COMPLETED`.
 
 ---
 
-## 5. Concrete Structured Data Example (Developer Reference)
+## 5. Concrete Structured Data Example (Shared Board Schema)
 
-To ensure interoperability between the Orchestrator, Specialist Agents, and Reviewer Agent, all communication must strictly conform to structured schemas.
+To enable Tier 2 collaboration, all specialist and reviewer interactions read and write to a standardized `Shared Board` JSON schema:
 
-### Example Orchestrator to Credit Agent Task Schema
 ```json
 {
-  "taskId": "task_credit_analysis_001",
-  "loanId": "loan_corp_99823",
-  "documents": [
-    { "type": "financial_statement_pdf", "path": "/shared/docs/corp_99823_fs2025.pdf" }
-  ],
-  "parameters": {
-    "requiredRatios": ["DSCR", "Leverage", "CurrentRatio"],
-    "minimumDSCR": 1.25
-  }
-}
-```
-
-### Example Credit Agent Output Schema
-```json
-{
-  "taskId": "task_credit_analysis_001",
-  "status": "SUCCESS",
-  "metrics": {
-    "DSCR": 1.42,
-    "Leverage": 2.1,
-    "CurrentRatio": 1.65
+  "boardId": "board_case_2026_881",
+  "caseId": "loan_corp_99823",
+  "status": "DEBATE_IN_PROGRESS",
+  "iterationRound": 2,
+  "tasks": {
+    "credit_analysis": { "status": "COMPLETED", "assignedTo": "CreditAgent" },
+    "compliance_check": { "status": "REFINING", "assignedTo": "ComplianceAgent" },
+    "legal_review": { "status": "COMPLETED", "assignedTo": "LegalAgent" }
   },
-  "flags": [],
-  "evidence": [
-    {
-      "finding": "Net Operating Income of $1.42M covers debt service of $1.0M.",
-      "pageReference": 14,
-      "document": "corp_99823_fs2025.pdf"
+  "specialistOutputs": {
+    "CreditAgent": {
+      "DSCR": 1.42,
+      "Leverage": 2.1,
+      "conclusion": "Financial strength acceptable. Meets DSCR policy > 1.25x."
+    },
+    "ComplianceAgent": {
+      "kycStatus": "VERIFIED",
+      "amlRisk": "MEDIUM",
+      "flag": "Subsidiary entity has pending inquiry in local registry."
     }
-  ]
+  },
+  "reviewerDebateLog": [
+    {
+      "round": 1,
+      "critic": "ReviewerAgent",
+      "target": "CreditAgent",
+      "issueFound": "Credit assessment did not factor in potential contingent liabilities from ComplianceAgent's flagged subsidiary inquiry.",
+      "requiredAction": "Recalculate stressed DSCR assuming a $250k legal contingency."
+    },
+    {
+      "round": 2,
+      "respondent": "CreditAgent",
+      "resolution": "Stressed DSCR recalculated to 1.28x. Still satisfies minimum threshold."
+    }
+  ],
+  "finalConsensusReached": true
 }
 ```
