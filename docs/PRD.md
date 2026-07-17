@@ -9,7 +9,7 @@
 ## 1. Problem Statement
 The current process for corporate loan application assessments is manually intensive, involving multiple departments (Credit, Risk, Legal, Operations, etc.), causing delays and inconsistencies. 
 
-**Digital Expert Agents** is a multi-agent AI system that automates the preliminary assessment of corporate loan applications. A central orchestrator coordinates specialized agents retrieving internal knowledge via Retrieval-Augmented Generation (RAG), utilizing tools, and collaborating using structured JSON outputs on a **Shared Board** to generate a consolidated preliminary assessment. 
+**Digital Expert Agents** is a multi-agent AI system that automates the preliminary assessment of corporate loan applications. The system uses a central orchestrator to coordinate specialized agents representing the Customer Relationship Department, Credit Department, Risk Management Department, Legal & Compliance Department, Collateral Appraisal Department, and Banking Operations Department. The agents retrieve internal knowledge through RAG, use approved tools, collaborate through structured JSON outputs on a **Shared Board**, and produce a consolidated assessment for human verification. 
 
 > [!IMPORTANT]
 > The system **does not** automatically approve or reject loans. It assists human banking employees by providing structured insights and executing operational tasks *only* after human verification.
@@ -25,7 +25,7 @@ The `Banking Orchestrator` is a LangChain/LangGraph **Deep Agent** responsible f
 *   **Understand Requirements (`Hiểu yêu cầu`):** Parses initial loan application goals, requested term sheets, and uploaded file types.
 *   **Determine Workflow (`Xác định workflow`):** Maps out the execution path based on company tier and loan complexity.
 *   **Task Decomposition (`Chia nhỏ nhiệm vụ`):** Breaks the assessment into granular analytical sub-tasks (e.g., DSCR calculation, KYC check, collateral evaluation).
-*   **Expert Agent Selection (`Chọn expert agent`):** Dispatches specific sub-tasks to the appropriate specialist agents.
+*   **Expert Agent Selection (`Chọn expert agent`):** Dispatches specific sub-tasks to the appropriate specialist agents (`Customer Relationship`, `Credit`, `Risk Management`, `Legal & Compliance`, `Collateral Appraisal`).
 *   **Task Tracking (`Theo dõi task`):** Monitors execution status across parallel sub-agent workers.
 *   **Dynamic Re-planning (`Re-plan khi thiếu dữ liệu`):** If a specialist agent reports missing or unreadable documents, the Orchestrator pauses, re-plans, or requests specific supplementary documents.
 *   **Result Synthesis (`Tổng hợp kết quả`):** Consolidates the final state from the Shared Board into a unified assessment draft for Tier 3 verification.
@@ -34,9 +34,11 @@ The `Banking Orchestrator` is a LangChain/LangGraph **Deep Agent** responsible f
 In Tier 2, specialist agents run concurrently and collaborate via a **Shared Board** (a centralized state memory / blackboard):
 *   **Shared Board:** All specialist agents post their interim outputs, calculated financial metrics, identified risks, and RAG policy citations onto the Shared Board.
 *   **Specialist Agents (Parallel Execution):**
-    *   **Credit Agent:** Analyzes financial statements, calculates Debt Service Coverage Ratio (DSCR), Current Ratio, and Leverage.
-    *   **Compliance Agent:** Verifies KYC compliance, anti-money laundering (AML) status, and sanctions screening.
-    *   **Legal Agent:** Evaluates corporate governance, articles of association, and collateral security documentation.
+    *   **Customer Relationship Agent:** Extracts borrower profile, requested loan parameters (amount, interest rate, maturity), and business model background.
+    *   **Credit Agent:** Analyzes financial statements, calculates Debt Service Coverage Ratio (DSCR), Current Ratio, and Leverage (D/E).
+    *   **Risk Management Agent:** Evaluates industry risk factors, checks against credit policies (e.g., maximum concentration limit), and assigns a preliminary risk tier (Low, Medium, High).
+    *   **Legal & Compliance Agent:** Performs KYC verification, corporate governance checks, anti-money laundering (AML) screening, and sanctions list checks.
+    *   **Collateral Appraisal Agent:** Assesses collateral assets (real estate, equipment, inventory) and computes the Loan-to-Value (LTV) ratio.
 *   **Reviewer Agent (Debate Agent):**
     *   Acts as the quality controller and adversarial challenger within Tier 2.
     *   **Error Detection & Debate (`Tìm lỗi sai & Debate`):** Inspects the Shared Board, identifies discrepancies, logical flaws, or unsupported claims across specialist outputs (e.g., Credit Agent claiming low risk while Compliance Agent flags pending regulatory litigation).
