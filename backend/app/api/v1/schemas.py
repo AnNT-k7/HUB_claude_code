@@ -25,6 +25,11 @@ class StartWorkflowResponse(ApiModel):
     workflow_state: WorkflowState
 
 
+class ResetResponse(ApiModel):
+    application_id: str
+    status: str
+
+
 class ReviewRequest(HumanReviewCommand):
     pass
 

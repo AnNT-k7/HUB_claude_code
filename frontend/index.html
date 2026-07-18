@@ -17,7 +17,7 @@
       </a>
       <nav class="nav-list" aria-label="Điều hướng chính">
         <button class="nav-item active" data-view="command"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>Trung tâm điều phối</span></button>
-        <button class="nav-item" data-view="cases"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4zM8 7V4h8v3M8 12h8M8 16h5"/></svg><span>Hồ sơ tín chấp</span><em id="caseCount">4</em></button>
+        <button class="nav-item" data-view="cases"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4zM8 7V4h8v3M8 12h8M8 16h5"/></svg><span>Hồ sơ tín chấp</span><em id="caseCount">1</em></button>
       </nav>
       <div class="sidebar-spacer"></div>
       <div class="system-health"><span class="health-dot"></span><div><strong>Hệ thống ổn định</strong><small><b id="onlineCount">8</b> tác tử trực tuyến · 38 ms</small></div></div>
@@ -27,12 +27,12 @@
     <main class="main-content">
       <header class="topbar">
         <div><span class="eyebrow">TRỢ LÝ NGHIỆP VỤ TÍN CHẤP</span><h1 id="pageTitle">Trợ lý xác minh thu nhập tín chấp</h1></div>
-        <div class="top-actions"><span class="clock"><i></i><b id="liveClock">--:--:--</b> ICT</span><span class="demo-pill">MÔ PHỎNG TRỰC TIẾP</span></div>
+        <div class="top-actions"><span class="clock"><i></i><b id="liveClock">--:--:--</b> ICT</span><span class="demo-pill">BACKEND TRỰC TIẾP</span></div>
       </header>
 
       <section class="view active" id="view-command">
         <section class="case-hero glass-panel">
-          <div class="case-main"><div class="company-logo" id="heroLogo">NM</div><div><div class="case-kicker"><span id="heroCaseId">HỒ SƠ #UV-2026-00128</span><b id="heroStatus">SẴN SÀNG</b></div><h2 id="heroCompany">Nguyễn Hoàng Minh</h2><div class="case-meta"><span>Khoản vay <strong id="heroAmount">500 triệu ₫</strong></span><i></i><span>Kỳ hạn <strong id="heroTerm">36 tháng</strong></span><i></i><span id="heroFile">Ho_so_thu_nhap_NHM.pdf</span></div></div></div>
+          <div class="case-main"><div class="company-logo" id="heroLogo">MA</div><div><div class="case-kicker"><span id="heroCaseId">HỒ SƠ #SYN-IV-001</span><b id="heroStatus">SẴN SÀNG</b></div><h2 id="heroCompany">Nguyễn Minh Anh</h2><div class="case-meta"><span>Khoản vay đề nghị <strong id="heroAmount">300 triệu ₫</strong></span><i></i><span>Kỳ hạn <strong id="heroTerm">36 tháng</strong></span><i></i><span id="heroFile">loan_application.md · application SYN-SHB-2026-0001</span></div></div></div>
           <div class="hero-actions"><button class="button ghost" id="resetBtn"><svg viewBox="0 0 24 24"><path d="M4 4v6h6M20 20v-6h-6M6 17a8 8 0 0 0 12-2M18 7A8 8 0 0 0 6 9"/></svg>Đặt lại</button><button class="button primary" id="runBtn"><span>✦</span> Bắt đầu xác minh</button></div>
         </section>
 
@@ -69,36 +69,31 @@
           <aside class="log-panel glass-panel">
             <header class="panel-header compact"><div><div class="title-line"><h3>Nhật ký hoạt động</h3><span class="event-count" id="eventCount">1</span></div><p>Tóm tắt sự kiện theo thời gian thực</p></div><button class="icon-only" id="clearLog" title="Xóa nhật ký"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3m-9 0 1 14h10l1-14M10 11v6M14 11v6"/></svg></button></header>
             <div class="log-stream" id="logStream"></div>
-            <footer class="stream-footer"><span><i></i><b>Luồng thời gian thực</b></span><em>Mô phỏng giao diện</em></footer>
+            <footer class="stream-footer"><span><i></i><b>Luồng thời gian thực</b></span><em>Dữ liệu thực từ backend</em></footer>
           </aside>
         </div>
       </section>
 
       <section class="view" id="view-cases">
-        <div class="section-heading cases-toolbar"><button class="button primary" id="createCaseBtn"><span>＋</span> Tạo hồ sơ mới</button></div>
-        <div class="case-summary"><div class="glass-panel"><span>Tổng hồ sơ</span><strong id="totalCases">4</strong><small>Đang quản lý</small></div><div class="glass-panel"><span>Đang xác minh</span><strong>2</strong><small>Tác tử đang xử lý</small></div><div class="glass-panel"><span>Chờ chuyên viên duyệt</span><strong>1</strong><small>Cần chuyên viên duyệt</small></div></div>
-        <section class="case-table glass-panel"><header><div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="caseSearch" placeholder="Tìm theo khách hàng hoặc mã hồ sơ..."></div><span>Cập nhật trực tiếp</span></header><div class="table-head"><span>Khách hàng / Hồ sơ</span><span>Khoản vay</span><span>Kỳ hạn</span><span>Trạng thái</span><span></span></div><div id="caseRows"></div></section>
+        <div class="section-heading cases-toolbar"><p>MVP demo hiện chỉ chạy trên một hồ sơ mẫu cố định do backend truy xuất; xem chi tiết trong <strong>Trung tâm điều phối</strong>.</p></div>
+        <div class="case-summary"><div class="glass-panel"><span>Tổng hồ sơ</span><strong id="totalCases">1</strong><small>Hồ sơ mẫu SYN-IV-001</small></div><div class="glass-panel"><span>Trạng thái workflow</span><strong id="caseWorkflowState">OPEN_CASE</strong><small>Cập nhật trực tiếp từ backend</small></div><div class="glass-panel"><span>Số sự kiện audit</span><strong id="caseAuditCount">0</strong><small>Ghi nhận append-only</small></div></div>
+        <section class="case-table glass-panel"><header><div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="caseSearch" placeholder="Tìm theo khách hàng hoặc mã hồ sơ..." disabled></div><span>Cập nhật trực tiếp</span></header><div class="table-head"><span>Khách hàng / Hồ sơ</span><span>Khoản vay</span><span>Kỳ hạn</span><span>Trạng thái</span><span></span></div><div id="caseRows"></div></section>
       </section>
     </main>
   </div>
 
-  <div class="modal-backdrop" id="caseModal" hidden>
-    <form class="modal glass-panel case-form" id="caseForm">
-      <button type="button" class="modal-close" data-close="caseModal">×</button><span class="modal-kicker">HỒ SƠ XÁC MINH MỚI</span><h2>Tạo hồ sơ tín chấp</h2><p>Thông tin sẽ được chuyển cho Orchestrator để lập workflow xác minh thu nhập.</p>
-      <label class="form-field"><span>Tên khách hàng</span><input name="company" required placeholder="Ví dụ: Nguyễn Hoàng Minh"></label>
-      <div class="form-grid"><label class="form-field"><span>Số tiền đề nghị vay</span><div class="input-affix"><input name="amount" type="number" min="1" step="1" required placeholder="500"><b>TRIỆU ₫</b></div></label><label class="form-field"><span>Thời hạn vay</span><div class="input-affix"><input name="term" type="number" min="1" max="120" required placeholder="36"><b>THÁNG</b></div></label></div>
-      <label class="form-field"><span>Thông tin phục vụ xác minh</span><textarea name="notes" rows="4" required placeholder="Đơn vị công tác, chức danh, thu nhập kê khai, nguồn trả nợ và thông tin liên quan..."></textarea></label>
-      <label class="file-drop" id="fileDrop"><input id="documentInput" name="document" type="file" accept=".pdf,.doc,.docx,.txt,.xls,.xlsx" required><span class="upload-icon"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v6h14v-6"/></svg></span><strong id="fileName">Tải file thông tin liên quan</strong><small>PDF, DOCX, TXT, XLSX · tối đa 25 MB</small></label>
-      <div class="modal-actions"><button type="button" class="button ghost" data-close="caseModal">Hủy</button><button class="button primary" type="submit"><span>✦</span>Tạo & chuyển cho Orchestrator</button></div>
-    </form>
-  </div>
-
   <div class="modal-backdrop" id="verifyModal" hidden>
-    <div class="modal glass-panel verify-modal"><button class="modal-close" data-close="verifyModal">×</button><span class="modal-kicker success">CỔNG KIỂM DUYỆT</span><h2>Kiểm duyệt đề xuất xác minh</h2><p>Thu nhập đã xác minh: <strong>31,2 triệu ₫/tháng</strong>. Đề xuất: <strong>Đủ điều kiện có kiểm soát</strong>, hạn mức 450 triệu ₫ trong 36 tháng.</p><div class="verify-checks"><label><input type="checkbox" class="verify-check"> Đã kiểm tra tài liệu và kết quả trích xuất</label><label><input type="checkbox" class="verify-check"> Đã đọc đối chiếu thu nhập và chính sách</label><label><input type="checkbox" class="verify-check"> Đồng ý cho Action Executor cập nhật hệ thống</label></div><div class="review-actions"><button class="button ghost" id="requestEditBtn">Yêu cầu chỉnh sửa</button><button class="button danger" id="rejectProposalBtn">Từ chối</button><button class="button approve" id="confirmApprove" disabled>Chấp thuận & thực thi</button></div></div>
+    <div class="modal glass-panel verify-modal"><button class="modal-close" data-close="verifyModal">×</button><span class="modal-kicker success">CỔNG KIỂM DUYỆT</span><h2>Kiểm duyệt kết quả xác minh thu nhập</h2><p id="verifySummary">Thu nhập ròng đã xác minh: <strong id="verifyAverageIncome">—</strong>. Thu nhập đủ điều kiện theo chính sách: <strong id="verifyEligibleIncome">—</strong>. Trạng thái đề xuất: <strong id="verifyStatus">—</strong>.</p>
+      <div class="verify-checks" id="verifyFindings"></div>
+      <div class="verify-checks"><label><input type="checkbox" class="verify-check"> Đã kiểm tra tài liệu và kết quả trích xuất</label><label><input type="checkbox" class="verify-check"> Đã đọc đối chiếu thu nhập và chính sách</label><label><input type="checkbox" class="verify-check"> Đồng ý cho Action Executor cập nhật hệ thống</label></div>
+      <label class="form-field"><span>Ghi chú của chuyên viên (bắt buộc)</span><textarea id="reviewReason" rows="2" placeholder="Ví dụ: Đã đối chiếu hồ sơ và đồng ý cập nhật kết quả xác minh."></textarea></label>
+      <label class="form-field" id="editIncomeField" hidden><span>Thu nhập đủ điều kiện điều chỉnh (triệu ₫/tháng)</span><input id="editIncomeInput" type="number" min="0" step="0.1"></label>
+      <div class="review-actions"><button class="button ghost" id="requestEditBtn">Yêu cầu chỉnh sửa</button><button class="button danger" id="rejectProposalBtn">Từ chối</button><button class="button approve" id="confirmApprove" disabled>Chấp thuận & thực thi</button></div>
+    </div>
   </div>
 
   <div class="modal-backdrop" id="evidenceModal" hidden>
-    <div class="modal glass-panel evidence-modal"><button class="modal-close" data-close="evidenceModal">×</button><span class="modal-kicker">BẰNG CHỨNG XÁC MINH</span><h2 id="evidenceTitle">Trích dẫn chính sách</h2><div class="document-ref"><span>PDF</span><div><strong id="evidenceDoc">Quy định cấp tín dụng tín chấp cá nhân 2026</strong><small id="evidencePage">Điều 4.3 · Trang 18</small></div></div><blockquote id="evidenceQuote">Tổng nghĩa vụ trả nợ hằng tháng không vượt quá 50% thu nhập ròng đã được xác minh.</blockquote><div class="confidence"><span>Độ phù hợp truy xuất</span><strong>96%</strong></div></div>
+    <div class="modal glass-panel evidence-modal"><button class="modal-close" data-close="evidenceModal">×</button><span class="modal-kicker">BẰNG CHỨNG XÁC MINH</span><h2 id="evidenceTitle">Trích dẫn chính sách</h2><div class="document-ref"><span>DOC</span><div><strong id="evidenceDoc">—</strong><small id="evidencePage">—</small></div></div><blockquote id="evidenceQuote">—</blockquote><div class="confidence"><span>Nguồn</span><strong id="evidenceConfidence">Case-scoped evidence</strong></div></div>
   </div>
 
   <div class="toast-stack" id="toastStack"></div>

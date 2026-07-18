@@ -93,6 +93,12 @@ class InMemoryCheckpointStore:
                 )
             self._states[context.case_id] = context.model_copy(deep=True)
 
+    async def forget(self, case_id: str) -> None:
+        """Demo-only convenience so the fixed sample case can be replayed."""
+
+        async with self._lock:
+            self._states.pop(case_id, None)
+
 
 class SqlAlchemyCheckpointStore:
     """Optimistic-locking checkpoint store for PostgreSQL-backed deployments."""

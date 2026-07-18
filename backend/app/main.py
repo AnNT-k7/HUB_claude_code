@@ -10,8 +10,8 @@ settings = get_settings()
 app = FastAPI(title="Income Verification Expert API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.backend_cors_origins,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

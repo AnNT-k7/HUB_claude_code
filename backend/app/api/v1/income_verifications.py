@@ -18,6 +18,7 @@ from app.services.runtime import (
 from .schemas import (
     AuditListResponse,
     EvidenceListResponse,
+    ResetResponse,
     ReviewRequest,
     ReviewResponse,
     StartWorkflowRequest,
@@ -64,6 +65,22 @@ async def start_workflow(
         case_id=context.case_id,
         workflow_state=context.workflow_state,
     )
+
+
+@router.post(
+    "/applications/{application_id}/income-verification/reset",
+    response_model=ResetResponse,
+)
+async def reset_workflow(
+    application_id: str,
+    _reviewer_id: ReviewerDependency,
+    runtime: RuntimeDependency,
+) -> ResetResponse:
+    try:
+        await runtime.reset(application_id)
+    except UnsupportedDemoApplication as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return ResetResponse(application_id=application_id, status="RESET")
 
 
 @router.get("/income-verifications/{case_id}", response_model=CaseContext)

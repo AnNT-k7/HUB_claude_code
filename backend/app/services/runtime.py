@@ -162,6 +162,19 @@ class IncomeVerificationRuntime:
             await self.checkpoints.save(executed, expected_version=previous.state_version)
             return executed
 
+    async def reset(self, application_id: str) -> None:
+        """Demo-only: forget the in-memory checkpoint so the sample case can rerun."""
+
+        if application_id != DEMO_APPLICATION_ID:
+            raise UnsupportedDemoApplication(
+                "MVP demo currently accepts only the normalized synthetic application."
+            )
+        async with self._lock:
+            case_id = self._application_cases.pop(application_id, None) or DEMO_CASE_ID
+            forget = getattr(self.checkpoints, "forget", None)
+            if forget is not None:
+                await forget(case_id)
+
 
 _runtime = IncomeVerificationRuntime()
 
