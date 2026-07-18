@@ -1,0 +1,58 @@
+{
+  "Dieu-le-SHB2017.md": [
+    {
+      "chunk_type": "LEGAL_CLAUSE",
+      "clause_id": "Điều 1",
+      "title": "Tên, địa chỉ và thời hạn hoạt động của Ngân hàng",
+      "content": "Ngân hàng Thương mại Cổ phần Sài Gòn - Hà Nội (viết tắt là SHB) hoạt động theo giấy phép của Ngân hàng Nhà nước. Thời hạn hoạt động là 99 năm kể từ ngày được cấp phép.",
+      "cross_references": [
+        "Luật Các tổ chức tín dụng năm 2010",
+        "Luật Doanh nghiệp 2014"
+      ]
+    },
+    {
+      "chunk_type": "LEGAL_CLAUSE",
+      "clause_id": "Điều 2",
+      "title": "Người đại diện theo pháp luật",
+      "content": "Tổng Giám đốc là người đại diện theo pháp luật của Ngân hàng, trừ trường hợp Điều lệ này có quy định khác do Đại hội đồng cổ đông quyết định.",
+      "cross_references": []
+    }
+  ],
+  "Niêm-yết-Quy-định-tiền-gửi-tiết-kiệm.md": [
+    {
+      "chunk_type": "PROCESS_STEP",
+      "step": "Kiểm tra đối tượng gửi tiền tiết kiệm",
+      "input": "Hồ sơ cá nhân, CCCD/CMND của khách hàng",
+      "checks": [
+        "Khách hàng là công dân Việt Nam đủ 18 tuổi trở lên, có năng lực hành vi dân sự đầy đủ",
+        "Nếu từ 15 - dưới 18 tuổi phải có giấy tờ chứng minh thu nhập/tài sản độc lập",
+        "Nếu dưới 15 tuổi hoặc mất NLHVDS thì phải thông qua Người giám hộ hợp pháp"
+      ],
+      "output": "Xác nhận đủ điều kiện giao dịch mở sổ tiết kiệm",
+      "owner": "Giao dịch viên (Teller)",
+      "exception": "Từ chối giao dịch nếu không có đủ giấy tờ chứng minh hoặc giấy giám hộ hợp lệ"
+    },
+    {
+      "chunk_type": "PROCESS_STEP",
+      "step": "Thanh toán lãi tiền gửi không kỳ hạn",
+      "input": "Sổ tiết kiệm không kỳ hạn đang hoạt động",
+      "checks": [
+        "Kiểm tra số dư tài khoản tiết kiệm",
+        "Xác định ngày cuối cùng của tháng hoặc ngày rút hết số dư"
+      ],
+      "output": "Nhập lãi vào gốc tiền gửi",
+      "owner": "Hệ thống Core Banking / Giao dịch viên",
+      "exception": "Chặn thanh toán nếu tài khoản đang bị phong tỏa pháp lý"
+    }
+  ],
+  "CONG-BO-TY-LE-AN-TOAN-VON-31-12-2023.md": [
+    {
+      "chunk_type": "POLICY_RULE",
+      "rule": "Quy định về Tỷ lệ an toàn vốn (CAR)",
+      "condition": "Hoạt động kinh doanh ngân hàng tại mọi thời điểm",
+      "threshold": "Tỷ lệ an toàn vốn tối thiểu phải đạt mức 8.0%",
+      "exception": "Quy định này áp dụng theo tiêu chuẩn của Thông tư 41/2016/TT-NHNN, có thể điều chỉnh theo quyết định đặc biệt của Thống đốc.",
+      "consequence": "Nếu tỷ lệ CAR tụt xuống dưới 8.0%, Ngân hàng phải báo cáo ngay cho NHNN và áp dụng Phương án phục hồi vốn khẩn cấp, đồng thời hạn chế chia cổ tức."
+    }
+  ]
+}
