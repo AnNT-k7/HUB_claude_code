@@ -1,20 +1,20 @@
 """
-Tier 2 — Specialist worker agents package.
-Exporting specialist agent schemas representing all 5 analytical departments.
+Specialist Agents package.
 """
-
-from .customer_relationship import CustomerRelationshipAssessment
-from .credit import CreditAssessment
-from .risk_management import RiskManagementAssessment
-from .compliance import ComplianceAssessment
-from .legal import LegalAssessment
-from .collateral_appraisal import CollateralAppraisalAssessment
+from app.agents.tier2_board.specialists.customer_relationship import run_customer_relationship_agent
+from app.agents.tier2_board.specialists.credit import run_credit_agent
+from app.agents.tier2_board.specialists.risk_management import run_risk_management_agent
+from app.agents.tier2_board.specialists.compliance import run_compliance_agent
+from app.agents.tier2_board.specialists.legal import run_legal_agent
+from app.agents.tier2_board.specialists.collateral_appraisal import run_collateral_appraisal_agent
+from app.agents.tier2_board.specialists.banking_operations import run_banking_operations_agent
 
 __all__ = [
-    "CustomerRelationshipAssessment",
-    "CreditAssessment",
-    "RiskManagementAssessment",
-    "ComplianceAssessment",
-    "LegalAssessment",
-    "CollateralAppraisalAssessment",
+    "run_customer_relationship_agent",
+    "run_credit_agent",
+    "run_risk_management_agent",
+    "run_compliance_agent",
+    "run_legal_agent",
+    "run_collateral_appraisal_agent",
+    "run_banking_operations_agent",
 ]
