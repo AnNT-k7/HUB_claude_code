@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     app_name: str = "Digital Expert Agents API"
     api_v1_prefix: str = "/api/v1"
     database_url: str = (
-        "postgresql+psycopg2://postgres:postgres@localhost:5432/"
+        "postgresql+psycopg2://postgres:postgres@localhost:5433/"
         "digital_expert_agents"
     )
     backend_cors_origins: list[str] = Field(

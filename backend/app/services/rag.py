@@ -13,11 +13,18 @@ from app.config import get_settings
 
 settings = get_settings()
 
-# We initialize the embeddings model. It requires OPENAI_API_KEY.
-embeddings = OpenAIEmbeddings(
-    model="text-embedding-3-small", 
-    api_key=settings.openai_api_key
-)
+from langchain_community.embeddings import FastEmbedEmbeddings
+
+def get_embeddings():
+    api_key = settings.openai_api_key
+    if api_key and not api_key.startswith("sk--"):
+        try:
+            from langchain_openai import OpenAIEmbeddings
+            return OpenAIEmbeddings(model="text-embedding-3-small", api_key=api_key)
+        except Exception:
+            pass
+    # Local free embedding model running 100% offline without API keys
+    return FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
 
 def split_text_into_chunks(text: str, chunk_type: str) -> List[str]:
     """
@@ -57,10 +64,10 @@ def index_policy_document(
         if not chunk.strip():
             continue
             
-        vector = embeddings.embed_query(chunk)
+        vector = get_embeddings().embed_query(chunk)
         
         record = PolicyEmbedding(
-            content=chunk,
+            content_chunk=chunk,
             embedding=vector,
             metadata_={
                 "department": department_tag,
@@ -83,11 +90,11 @@ def search_policies(
     """
     Search for semantically similar policy chunks with hard metadata filtering.
     """
-    query_vector = embeddings.embed_query(query_text)
+    query_vector = get_embeddings().embed_query(query_text)
     
     # pgvector cosine distance operator is <=>
     sql = text("""
-        SELECT content, metadata_
+        SELECT content_chunk, metadata_
         FROM policy_embeddings
         WHERE metadata_->>'department' = :dept
           AND metadata_->>'chunk_type' = :c_type
