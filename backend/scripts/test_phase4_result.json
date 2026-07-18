@@ -1,0 +1,66 @@
+{
+  "tier1_draft": {
+    "case_id": "case-shb-2026-002",
+    "status": "TIER3_PENDING_REVIEW",
+    "synthesis_summary": "Tier 2 consensus reached. Ready for operations processing pending Human Approval.",
+    "tier2_execution_rounds": 1,
+    "tier2_specialists_run": [
+      "CustomerRelationship",
+      "Credit",
+      "RiskManagement",
+      "Compliance",
+      "Legal",
+      "CollateralAppraisal",
+      "BankingOperations"
+    ],
+    "missing_data_flags": [],
+    "timestamp": "2026-07-18T09:45:13.537717"
+  },
+  "tier3_operations": {
+    "agent_id": "BankingOperations",
+    "case_id": "case-shb-2026-002",
+    "status": "COMPLETED",
+    "generated_agreement_path": "D:\\GIT\\HUB_claude_code\\backend\\app\\agents\\tier3_operations\\..\\..\\..\\data\\drafts\\case-shb-2026-002_Draft_Credit_Agreement.md",
+    "onboarding_payload": {
+      "case_id": "case-shb-2026-002",
+      "company_name": "Công ty Cổ phần Năng lượng Xanh Việt Nam",
+      "tax_code": "0109998887",
+      "cif": "SHB-201555",
+      "approved_amount": 250000000000,
+      "interest_rate": 8.5,
+      "disbursement_method": "Chuyển khoản thanh toán cho nhà thầu EPC",
+      "audit_trace_id": "AUDIT-OPS-BD5BFA80"
+    },
+    "mock_api_responses": {
+      "customer_master": {
+        "status": "success",
+        "data": {
+          "exists": true,
+          "cif": "SHB-201555",
+          "kyc_status": "VERIFIED",
+          "internal_credit_rating": "B",
+          "account_manager": "RM_6"
+        }
+      },
+      "credit_ledger": {
+        "status": "success",
+        "data": {
+          "total_active_limit": 50000000000,
+          "utilized_amount": 10000000000,
+          "npl_status": false,
+          "delinquency_days": 0
+        }
+      },
+      "onboarding_draft": {
+        "status": "success",
+        "data": {
+          "core_dossier_id": "DOS-7DB60A19",
+          "timestamp": "2026-07-18T09:45:13.540506",
+          "queue_status": "PENDING_DISBURSEMENT_CHECK",
+          "message": "Draft created successfully in Mock Core Banking"
+        }
+      }
+    },
+    "audit_trace_id": "AUDIT-OPS-BD5BFA80"
+  }
+}
