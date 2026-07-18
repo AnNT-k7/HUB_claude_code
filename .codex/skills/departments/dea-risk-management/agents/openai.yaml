@@ -1,4 +1,0 @@
-interface:
-  display_name: "Risk Management Agent"
-  short_description: "Assess industry and concentration risk."
-  default_prompt: "Use -risk-management to implement or review this department's agent workflow."

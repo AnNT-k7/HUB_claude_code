@@ -1,0 +1,4 @@
+interface:
+  display_name: "Income Verification Expert Development"
+  short_description: "Develop the scoped income verification MVP"
+  default_prompt: "Use $income-verification-dev to implement or review a repository change against the approved Income Verification Expert docs."

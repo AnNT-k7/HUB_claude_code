@@ -1,4 +1,0 @@
-interface:
-  display_name: "Credit Agent"
-  short_description: "Analyze financials and deterministic credit ratios."
-  default_prompt: "Use -credit to implement or review this department's agent workflow."
