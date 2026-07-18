@@ -1,0 +1,6 @@
+interface:
+  display_name: "Digital Expert Agents Development"
+  short_description: "Apply project architecture and banking guardrails"
+  default_prompt: "Use $digital-expert-agents-dev to implement or review a change in this repository."
+policy:
+  allow_implicit_invocation: true
