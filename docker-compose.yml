@@ -31,6 +31,49 @@ services:
       - minio_data:/data
     restart: unless-stopped
 
+  backend:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-digital_expert_agents}
+      MINIO_URL: http://object_store:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_CASE_BUCKET: ${MINIO_CASE_BUCKET:-case-documents}
+      MINIO_POLICY_BUCKET: ${MINIO_POLICY_BUCKET:-bank-policies}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-openai_compatible}
+      EMBEDDING_DIMENSION: ${EMBEDDING_DIMENSION:-1024}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-Vietnamese_Embedding}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai_compatible}
+      LLM_API_BASE: ${LLM_API_BASE:-https://mkp-api.fptcloud.com}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-GLM-5.2}
+      SEED_DEMO_POLICIES: ${SEED_DEMO_POLICIES:-true}
+      SEED_DEMO_CASE: ${SEED_DEMO_CASE:-true}
+      BACKEND_CORS_ORIGINS: '["http://localhost:3000"]'
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      object_store:
+        condition: service_started
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+      NEXT_PUBLIC_OFFICER_ID: ${DEMO_OFFICER_ID:-demo-officer}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   minio_data:

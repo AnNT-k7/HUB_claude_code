@@ -1,14 +1,17 @@
+import type { Metadata } from "next";
+
+import { CaseWorkspace } from "@/features/cases/components/CaseWorkspace";
+
 interface CasePageProps {
   params: {
     id: string;
   };
 }
 
-export default function CasePage({ params }: CasePageProps) {
-  return (
-    <main className="mx-auto max-w-6xl px-6 py-12">
-      <h1 className="text-3xl font-semibold">Case {params.id}</h1>
-    </main>
-  );
-}
+export const metadata: Metadata = {
+  title: "Chi tiết hồ sơ | Digital Expert Agents",
+};
 
+export default function CasePage({ params }: CasePageProps) {
+  return <CaseWorkspace caseId={params.id} />;
+}

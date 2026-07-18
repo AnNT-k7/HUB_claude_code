@@ -1,25 +1,74 @@
-"""
-Tier 2 Specialist — Customer Relationship Agent.
+"""Deterministic contract builder for the Customer Relationship specialist."""
 
-Department: Customer Relationship Department
-Responsibilities:
-  - Extract general borrower profile and company history from uploaded proposal documents
-  - Parse requested term sheet parameters (loan amount, requested currency, interest rate, maturity)
-  - Summarize business model, key revenue drivers, and primary customer base
-  - Post structured SpecialistAssessment to the Shared Board
-"""
+from collections.abc import Sequence
 
-from typing import Dict, Any, List
-from pydantic import BaseModel, Field
+from app.schemas.enums import AssessmentStatus
+from app.schemas.evidence import AgentCitation, CaseDocumentEvidence, MissingDataRequest
+from app.schemas.tier2 import (
+    BorrowerProfile,
+    CustomerRelationshipAssessment,
+    RequestedLoanTerms,
+)
 
 
-class CustomerRelationshipAssessment(BaseModel):
-    agent_id: str = "CustomerRelationship"
-    status: str = "PENDING"
-    borrower_profile: Dict[str, Any] = Field(default_factory=dict)
-    requested_terms: Dict[str, Any] = Field(default_factory=dict)
-    business_model_summary: str = ""
-    risk_flags: List[str] = Field(default_factory=list)
-    evidence: List[Dict[str, Any]] = Field(default_factory=list)
+def assess_customer_relationship(
+    borrower_profile: BorrowerProfile | None,
+    requested_terms: RequestedLoanTerms | None,
+    *,
+    document_evidence: Sequence[CaseDocumentEvidence] = (),
+    policy_citations: Sequence[AgentCitation] = (),
+) -> CustomerRelationshipAssessment:
+    """Build a typed assessment without filling absent borrower information."""
 
-# TODO: Implement LangChain tool definitions and LangGraph node runner for Customer Relationship Agent
+    missing_data: list[MissingDataRequest] = []
+    if borrower_profile is None:
+        missing_data.append(
+            MissingDataRequest(
+                code="BORROWER_PROFILE_MISSING",
+                description="Borrower profile and corporate registration data are required.",
+                requested_document_types=["CORPORATE_PROFILE"],
+                requested_fields=[
+                    "company_name",
+                    "registration_number",
+                    "industry",
+                    "business_model_summary",
+                ],
+            )
+        )
+    if requested_terms is None:
+        missing_data.append(
+            MissingDataRequest(
+                code="REQUESTED_TERMS_MISSING",
+                description="The signed loan request with requested terms is required.",
+                requested_document_types=["LOAN_APPLICATION"],
+                requested_fields=["requested_amount", "currency"],
+            )
+        )
+
+    status = (
+        AssessmentStatus.REQUIRES_MORE_DATA
+        if missing_data
+        else AssessmentStatus.SUCCESS
+    )
+    rationale = (
+        "Required borrower information is incomplete; no values were inferred."
+        if missing_data
+        else "Borrower profile and requested loan terms were extracted from case evidence."
+    )
+    return CustomerRelationshipAssessment(
+        status=status,
+        borrower_profile=borrower_profile,
+        requested_terms=requested_terms,
+        policy_citations=list(policy_citations),
+        document_evidence=list(document_evidence),
+        missing_data=missing_data,
+        rationale_summary=rationale,
+    )
+
+
+__all__ = [
+    "BorrowerProfile",
+    "CustomerRelationshipAssessment",
+    "RequestedLoanTerms",
+    "assess_customer_relationship",
+]

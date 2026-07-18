@@ -1,25 +1,24 @@
-"""
-Tier 2 Specialist — Legal & Compliance Agent (Compliance Module).
+"""Internal compliance-analysis module for the LegalCompliance agent identity."""
 
-Department: Legal & Compliance Department
-Responsibilities:
-  - Verify Know-Your-Customer (KYC) compliance status using uploaded corporate registry inputs
-  - Screen borrower entity and beneficial owners against Anti-Money Laundering (AML) and Sanctions databases (mock)
-  - Flag pending regulatory inquiries, fines, or violations
-  - Post structured SpecialistAssessment to the Shared Board
-"""
-
-from typing import Dict, Any, List
-from pydantic import BaseModel, Field
+from app.schemas.enums import AmlRiskLevel, KycStatus
+from app.schemas.tier2 import ComplianceFindings
 
 
-class ComplianceAssessment(BaseModel):
-    agent_id: str = "Compliance"
-    status: str = "PENDING"
-    kyc_status: str = "UNVERIFIED"  # VERIFIED, UNVERIFIED, FAILED
-    aml_risk_level: str = "UNKNOWN"  # LOW, MEDIUM, HIGH
-    sanctions_check_passed: bool = False
-    risk_flags: List[str] = Field(default_factory=list)
-    evidence: List[Dict[str, Any]] = Field(default_factory=list)
+def build_compliance_findings(
+    *,
+    kyc_status: KycStatus,
+    aml_risk_level: AmlRiskLevel,
+    sanctions_check_passed: bool | None,
+    regulatory_inquiry_open: bool | None,
+) -> ComplianceFindings:
+    """Return compliance findings only; this module is not an independent agent."""
 
-# TODO: Implement LangChain tool definitions and LangGraph node runner for Compliance Agent
+    return ComplianceFindings(
+        kyc_status=kyc_status,
+        aml_risk_level=aml_risk_level,
+        sanctions_check_passed=sanctions_check_passed,
+        regulatory_inquiry_open=regulatory_inquiry_open,
+    )
+
+
+__all__ = ["ComplianceFindings", "build_compliance_findings"]

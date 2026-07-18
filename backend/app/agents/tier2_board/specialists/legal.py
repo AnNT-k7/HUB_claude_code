@@ -1,25 +1,23 @@
-"""
-Tier 2 Specialist — Legal & Compliance Agent (Legal Module).
+"""Internal legal-analysis module for the LegalCompliance specialist identity."""
 
-Department: Legal & Compliance Department
-Responsibilities:
-  - Evaluate corporate governance documents, charter, and articles of association
-  - Verify collateral ownership titles, land registry proofs, and security documentation
-  - Check contract framework, litigation history, and existing legal encumbrances
-  - Post structured SpecialistAssessment to the Shared Board
-"""
-
-from typing import Dict, Any, List
-from pydantic import BaseModel, Field
+from app.schemas.tier2 import LegalFindings
 
 
-class LegalAssessment(BaseModel):
-    agent_id: str = "Legal"
-    status: str = "PENDING"
-    corporate_governance_valid: bool = False
-    title_ownership_verified: bool = False
-    litigation_risk_summary: str = ""
-    risk_flags: List[str] = Field(default_factory=list)
-    evidence: List[Dict[str, Any]] = Field(default_factory=list)
+def build_legal_findings(
+    *,
+    corporate_governance_valid: bool | None,
+    title_ownership_verified: bool | None,
+    unresolved_litigation: bool | None,
+    litigation_risk_summary: str = "",
+) -> LegalFindings:
+    """Return legal findings only; this module is not an independent agent."""
 
-# TODO: Implement LangChain tool definitions and LangGraph node runner for Legal Agent
+    return LegalFindings(
+        corporate_governance_valid=corporate_governance_valid,
+        title_ownership_verified=title_ownership_verified,
+        unresolved_litigation=unresolved_litigation,
+        litigation_risk_summary=litigation_risk_summary,
+    )
+
+
+__all__ = ["LegalFindings", "build_legal_findings"]

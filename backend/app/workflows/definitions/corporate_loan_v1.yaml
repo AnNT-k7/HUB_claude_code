@@ -1,0 +1,77 @@
+workflow_id: corporate_loan_v1
+version: "1.0"
+description: >-
+  LLM-backed multi-agent workflow for preliminary corporate loan assessment,
+  reviewer debate, human verification, and post-approval mock operations.
+max_debate_rounds: 3
+
+outcomes:
+  missing_data_case_status: AWAITING_DOCS
+  consensus_case_status: TIER3_PENDING_REVIEW
+  max_rounds_case_status: TIER3_PENDING_REVIEW
+  require_human_approval_for_operations: true
+
+steps:
+  - id: understand_and_plan
+    type: orchestrator
+    agent: BankingOrchestrator
+    depends_on: []
+    description: Validate case inputs, select this workflow, and initialize the Shared Board.
+
+  - id: customer_profile
+    type: specialist
+    agent: CustomerRelationship
+    depends_on: [understand_and_plan]
+    description: Extract the borrower profile, request terms, business model, and document completeness.
+
+  - id: credit_analysis
+    type: specialist
+    agent: Credit
+    depends_on: [understand_and_plan]
+    description: Calculate DSCR, current ratio, leverage, and cite the applicable credit policies.
+
+  - id: risk_assessment
+    type: specialist
+    agent: RiskManagement
+    depends_on: [understand_and_plan]
+    description: Assess industry and concentration risks and assign a preliminary risk tier.
+
+  - id: legal_compliance_review
+    type: specialist
+    agent: LegalCompliance
+    depends_on: [understand_and_plan]
+    description: Perform legal, governance, KYC, AML, sanctions, and litigation checks.
+
+  - id: collateral_appraisal
+    type: specialist
+    agent: CollateralAppraisal
+    depends_on: [understand_and_plan]
+    description: Assess eligible collateral and calculate the Loan-to-Value ratio.
+
+  - id: reviewer_debate
+    type: reviewer
+    agent: ReviewerAgent
+    depends_on:
+      - customer_profile
+      - credit_analysis
+      - risk_assessment
+      - legal_compliance_review
+      - collateral_appraisal
+    description: Verify calculations, citations, and cross-domain consistency for up to three rounds.
+
+  - id: synthesize_assessment
+    type: orchestrator
+    agent: BankingOrchestrator
+    depends_on: [reviewer_debate]
+    description: Produce a consolidated assessment draft without approving or rejecting the loan.
+
+  - id: human_verification
+    type: human_gate
+    depends_on: [synthesize_assessment]
+    description: Require an explicit banking officer decision and optional feedback.
+
+  - id: banking_operations
+    type: operations
+    agent: BankingOperations
+    depends_on: [human_verification]
+    description: Use the Operations Agent to draft artifacts and call Mock SHB APIs only after approval.

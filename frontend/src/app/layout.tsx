@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { AppHeader } from "@/shared/components/app-header";
 import "@/shared/styles/index.css";
-
 
 export const metadata: Metadata = {
   title: "Digital Expert Agents",
@@ -15,9 +15,13 @@ type RootLayoutProps = Readonly<{
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="vi">
+      <body>
+        <div className="min-h-screen">
+          <AppHeader />
+          {children}
+        </div>
+      </body>
     </html>
   );
 }
-
