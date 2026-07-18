@@ -18,7 +18,9 @@ from app.services.namespace_rag import (
     search_namespace,
 )
 from app.tools.income_calculator import (
+    CALCULATION_VERSION,
     CalculationInputError,
+    calculate_average_variable_income,
     calculate_eligible_income,
     calculate_income_metrics,
 )
@@ -115,9 +117,13 @@ class PolicyAgent:
                     "chênh lệch thu nhập khai báo"
                 ),
                 namespace=RagNamespace.POLICY,
+                domain="INCOME_VERIFICATION",
+                product="UNSECURED_PERSONAL_LOAN",
                 top_k=10,
                 chunk_types=["POLICY_RULE"],
                 allowed_scopes=list(self.config.allowed_scopes),
+                approval_statuses=list(self.config.accepted_approval_statuses),
+                as_of_date=self.config.as_of_date or date.today(),
             )
         )
         accepted = self._accepted_hits(hits)
@@ -153,7 +159,15 @@ class PolicyAgent:
             selected["IVP-3"].content,
             r"tối đa\s+([\d.]+)\s*VND",
         )
-        if statement_months is None or variable_cap is None:
+        minimum_variable_periods = _parse_integer_rule_value(
+            selected["IVP-3"].content,
+            r"ít nhất\s+0?(\d+)\s+trong\s+0?\d+\s+tháng",
+        )
+        if (
+            statement_months is None
+            or variable_cap is None
+            or minimum_variable_periods is None
+        ):
             return PolicyResult(
                 status=ComponentStatus.MANUAL_REVIEW,
                 reason_code="POLICY_PARAMETER_NOT_PARSEABLE",
@@ -194,12 +208,15 @@ class PolicyAgent:
         recognized, _ = select_recognized_transactions(context)
         try:
             metrics = calculate_income_metrics(recognized)
-            # Variable payroll components are not represented in the current normalized
-            # contract, so the policy is applied conservatively with a zero variable part.
+            variable_average, variable_fact_ids = calculate_average_variable_income(
+                extracted.variable_income_records,
+                required_periods=statement_months,
+                minimum_positive_periods=minimum_variable_periods,
+            )
             eligible_income = calculate_eligible_income(
                 average_income=metrics.average_income,
                 contract_salary=extracted.contract_salary,
-                average_documented_variable_income=Decimal("0"),
+                average_documented_variable_income=variable_average,
                 variable_income_cap=variable_cap_decimal,
             )
         except CalculationInputError:
@@ -223,6 +240,10 @@ class PolicyAgent:
             required_statement_months=statement_months,
             applied_rule_ids=list(self.config.required_rule_ids),
             citations=citations,
+            average_documented_variable_income=variable_average,
+            variable_income_cap=variable_cap_decimal,
+            calculation_version=CALCULATION_VERSION,
+            input_fact_ids=list(metrics.input_fact_ids) + list(variable_fact_ids),
         )
 
     def _accepted_hits(self, hits: list[NamespaceHit]) -> list[NamespaceHit]:
@@ -231,7 +252,10 @@ class PolicyAgent:
             hit
             for hit in hits
             if hit.indexing_scope in self.config.allowed_scopes
+            and hit.domain == "INCOME_VERIFICATION"
+            and hit.product == "UNSECURED_PERSONAL_LOAN"
             and hit.approval_status in self.config.accepted_approval_statuses
             and hit.effective_date is not None
             and hit.effective_date <= as_of
+            and (hit.expiry_date is None or hit.expiry_date >= as_of)
         ]

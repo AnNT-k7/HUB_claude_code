@@ -1,13 +1,15 @@
 """Public contracts for the Income Verification Expert workflow."""
 
 from .consistency_agent import ConsistencyInputError, run_consistency_agent
-from .document_agent import DocumentAgentConfig, MarkdownDocumentAgent
+from .document_agent import DocumentAgentConfig, MarkdownDocumentAgent, PdfTextDocumentAgent
 from .income_agent import IncomeAgentConfig, IncomeAnalysisAgent
+from .human_review import HumanReviewCommand, HumanReviewError, apply_human_review
 from .orchestrator import (
     CheckpointStore,
     ConcurrentStateError,
     IncomeVerificationOrchestrator,
     InMemoryCheckpointStore,
+    SqlAlchemyCheckpointStore,
     WorkflowConfig,
     WorkflowDependencies,
 )
@@ -31,11 +33,16 @@ from .state import (
     Finding,
     FindingSeverity,
     IncomeAnalysisResult,
+    ExecutionResult,
+    ExecutionStatus,
+    HumanReviewOutcome,
+    HumanReviewRecord,
     PolicyCitation,
     PolicyResult,
     ProposedAction,
     Recommendation,
     SalaryTransaction,
+    VariableIncomeRecord,
     VerificationResultStatus,
     WorkflowState,
 )
@@ -43,6 +50,7 @@ from .state import (
 __all__ = [
     "ActionPermission",
     "ActionType",
+    "apply_human_review",
     "CaseContext",
     "CheckpointStore",
     "ComponentStatus",
@@ -57,10 +65,17 @@ __all__ = [
     "Finding",
     "FindingSeverity",
     "IncomeAnalysisResult",
+    "ExecutionResult",
+    "ExecutionStatus",
     "IncomeAnalysisAgent",
     "IncomeAgentConfig",
+    "HumanReviewCommand",
+    "HumanReviewError",
+    "HumanReviewOutcome",
+    "HumanReviewRecord",
     "IncomeVerificationOrchestrator",
     "InMemoryCheckpointStore",
+    "SqlAlchemyCheckpointStore",
     "PolicyCitation",
     "PolicyAgent",
     "PolicyAgentConfig",
@@ -70,11 +85,13 @@ __all__ = [
     "Recommendation",
     "RecommendationInputError",
     "SalaryTransaction",
+    "VariableIncomeRecord",
     "VerificationResultStatus",
     "WorkflowConfig",
     "WorkflowDependencies",
     "WorkflowState",
     "MarkdownDocumentAgent",
+    "PdfTextDocumentAgent",
     "NamespacePolicyRetriever",
     "build_recommendation",
     "run_consistency_agent",

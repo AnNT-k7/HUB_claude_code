@@ -41,6 +41,17 @@ def _normalize_text(value: str | None) -> str:
     return re.sub(r"[^a-z0-9]+", " ", ascii_value.lower()).strip()
 
 
+def _organization_matches(left: str, right: str) -> bool:
+    stop_words = {"cong", "ty", "cty", "tnhh", "co", "ltd"}
+    left_tokens = set(_normalize_text(left).split()) - stop_words
+    right_tokens = set(_normalize_text(right).split()) - stop_words
+    if not left_tokens or not right_tokens:
+        return False
+    if left_tokens <= right_tokens or right_tokens <= left_tokens:
+        return True
+    return len(left_tokens & right_tokens) / min(len(left_tokens), len(right_tokens)) >= 0.6
+
+
 def _difference_ratio(left: Decimal, right: Decimal) -> Decimal:
     denominator = max(abs(left), abs(right))
     return Decimal("0") if denominator == 0 else abs(left - right) / denominator
@@ -127,14 +138,13 @@ def evaluate_consistency(
             source_values={"currencies": ",".join(sorted(currencies))},
         )
 
-    normalized_employer = _normalize_text(extracted.employer)
     recognized_sources = {
-        _normalize_text(transaction.source)
+        transaction.source
         for transaction in extracted.salary_transactions
         if transaction.evidence_id in income.recognized_evidence_ids
     }
-    if normalized_employer and recognized_sources and not any(
-        normalized_employer in source or source in normalized_employer
+    if extracted.employer and recognized_sources and not any(
+        _organization_matches(extracted.employer, source)
         for source in recognized_sources
     ):
         add(
@@ -145,6 +155,25 @@ def evaluate_consistency(
             source_values={
                 "employer": extracted.employer,
                 "recognized_sources": ",".join(sorted(recognized_sources)),
+            },
+        )
+
+    for anomaly in income.anomalies:
+        add(
+            "INCOME_PERIOD_ANOMALY",
+            FindingSeverity.WARNING,
+            "A salary period differs from the deterministic reference and requires review.",
+            discriminator=anomaly.month or anomaly.code,
+            evidence_ids=anomaly.evidence_ids,
+            source_values={
+                "month": anomaly.month,
+                "amount": str(anomaly.amount) if anomaly.amount is not None else None,
+                "deviation_ratio": (
+                    str(anomaly.deviation_ratio)
+                    if anomaly.deviation_ratio is not None
+                    else None
+                ),
+                "anomaly_code": anomaly.code,
             },
         )
 
@@ -188,6 +217,9 @@ def evaluate_consistency(
     if valid_evidence_ids is not None:
         referenced_evidence_ids = set(income.recognized_evidence_ids).union(
             transaction.evidence_id for transaction in extracted.salary_transactions
+        )
+        referenced_evidence_ids.update(
+            record.evidence_id for record in extracted.variable_income_records
         )
         unresolved_evidence_ids = sorted(referenced_evidence_ids - valid_evidence_ids)
         if unresolved_evidence_ids:

@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Protocol, TypedDict, TypeVar
 
 from langgraph.graph import END, START, StateGraph
+from sqlalchemy import select
 
 from app.tools.consistency_rules import ConsistencyRuleConfig
 from app.tools.routing_rules import ConsistencyRoute, select_consistency_route
@@ -25,6 +26,7 @@ from .state import (
     WorkflowError,
     WorkflowState,
 )
+from app.db.models import VerificationCheckpoint
 
 
 FetchDocuments = Callable[[CaseContext], Awaitable[list[DocumentRecord]]]
@@ -90,6 +92,53 @@ class InMemoryCheckpointStore:
                     f"Case {context.case_id} checkpoint version changed"
                 )
             self._states[context.case_id] = context.model_copy(deep=True)
+
+
+class SqlAlchemyCheckpointStore:
+    """Optimistic-locking checkpoint store for PostgreSQL-backed deployments."""
+
+    def __init__(self, session_factory: Callable[[], object]) -> None:
+        self.session_factory = session_factory
+
+    async def load(self, case_id: str) -> CaseContext | None:
+        return await asyncio.to_thread(self._load_sync, case_id)
+
+    async def save(self, context: CaseContext, *, expected_version: int) -> None:
+        await asyncio.to_thread(self._save_sync, context, expected_version)
+
+    def _load_sync(self, case_id: str) -> CaseContext | None:
+        with self.session_factory() as session:
+            row = session.execute(
+                select(VerificationCheckpoint).where(
+                    VerificationCheckpoint.case_id == case_id
+                )
+            ).scalar_one_or_none()
+            return CaseContext.model_validate(row.context_payload) if row else None
+
+    def _save_sync(self, context: CaseContext, expected_version: int) -> None:
+        with self.session_factory() as session:
+            row = session.get(VerificationCheckpoint, context.case_id)
+            current_version = row.state_version if row is not None else 0
+            if current_version != expected_version:
+                raise ConcurrentStateError(
+                    f"Case {context.case_id} checkpoint version changed"
+                )
+            payload = context.model_dump(mode="json")
+            if row is None:
+                row = VerificationCheckpoint(
+                    case_id=context.case_id,
+                    application_id=context.application_id,
+                    state_version=context.state_version,
+                    workflow_state=context.workflow_state.value,
+                    context_payload=payload,
+                )
+                session.add(row)
+            else:
+                row.application_id = context.application_id
+                row.state_version = context.state_version
+                row.workflow_state = context.workflow_state.value
+                row.context_payload = payload
+            session.commit()
 
 
 class _GraphState(TypedDict):

@@ -18,6 +18,7 @@ from .state import (
     EvidenceCitation,
     ExtractedFields,
     SalaryTransaction,
+    VariableIncomeRecord,
 )
 
 
@@ -29,6 +30,11 @@ _DOCUMENT_PATTERN = re.compile(
 _TRANSACTION_PATTERN = re.compile(
     r"^\| `(?P<evidence_id>[^`]+)` \| (?P<date>\d{2}/\d{2}/\d{4}) "
     r"\| (?P<description>[^|]+?) \| (?P<source>[^|]+?) \| (?P<amount>[\d.]+) \|$",
+    re.MULTILINE,
+)
+_PAYSLIP_PATTERN = re.compile(
+    r"^\| (?P<month>\d{4}-\d{2}) \| (?P<base>[\d.]+) \| "
+    r"(?P<variable>[\d.]+) \| (?P<deduction>[\d.]+) \| (?P<net>[\d.]+) \|$",
     re.MULTILINE,
 )
 
@@ -84,6 +90,8 @@ class MarkdownDocumentAgent:
     def _read_source(self) -> str:
         if not self.source_path.is_file():
             raise DocumentExtractionError("The configured case document is unavailable.")
+        if self.source_path.suffix.lower() not in {".md", ".txt"}:
+            raise DocumentExtractionError("UNSUPPORTED_TEXT_FIXTURE_FORMAT")
         return self.source_path.read_text(encoding="utf-8")
 
     async def fetch_documents(self, context: CaseContext) -> list[DocumentRecord]:
@@ -182,6 +190,7 @@ class MarkdownDocumentAgent:
         checksum = _source_checksum(content)
         application = records["LOAN_APPLICATION"]
         contract = records["EMPLOYMENT_CONTRACT"]
+        payslip = records["PAYSLIP_BUNDLE"]
         statement = records["BANK_STATEMENT"]
         evidence = [
             EvidenceCitation(
@@ -268,6 +277,38 @@ class MarkdownDocumentAgent:
         if not transactions:
             raise DocumentExtractionError("BANK_TRANSACTIONS_NOT_EXTRACTED")
 
+        variable_income_records: list[VariableIncomeRecord] = []
+        for match in _PAYSLIP_PATTERN.finditer(customer_content):
+            month = match.group("month")
+            amount = _parse_vnd(match.group("variable"))
+            if amount is None:
+                continue
+            evidence_id = f"payslip_{month.replace('-', '_')}_variable"
+            evidence.append(
+                EvidenceCitation(
+                    evidence_id=evidence_id,
+                    document_id=payslip.document_id,
+                    document_name=payslip.document_name,
+                    page_number=3,
+                    quote=(
+                        f"{month} | base={match.group('base')} | "
+                        f"variable={match.group('variable')} | net={match.group('net')}"
+                    ),
+                    source_checksum=checksum,
+                    location=f"payroll-row:{month}",
+                )
+            )
+            variable_income_records.append(
+                VariableIncomeRecord(
+                    month=month,
+                    amount=amount,
+                    currency=currency,
+                    evidence_id=evidence_id,
+                )
+            )
+        if not variable_income_records:
+            raise DocumentExtractionError("PAYSLIP_COMPONENTS_NOT_EXTRACTED")
+
         optional_missing = sorted(set(self.config.optional_document_types) - set(records))
         return DocumentExtractionResult(
             status=ComponentStatus.SUCCESS,
@@ -279,6 +320,7 @@ class MarkdownDocumentAgent:
                 employer=employer,
                 contract_expiry=contract_expiry,
                 salary_transactions=transactions,
+                variable_income_records=variable_income_records,
                 missing_documents=optional_missing,
                 extraction_confidence=0.98,
             ),
@@ -297,3 +339,30 @@ class MarkdownDocumentAgent:
             )
             for match in _DOCUMENT_PATTERN.finditer(content)
         ]
+
+
+class PdfTextDocumentAgent(MarkdownDocumentAgent):
+    """Text-PDF adapter for digitally generated dossiers.
+
+    Scanned PDFs deliberately return ``UNREADABLE`` until an approved OCR adapter
+    supplies text and page coordinates; this prevents silently inventing facts.
+    """
+
+    def _read_source(self) -> str:
+        if not self.source_path.is_file() or self.source_path.suffix.lower() != ".pdf":
+            raise DocumentExtractionError("PDF_SOURCE_REQUIRED")
+        try:
+            import fitz
+
+            with fitz.open(self.source_path) as document:
+                pages = []
+                for page_number, page in enumerate(document, 1):
+                    text = page.get_text("text").strip()
+                    if not text:
+                        raise DocumentExtractionError("OCR_REQUIRED_FOR_SCANNED_PAGE")
+                    pages.append(f"<!-- Trang {page_number} -->\n{text}")
+                return "\n\n".join(pages)
+        except DocumentExtractionError:
+            raise
+        except Exception as exc:
+            raise DocumentExtractionError("PDF_TEXT_EXTRACTION_FAILED") from exc

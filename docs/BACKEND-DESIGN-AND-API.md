@@ -1,5 +1,10 @@
 # Backend API Contracts & Data Models
 
+> Canonical MVP contract: `backend/app/agents/income_verification/state.py` and
+> `docs/BACKEND-MVP-STATUS.md`. The historical TypeScript examples below are kept
+> only as a UI mapping reference; API routes and review outcomes follow the typed
+> Python contract.
+
 Tài liệu này định nghĩa rõ ràng cấu trúc dữ liệu và API Contracts từ Backend để Frontend (hoặc hệ thống tạo code Frontend) có thể sử dụng làm nguồn chân lý (source of truth) để sinh giao diện cho **Income Verification Expert**.
 
 ---
@@ -11,20 +16,25 @@ Frontend cần định nghĩa các interface sau để đồng bộ với cấu 
 ### 1.1. Core Enums
 ```typescript
 export enum WorkflowState {
-  INIT = "INIT",
+  OPEN_CASE = "OPEN_CASE",
   FETCHING_DOCUMENTS = "FETCHING_DOCUMENTS",
-  EXTRACTING_DATA = "EXTRACTING_DATA",
+  EXTRACTING_DOCUMENT_DATA = "EXTRACTING_DOCUMENT_DATA",
   ANALYZING_INCOME_AND_POLICY = "ANALYZING_INCOME_AND_POLICY",
-  CHECKING_CONSISTENCY = "CHECKING_CONSISTENCY",
-  PENDING_HUMAN_REVIEW = "PENDING_HUMAN_REVIEW",
-  EXECUTING_ACTIONS = "EXECUTING_ACTIONS",
-  COMPLETED = "COMPLETED"
+  CROSS_CHECKING = "CROSS_CHECKING",
+  BUILDING_RECOMMENDATION = "BUILDING_RECOMMENDATION",
+  HUMAN_REVIEW = "HUMAN_REVIEW",
+  EXECUTING_APPROVED_ACTIONS = "EXECUTING_APPROVED_ACTIONS",
+  VERIFYING_EXECUTION = "VERIFYING_EXECUTION",
+  COMPLETED = "COMPLETED",
+  AWAITING_DOCUMENTS = "AWAITING_DOCUMENTS",
+  MANUAL_REVIEW_REQUIRED = "MANUAL_REVIEW_REQUIRED",
+  TECHNICAL_ERROR = "TECHNICAL_ERROR"
 }
 
 export enum HumanReviewOutcome {
-  APPROVED = "APPROVED",
-  REJECTED = "REJECTED",
-  REVISION_REQUESTED = "REVISION_REQUESTED"
+  ACCEPT_ACTIONS = "ACCEPT_ACTIONS",
+  EDIT_AND_RERUN = "EDIT_AND_RERUN",
+  MANUAL_HANDLING = "MANUAL_HANDLING"
 }
 
 export enum FindingSeverity {
@@ -173,7 +183,7 @@ Mọi request từ Frontend đều cần gắn header Authorization. Backend tr�
 - **Request Payload Schema:**
 ```typescript
 interface ReviewRequest {
-  outcome: HumanReviewOutcome; // APPROVED, REJECTED, REVISION_REQUESTED
+  outcome: HumanReviewOutcome; // ACCEPT_ACTIONS, EDIT_AND_RERUN, MANUAL_HANDLING
   reason: string; // Ghi chú của chuyên viên
   approved_action_ids: string[]; // Danh sách ID các action mà user chọn cho phép thực thi
   edited_qualified_income?: number; // (Tùy chọn) Ghi đè nếu kết quả tính của AI chưa đúng
@@ -182,7 +192,7 @@ interface ReviewRequest {
 - **Ví dụ Request:**
 ```json
 {
-  "outcome": "APPROVED",
+  "outcome": "ACCEPT_ACTIONS",
   "reason": "Đã kiểm tra bất thường, đồng ý gửi yêu cầu bổ sung",
   "approved_action_ids": ["act1"]
 }
@@ -191,7 +201,7 @@ interface ReviewRequest {
 ```json
 {
   "message": "Review submitted successfully",
-  "next_state": "EXECUTING_ACTIONS"
+  "next_state": "COMPLETED"
 }
 ```
 
