@@ -2,6 +2,7 @@ import logging
 from typing import List, Set
 from .audit import log_event
 from .integrations import los, notification, workflow
+from .document_generator import document_generator
 
 # To avoid circular imports, we will import MOCK_DB locally inside the function 
 # since it's a global in the api module for this mock phase.
@@ -47,6 +48,11 @@ def execute_approved_actions(case_id: str, approved_action_ids: List[str]):
                 elif action.action_type == "CREATE_EXCEPTION_TASK":
                     reason = action.parameters.get("reason", "Manual review required")
                     workflow.create_exception_task(case.application_id, reason)
+                    
+                elif action.action_type == "GENERATE_DOCUMENT":
+                    template_name = action.parameters.get("template_name", "income_verification_report.md")
+                    output_path = document_generator.generate(case, template_name)
+                    logger.info(f"Generated document saved at {output_path}")
                     
                 else:
                     logger.warning(f"Unknown action type: {action.action_type}")

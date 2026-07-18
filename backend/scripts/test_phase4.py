@@ -40,7 +40,14 @@ async def run_test():
         parameters={"missing_documents": ["Pay stub May 2026"]},
         requires_approval=True
     )
-    case.proposed_actions = [action, action2]
+    action3 = ProposedAction(
+        action_id="ACT-003",
+        action_type="GENERATE_DOCUMENT",
+        description="Generate official verification report",
+        parameters={"template_name": "income_verification_report.md"},
+        requires_approval=True
+    )
+    case.proposed_actions = [action, action2, action3]
     
     # 2. Get Case
     print("2. Fetching Case Context")
@@ -53,7 +60,7 @@ async def run_test():
     review_req = ReviewRequest(
         outcome=HumanReviewOutcome.APPROVED,
         reason="Looks good.",
-        approved_action_ids=["ACT-001", "ACT-002"],
+        approved_action_ids=["ACT-001", "ACT-002", "ACT-003"],
         edited_qualified_income=23500000
     )
     review_resp = await submit_review(case_id, review_req)
