@@ -1,166 +1,245 @@
-# Digital Expert Agents Workflow
+# Workflow — Income Verification Expert
 
-This document is the operational source of truth for the MVP workflow. It covers both the application runtime and the development workflow used by Codex/team members.
+Tài liệu này là nguồn vận hành cho MVP xác minh thu nhập. Actor duy nhất là **chuyên viên thẩm định tín chấp**; task duy nhất là **kiểm tra và xác minh thu nhập từ bộ hồ sơ vay**.
 
-## 1. Runtime workflow
+Agents phân tích và đề xuất. Chuyên viên xử lý phán đoán nghiệp vụ và xác nhận action chính thức. Action Executor là service duy nhất được gọi mutation API qua mock adapters.
+
+---
+
+## 1. Luồng tổng thể
 
 ```mermaid
 flowchart TD
-    A[Banking Officer creates case] --> B[Upload documents]
-    B --> C[Store case and documents]
-    C --> D[Orchestrator plans tasks]
-    D --> E[Initialize Shared Board]
+    A[Chuyên viên chọn hồ sơ]
+    B[Orchestrator mở workflow]
+    C[Lấy tài liệu từ Mock DMS/LOS]
+    D[Document Agent trích xuất facts + evidence]
+    I[Income Agent + deterministic tools]
+    P[Policy Agent + scoped RAG]
+    X[Consistency Agent đối chiếu]
+    R[Recommendation Builder]
+    H{Human Review Gate}
+    E[Action Executor]
+    V[Xác minh execution result]
+    Z[Hoàn tất tác vụ]
+    M[Awaiting documents / Manual review]
 
-    E --> F1[Customer Relationship]
-    E --> F2[Credit]
-    E --> F3[Risk Management]
-    E --> F4[Legal & Compliance]
-    E --> F5[Collateral Appraisal]
-
-    F1 --> G[Reviewer quality gate]
-    F2 --> G
-    F3 --> G
-    F4 --> G
-    F5 --> G
-    G -->|Errors or contradictions| H[Targeted re-analysis]
-    H --> G
-    G -->|Consensus or max rounds| I[Orchestrator synthesis]
-    I --> J[Human verification console]
-    J -->|Missing data| K[Request revision / await documents]
-    K --> B
-    J -->|Reject| L[Close as rejected]
-    J -->|Approve| M[Operations prechecks]
-    M --> N[Mock SHB APIs + draft outputs]
-    N --> O[Audit and complete]
+    A --> B --> C --> D
+    D --> I
+    D --> P
+    I --> X
+    P --> X
+    X --> R --> H
+    H -->|Accept actions| E
+    H -->|Edit / re-run| R
+    H -->|Reject AI result| M
+    E --> V --> Z
+    C -->|Missing| M
+    D -->|Unreadable| M
+    I -->|Invalid periods/currency| M
+    P -->|Not found/conflict| M
+    M -->|Supplement/correct| C
 ```
 
-### 1.1 Case intake
+Income Agent và Policy Agent chạy song song khi Document Agent đã cung cấp đủ input. Không dùng flow tuần tự Income → Policy.
 
-1. The officer creates a `Case` with company name, requested amount, currency, and initial status `INGESTED`.
-2. Documents are uploaded through the API and stored in MinIO under a case-isolated path.
-3. Each document is linked to the case in `documents` and receives an audit event.
-4. Reject unsupported, empty, or unreadable files early. Do not start analysis with an incomplete document set without recording the gap.
+## 2. Trách nhiệm
 
-### 1.2 Evidence preparation and RAG
-
-1. Extract text and structured facts from case documents while retaining `case_id`, filename, page, and section metadata.
-2. Keep customer evidence isolated from the global policy index. Policy embeddings contain internal guidance, not customer PII.
-3. Index policy documents using the five approved chunk types: `POLICY_RULE`, `CASE_EVIDENCE`, `STRUCTURED_FACT`, `LEGAL_CLAUSE`, and `PROCESS_STEP`.
-4. Every specialist query must filter at least by department and `chunk_type`. Case evidence queries must also be scoped to `case_id`.
-5. Inject retrieved evidence into the specialist prompt and require exact citations: document name, page number, section ID, and quote.
-
-### 1.3 Tier 1 planning
-
-The Banking Orchestrator reads the case and available evidence, then creates a typed `task_breakdown` on the Shared Board. The plan must identify:
-
-- required specialist tasks;
-- required input documents and structured facts;
-- dependencies and parallelizable tasks;
-- missing-data conditions and the re-plan path;
-- the expected output schema for each task.
-
-The Orchestrator must not produce a credit decision at this stage.
-
-### 1.4 Tier 2 specialist execution
-
-The five business workstreams run in parallel where their inputs allow it:
-
-| Workstream | Primary output | Deterministic requirement |
+| Thành phần | Trách nhiệm | Không được làm |
 | --- | --- | --- |
-| Customer Relationship | Borrower profile, requested terms, business context | Preserve source evidence; do not infer facts |
-| Credit | DSCR, Current Ratio, D/E, cash-flow viability | Calculate from structured facts in tested code |
-| Risk Management | Risk tier, industry analysis, concentration check | Compare against cited policy limits |
-| Legal & Compliance | Governance/title findings, KYC/AML/sanctions | Use evidence and deterministic/mock checks |
-| Collateral Appraisal | Asset breakdown, eligible value, LTV | Apply documented valuation/haircut rules |
+| Orchestrator | State, dispatch, checkpoint, retry, routing, schema validation | Tính thu nhập, diễn giải policy, mutation API |
+| Document Agent | Trích xuất structured facts và evidence | Kết luận thu nhập đủ điều kiện |
+| Income Agent | Phân loại giao dịch và gọi calculation tools | Tự làm số học bằng LLM |
+| Policy Agent | Query policy đúng scope/effective date và tạo citation | Tự tạo rule/ngưỡng |
+| Consistency Agent | Đối chiếu facts, calculations và policy results | Quyết định tín dụng |
+| Recommendation Builder | Tạo kết quả, findings, evidence và action đề xuất | Phê duyệt/từ chối khoản vay |
+| Human Review Gate | Accept/edit/reject AI result và duyệt action nhạy cảm | Không áp dụng |
+| Action Executor | Permission, precondition, idempotency, execute, verify, audit | LLM reasoning hoặc gọi production API |
 
-Each workstream must:
+## 3. State machine chuẩn
 
-1. Read only the Shared Board state and authorized tools/RAG results.
-2. Return a typed Pydantic assessment with a status, findings, risk flags, and evidence.
-3. Return `REQUIRES_MORE_DATA`/manual review when required evidence is absent or contradictory.
-4. Post its result to `specialist_outputs` and append an audit event.
+```mermaid
+stateDiagram-v2
+    [*] --> OPEN_CASE
+    OPEN_CASE --> FETCHING_DOCUMENTS
+    FETCHING_DOCUMENTS --> EXTRACTING_DOCUMENT_DATA
+    EXTRACTING_DOCUMENT_DATA --> ANALYZING_INCOME_AND_POLICY
+    ANALYZING_INCOME_AND_POLICY --> CROSS_CHECKING
+    CROSS_CHECKING --> BUILDING_RECOMMENDATION
+    BUILDING_RECOMMENDATION --> HUMAN_REVIEW
+    HUMAN_REVIEW --> BUILDING_RECOMMENDATION: Edit / Re-run
+    HUMAN_REVIEW --> EXECUTING_APPROVED_ACTIONS: Accept actions
+    HUMAN_REVIEW --> MANUAL_REVIEW_REQUIRED: Reject AI result
+    EXECUTING_APPROVED_ACTIONS --> VERIFYING_EXECUTION
+    VERIFYING_EXECUTION --> COMPLETED
 
-### 1.5 Reviewer quality gate
-
-The Reviewer inspects the board after specialist outputs arrive. It must check:
-
-- formula inputs and outputs for arithmetic consistency;
-- cross-agent contradictions;
-- policy citation completeness and department scope;
-- case/document isolation;
-- missing-data statuses and unsupported claims;
-- whether every high-impact conclusion is traceable to evidence.
-
-When an issue is found, create a `debate_logs` record with round, critic, target, error, and resolution. Ask only the affected specialist to re-analyze. Stop when consensus is reached or `max_debate_rounds` (default: 3) is reached. A maximum-round exit remains visible to the human reviewer and is not silently treated as consensus.
-
-### 1.6 Synthesis and human verification
-
-The Orchestrator synthesizes the latest board state only after the Reviewer gate. Set the case to `TIER3_PENDING_REVIEW` and present:
-
-- consolidated findings and risk flags;
-- all specialist evidence and citations;
-- calculated ratios and their inputs;
-- debate history and unresolved issues;
-- missing-document requests, if any.
-
-The officer chooses exactly one outcome:
-
-- `APPROVED`: proceed to Tier 3 operations;
-- `REJECTED`: close the assessment without operations execution;
-- `REVISION_REQUESTED`: record feedback and return to document/task re-planning.
-
-No agent may choose this outcome on behalf of the officer.
-
-### 1.7 Tier 3 operations
-
-Operations starts only for an explicit `APPROVED` decision. It must:
-
-1. Verify approval identity, case identity, required documents, and idempotency key.
-2. Run read-only prechecks against Mock SHB APIs.
-3. Generate `Draft_Credit_Agreement.pdf` and `Core_Banking_Onboarding.json` as drafts.
-4. Record complete request/response traces in `audit_logs`, excluding secrets.
-5. Return a structured `OperationsExecutionResult` and mark the case `COMPLETED` only after all required outputs and audit records exist.
-
-Production core-banking endpoints, fund disbursement, and irreversible writes are out of scope.
-
-## 2. State machine
-
-```text
-INGESTED
-  -> TIER1_PLANNING
-  -> TIER2_DEBATING
-  -> TIER3_PENDING_REVIEW
-  -> APPROVED -> COMPLETED
-  -> REJECTED
-  -> REVISION_REQUESTED -> INGESTED or TIER1_PLANNING
-  -> AWAITING_DOCS -> INGESTED
+    FETCHING_DOCUMENTS --> AWAITING_DOCUMENTS: Missing documents
+    AWAITING_DOCUMENTS --> FETCHING_DOCUMENTS: Documents supplied
+    EXTRACTING_DOCUMENT_DATA --> MANUAL_REVIEW_REQUIRED: Unreadable / low confidence
+    ANALYZING_INCOME_AND_POLICY --> MANUAL_REVIEW_REQUIRED: Invalid data / policy not found
+    CROSS_CHECKING --> MANUAL_REVIEW_REQUIRED: Material mismatch
+    MANUAL_REVIEW_REQUIRED --> FETCHING_DOCUMENTS: Corrected / supplemented input
+    MANUAL_REVIEW_REQUIRED --> BUILDING_RECOMMENDATION: Human correction
+    EXECUTING_APPROVED_ACTIONS --> TECHNICAL_ERROR: Tool/API failure
+    TECHNICAL_ERROR --> EXECUTING_APPROVED_ACTIONS: Bounded retry
 ```
 
-Any transition that changes official case state requires an audit event. `AWAITING_DOCS`, `REQUIRES_MORE_DATA`, and manual-review statuses are blocking states, not successful assessments.
+Không có workflow state `APPROVED` hoặc `REJECTED` cho khoản vay. `EXECUTING_APPROVED_ACTIONS` chỉ có nghĩa là action của bước xác minh đã được chuyên viên chấp thuận.
 
-## 3. Development workflow
+## 4. Chi tiết từng bước
 
-1. Read `docs/PRD.md`, `docs/PROJECT-RULES.md`, `docs/ARCHITECTURE.md`, `docs/RAG-ARCHITECTURE.md`, and this file as applicable.
-2. Select `$digital-expert-agents-dev` for cross-cutting work.
-3. Select the narrowest department skill for specialist work:
-   - `$dea-customer-relationship`
-   - `$dea-credit`
-   - `$dea-risk-management`
-   - `$dea-legal-compliance`
-   - `$dea-collateral-appraisal`
-   - `$dea-banking-operations`
-4. Keep changes in the active roadmap phase and the correct layer.
-5. Add deterministic tests for calculations, parsers, filters, state transitions, and mock API outcomes.
-6. Run focused checks and report stubs, assumptions, and blockers.
+### 4.1. Open case
 
-## 4. Definition of done
+1. API kiểm tra identity, role và quyền với `application_id`.
+2. Orchestrator tạo/resume workflow theo idempotency key.
+3. Case Context được khởi tạo với `task_type=INCOME_VERIFICATION` và workflow version.
+4. Audit event `WORKFLOW_OPENED` được ghi.
 
-A workflow change is complete only when:
+### 4.2. Fetch documents
 
-- the affected state transitions and schemas are explicit;
-- missing-data and failure paths are handled;
-- policy conclusions have scoped citations;
-- human approval gates remain intact;
-- audit logging is covered;
-- deterministic tests pass;
-- no secrets or customer PII are added to source, fixtures, logs, or policy embeddings.
+1. DMS adapter lấy danh sách/file theo `case_id`.
+2. Hệ thống kiểm tra loại file, checksum, kích thước, quyền và parse status.
+3. Thiếu tài liệu bắt buộc → `AWAITING_DOCUMENTS` cùng danh sách cụ thể.
+4. Không tự lấy dữ liệu từ CIC, thuế, bảo hiểm hoặc web.
+
+### 4.3. Extract document data
+
+1. Document Agent phân loại tài liệu.
+2. Mỗi fact gắn document/page/row hoặc bounding box và `evidence_id`.
+3. Unreadable hoặc confidence dưới rule được duyệt → `MANUAL_REVIEW_REQUIRED`.
+4. Agent không suy đoán fact bị thiếu.
+
+### 4.4. Analyze income and policy
+
+Hai branch chạy song song:
+
+- Income branch validate facts rồi gọi deterministic tools để tính average, variation và deviation;
+- Policy branch query RAG với domain/product/chunk type/effective date bắt buộc.
+
+Period/currency mismatch, policy not found hoặc policy conflict tạo status rõ ràng và chuyển người; không dùng retry LLM để tạo dữ liệu thay thế.
+
+### 4.5. Cross-check
+
+Consistency Agent kiểm tra:
+
+- declared income với salary transactions;
+- employer với transaction source;
+- contract salary với amount thực nhận;
+- period/currency/danh tính giữa các nguồn;
+- required documents và policy requirements;
+- calculation trace và citation completeness.
+
+Mỗi finding có code, severity, values, rule version và evidence IDs.
+
+### 4.6. Build recommendation
+
+Recommendation Builder tạo:
+
+- verification result draft;
+- declared/average/eligible income;
+- findings và missing documents;
+- evidence và policy citations;
+- proposed actions và permission class;
+- unresolved issues.
+
+Builder không tạo loan decision.
+
+### 4.7. Human review
+
+Chuyên viên chọn một outcome:
+
+- `ACCEPT_ACTIONS`: chấp thuận kết quả/action của bước xác minh;
+- `EDIT_AND_RERUN`: sửa fact/action có lý do và chạy lại bước bị ảnh hưởng;
+- `MANUAL_HANDLING`: không chấp nhận kết quả AI và tiếp tục xử lý thủ công.
+
+Review record phải có reviewer identity, timestamp, outcome, edits và reason. Không tự dùng record làm training data.
+
+### 4.8. Execute and verify
+
+Action Executor:
+
+1. validate typed action;
+2. kiểm tra quyền và human approval nếu action yêu cầu;
+3. kiểm tra state precondition;
+4. kiểm tra idempotency;
+5. gọi đúng mock adapter;
+6. read-back/verify kết quả;
+7. ghi audit;
+8. trả structured execution result.
+
+Chỉ mark `COMPLETED` khi các action bắt buộc đã có kết quả xác định và audit đầy đủ.
+
+## 5. Routing rules
+
+Routing do deterministic rule engine quyết định, không do LLM tự chọn. Chuyển manual review khi:
+
+- tài liệu unreadable hoặc extraction quality dưới ngưỡng;
+- thiếu tài liệu/kỳ dữ liệu bắt buộc;
+- identity, employer, period hoặc currency không khớp;
+- chênh lệch vượt ngưỡng nghiệp vụ có version;
+- policy not found, expired hoặc conflict;
+- calculation/schema/tool failure sau bounded retry;
+- action yêu cầu phán đoán hoặc official/outbound write.
+
+Ngưỡng minh họa không được hard-code trong prompt. Runtime phải ghi rule version đã áp dụng.
+
+## 6. Action permissions
+
+### Auto-reversible
+
+- đọc tài liệu theo quyền;
+- tạo draft phiếu xác minh;
+- đính kèm evidence vào draft;
+- tạo task/nhãn nội bộ có thể đảo ngược;
+- chuyển vào review queue nội bộ.
+
+### Human-required
+
+- gửi yêu cầu bổ sung ra ngoài;
+- ghi nhận thu nhập chính thức;
+- ghi chú chính thức vào LOS;
+- đóng bước xác minh;
+- chuyển sang công đoạn tiếp theo.
+
+### Prohibited
+
+- phê duyệt/từ chối khoản vay;
+- thay đổi hạn mức hoặc bỏ qua policy;
+- sửa/xóa tài liệu nguồn;
+- production mutation trong MVP.
+
+## 7. Retry và idempotency
+
+- chỉ retry transient technical errors;
+- mỗi node có timeout, `max_attempts` và backoff;
+- missing evidence/policy là business exception, không retry;
+- checkpoint sau state transition quan trọng;
+- external action có idempotency key;
+- ambiguous response phải verify trước khi retry;
+- max retry dẫn tới `TECHNICAL_ERROR`/manual review, không phải success.
+
+## 8. Audit requirements
+
+Audit bắt buộc cho:
+
+- workflow open/resume;
+- document fetch/parse;
+- agent/tool execution;
+- calculation và rule version;
+- policy query/citations;
+- Case Context update;
+- human review;
+- action request/result/verification;
+- mọi state transition.
+
+Audit/log chỉ lưu reference và dữ liệu cần thiết, mask PII và không chứa secret hoặc raw document mặc định.
+
+## 9. Definition of done cho workflow change
+
+- state transition và schema bị ảnh hưởng được cập nhật ở cả code và docs;
+- missing data, policy not found, mismatch và technical failure có đường đi rõ ràng;
+- calculations và routing có deterministic tests;
+- policy conclusions có scoped citations;
+- official/outbound actions giữ human gate;
+- idempotency và audit được test;
+- không phụ thuộc vào legacy department pipeline trong target flow.

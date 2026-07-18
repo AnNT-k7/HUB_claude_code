@@ -1,0 +1,43 @@
+# PHIẾU TRÌNH XÁC MINH THU NHẬP
+
+**Kính gửi:** Ban Giám đốc / Trưởng phòng Phê duyệt Tín dụng
+**Ngày lập:** 18/07/2026 20:57:47
+
+## I. THÔNG TIN HỒ SƠ
+- **Mã hồ sơ (Application ID):** APP-999
+- **Tên khách hàng:** Chưa xác định
+- **Nơi công tác:** Chưa xác định
+
+## II. KẾT QUẢ ĐÁNH GIÁ THU NHẬP
+- **Thu nhập khai báo:** 0 VND
+- **Lương theo Hợp đồng:** 0 VND
+- **Thu nhập tính toán đủ điều kiện (Qualified Income):** 23500000.0 VND
+- **Thu nhập bình quân 6 tháng:** 0 VND
+- **Đánh giá mức độ ổn định:** Không ổn định
+
+## III. CÁC ĐIỂM BẤT THƯỜNG / CẢNH BÁO (FINDINGS)
+
+Không có bất thường nào được phát hiện.
+
+
+## IV. TÀI LIỆU CÒN THIẾU
+
+Hồ sơ đầy đủ tài liệu.
+
+
+## V. ĐỀ XUẤT CỦA CHUYÊN VIÊN
+- Các hành động đã thực thi: 
+
+  
+  - Đã thực hiện: Update LOS with qualified income
+  
+
+  
+  - Đã thực hiện: Request missing pay stub
+  
+
+  
+
+
+---------------------------------------------
+*Báo cáo được tạo tự động bởi hệ thống Income Verification Expert.*

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Income Action Executor"
+  short_description: "Control reviewed actions and integrations"
+  default_prompt: "Use $income-action-executor to implement or review human-gated actions, idempotency, and mock integrations."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Income Analysis"
+  short_description: "Build deterministic income calculations"
+  default_prompt: "Use $income-analysis to implement or review transaction classification and deterministic income calculations."

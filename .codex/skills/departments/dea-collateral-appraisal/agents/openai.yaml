@@ -1,4 +1,0 @@
-interface:
-  display_name: "Collateral Appraisal Agent"
-  short_description: "Assess collateral value, ownership, and LTV."
-  default_prompt: "Use -collateral-appraisal to implement or review this department's agent workflow."

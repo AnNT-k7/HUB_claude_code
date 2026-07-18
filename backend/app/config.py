@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     app_name: str = "Digital Expert Agents API"
     api_v1_prefix: str = "/api/v1"
     database_url: str = (
-        "postgresql+psycopg2://postgres:postgres@localhost:5432/"
+        "postgresql+psycopg2://postgres:postgres@localhost:5433/"
         "digital_expert_agents"
     )
     backend_cors_origins: list[str] = Field(
@@ -31,6 +31,19 @@ class Settings(BaseSettings):
     minio_secure: bool = False
 
     openai_api_key: str = ""
+    glm_api_key: str = ""
+    glm_base_url: str = "https://open.bigmodel.cn/api/paas/v4"
+    glm_request_timeout_seconds: float = 60.0
+    fpt_api_key: str = ""
+    fpt_base_url: str = "https://mkp-api.fptcloud.com"
+    fpt_request_timeout_seconds: float = 60.0
+    embedding_provider: str = "fpt"
+    embedding_model: str = "Vietnamese_Embedding"
+    embedding_dimensions: int = 512
+    embedding_device: str = "cpu"
+    embedding_batch_size: int = 16
+    embedding_trust_remote_code: bool = True
+    embedding_cache_dir: str = ".cache/huggingface"
 
 
 @lru_cache
