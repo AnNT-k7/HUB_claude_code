@@ -1,3 +1,22 @@
+---
+dataset_id: REF-INCOME-NOTES-001
+dataset_type: REFERENCE_NOTE
+target_agent: INCOME_ANALYSIS_AGENT
+domain: INCOME_VERIFICATION
+product: UNSECURED_PERSONAL_LOAN
+document_name: SHB and Government Web Source Review Notes for Income Analysis
+document_version: "2026-07-18"
+issuer: PROJECT_RESEARCH_NOTES
+approval_status: PENDING_REVIEW
+effective_date: null
+effective_to: null
+language: vi
+synthetic: false
+production_use: prohibited
+source_kind: PUBLIC_WEB_RESEARCH
+case_scoped: false
+---
+
 # Ghi chú nguồn web SHB và nguồn Chính phủ phục vụ Income Analysis Agent
 
 **Dự án:** MAS hỗ trợ xác minh thu nhập và thẩm định tín dụng tại SHB  

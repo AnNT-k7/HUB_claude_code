@@ -144,7 +144,7 @@ class FPTEmbeddings(Embeddings):
         self,
         api_key: str,
         model_name: str = "Vietnamese_Embedding",
-        dimensions: int = 1024,
+        dimensions: int = 512,
         batch_size: int = 16,
         base_url: str = "https://mkp-api.fptcloud.com",
         timeout_seconds: float = 60.0,
@@ -179,6 +179,7 @@ class FPTEmbeddings(Embeddings):
             response = self._get_client().embeddings.create(
                 model=self.model_name,
                 input=texts,
+                dimensions=self.dimensions,
             )
         except Exception as exc:
             status_code = getattr(exc, "status_code", "unknown")

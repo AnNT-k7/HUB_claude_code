@@ -1,0 +1,123 @@
+{
+  "schema_version": "income-policy-rag-v1",
+  "generated_at": "2026-07-18T14:00:52.153396+00:00",
+  "embedding_dimensions": 512,
+  "allowed_chunk_types": [
+    "POLICY_RULE",
+    "VERIFICATION_PROCEDURE"
+  ],
+  "chunks": [],
+  "quarantine": [
+    {
+      "source_path": "dataset/Policy_agent/07.Điều-khoản-điều-kiện-sử-dụng-thẻ-tín-dụng-doanh-nghiệp-SHB-1903.pdf",
+      "source_checksum": "ae7d1f53a022fb83521248a81a55012babb16708af3b5bb7c2aa45c3b396fe7a",
+      "code": "MISSING_APPROVED_METADATA",
+      "reason": "Policy PDFs/notes need an owner-approved manifest with effective dates, section and approval status before indexing.",
+      "page_count": 23
+    },
+    {
+      "source_path": "dataset/Policy_agent/1.-DKDK-TC-ONLINE.pdf",
+      "source_checksum": "ea50c72ca63794559ed454627b4a2e2c775c69d91c17b8d0c980f73a1b2446d7",
+      "code": "MISSING_APPROVED_METADATA",
+      "reason": "Policy PDFs/notes need an owner-approved manifest with effective dates, section and approval status before indexing.",
+      "page_count": 11
+    },
+    {
+      "source_path": "dataset/Policy_agent/2.-Dieu-khoan-chung-vay-HMTC-cam-co-STK.pdf",
+      "source_checksum": "3b3aca7ac49e23a250f0b2506cb46d1e73eed124c96e287c90d07092d0ef471d",
+      "code": "MISSING_APPROVED_METADATA",
+      "reason": "Policy PDFs/notes need an owner-approved manifest with effective dates, section and approval status before indexing.",
+      "page_count": 11
+    },
+    {
+      "source_path": "dataset/Policy_agent/BAN-DIEU-KIEN-DIEU-KHOAN-MO-VA-SU-DUNG-DICH-VU-TKTT-TAI-SHB-1.pdf",
+      "source_checksum": "a827a169b34614e5126d4ac34426e365caa7ab3f61c2c6084fe0854a8a88a055",
+      "code": "MISSING_APPROVED_METADATA",
+      "reason": "Policy PDFs/notes need an owner-approved manifest with effective dates, section and approval status before indexing.",
+      "page_count": 9
+    },
+    {
+      "source_path": "dataset/Policy_agent/Bản-Điều-khoản-điều-kiện_up-website_1912.pdf",
+      "source_checksum": "e3292269952af26c5dafdd912ff8ded2a266b21a29645f740ece15058c679cc8",
+      "code": "MISSING_APPROVED_METADATA",
+      "reason": "Policy PDFs/notes need an owner-approved manifest with effective dates, section and approval status before indexing.",
+      "page_count": 32
+    },
+    {
+      "source_path": "dataset/Policy_agent/BẢN-ĐIỀU-KIỆN-VÀ-ĐIỀU-KHOẢN-PHÁT-HÀNH-VÀ-SỬ-DỤNG-THẺ-GHI-NỢ-CÁ-NHÂN.pdf",
+      "source_checksum": "e499256c68a98f1e713e62c3f22834e0f332dfe99005d63f72381a2c477e5b19",
+      "code": "MISSING_APPROVED_METADATA",
+      "reason": "Policy PDFs/notes need an owner-approved manifest with effective dates, section and approval status before indexing.",
+      "page_count": 27
+    },
+    {
+      "source_path": "dataset/Policy_agent/Dieu-khoan-chung-CC-vay-mon.pdf",
+      "source_checksum": "892f62551f53e64eb6b19e2c3dbf9c40c5e2f25c5449594797a2fdf1d9c6f692",
+      "code": "MISSING_APPROVED_METADATA",
+      "reason": "Policy PDFs/notes need an owner-approved manifest with effective dates, section and approval status before indexing.",
+      "page_count": 11
+    },
+    {
+      "source_path": "dataset/Policy_agent/Dieu-kien-dieu-khoan-su-dung-the-tin-dung-SHB.pdf",
+      "source_checksum": "69163f22b5bebfcded8196c50415441798d450b7f64df8414f0bd128dd276c06",
+      "code": "MISSING_APPROVED_METADATA",
+      "reason": "Policy PDFs/notes need an owner-approved manifest with effective dates, section and approval status before indexing.",
+      "page_count": 12
+    },
+    {
+      "source_path": "dataset/Policy_agent/Goi-chi-tra-luong-up-web.pdf",
+      "source_checksum": "26aa21a7c1249995fbd891ca040697b41e763dbcd4767347209c25718b0ee3c8",
+      "code": "MISSING_APPROVED_METADATA",
+      "reason": "Policy PDFs/notes need an owner-approved manifest with effective dates, section and approval status before indexing.",
+      "page_count": 6
+    },
+    {
+      "source_path": "dataset/Policy_agent/Phụ-lục_ĐKĐK_BVDLCN-up-1.pdf",
+      "source_checksum": "9d5dfb5c42681b6cd3b030196fc95cd6fec032ec476dbe6d9d9928cfa31d2385",
+      "code": "MISSING_APPROVED_METADATA",
+      "reason": "Policy PDFs/notes need an owner-approved manifest with effective dates, section and approval status before indexing.",
+      "page_count": 13
+    },
+    {
+      "source_path": "dataset/Policy_agent/policy_agent_shb_web_government_sources_notes.md",
+      "source_checksum": "cb9f1acc10a6d310adea7543fe529d1492611c7845ecfc4275165506d7a7ad06",
+      "code": "MISSING_APPROVED_METADATA",
+      "reason": "Policy PDFs/notes need an owner-approved manifest with effective dates, section and approval status before indexing.",
+      "page_count": null
+    },
+    {
+      "source_path": "dataset/Policy_agent/synthetic_income_verification_policy_v1.md",
+      "source_checksum": "1a0d047285dced88a0da9fca229345ee7cdcc15cbee5fbf5c52c0edb66f5ba16",
+      "code": "APPROVAL_STATUS_NOT_APPROVED",
+      "reason": "approval_status=APPROVED_FOR_DEMO is not production-approved.",
+      "page_count": null
+    },
+    {
+      "source_path": "dataset/Income_analysis_agent/Goi-chi-tra-luong-up-web.pdf",
+      "source_checksum": "26aa21a7c1249995fbd891ca040697b41e763dbcd4767347209c25718b0ee3c8",
+      "code": "CASE_EVIDENCE_NOT_GLOBAL_POLICY",
+      "reason": "Income analysis data is case-scoped evidence and must not enter the global policy embedding index.",
+      "page_count": 6
+    },
+    {
+      "source_path": "dataset/Income_analysis_agent/shb_government_web_sources_income_analysis_notes.md",
+      "source_checksum": "442b61f3efdc6a6850aa037086aa279fd0b548b8ae07dc0c267eeb7d1924d396",
+      "code": "CASE_EVIDENCE_NOT_GLOBAL_POLICY",
+      "reason": "Income analysis data is case-scoped evidence and must not enter the global policy embedding index.",
+      "page_count": null
+    },
+    {
+      "source_path": "dataset/Income_analysis_agent/synthetic_income_transactions_case_001.md",
+      "source_checksum": "7ee9217749c6aa185714c471ece05b384f9785d37b6caf04e1f39c8e05c546ac",
+      "code": "CASE_EVIDENCE_NOT_GLOBAL_POLICY",
+      "reason": "Income analysis data is case-scoped evidence and must not enter the global policy embedding index.",
+      "page_count": null
+    }
+  ],
+  "quality_report": {
+    "source_count": 15,
+    "chunk_count": 0,
+    "quarantine_count": 15,
+    "demo_only_chunk_count": 0
+  }
+}

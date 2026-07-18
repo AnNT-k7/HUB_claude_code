@@ -134,7 +134,7 @@ class PolicyEmbedding(Base):
         PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4
     )
     content_chunk: Mapped[str] = mapped_column(Text, nullable=False)
-    embedding: Mapped[list[float]] = mapped_column(Vector(1024), nullable=False)
+    embedding: Mapped[list[float]] = mapped_column(Vector(512), nullable=False)
     metadata_: Mapped[dict[str, object]] = mapped_column(
         "metadata", JSONB, nullable=False
     )

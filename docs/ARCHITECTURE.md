@@ -395,7 +395,7 @@ Quy tắc cập nhật:
 
 - **PostgreSQL:** case metadata, workflow checkpoint, structured facts, analysis, findings, review, action và audit.
 - **MinIO/S3 hoặc Mock DMS:** tài liệu gốc và artifact draft, tách đường dẫn theo `case_id`.
-- **pgvector:** chỉ lưu chính sách nội bộ đã kiểm duyệt; embedding dùng FPT `Vietnamese_Embedding`, 1024 chiều theo cấu hình hiện tại.
+- **pgvector:** chỉ lưu chính sách nội bộ đã kiểm duyệt; embedding dùng FPT `Vietnamese_Embedding`, 512 chiều theo cấu hình hiện tại.
 - **Không đưa customer documents vào global policy index.** Nếu cần tìm kiếm evidence, phải dùng kho case-scoped và filter bắt buộc theo `case_id`.
 
 ### 7.2. Policy RAG

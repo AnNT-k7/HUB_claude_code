@@ -267,7 +267,7 @@ Cấu hình hiện tại:
 ```text
 EMBEDDING_PROVIDER=fpt
 EMBEDDING_MODEL=Vietnamese_Embedding
-EMBEDDING_DIMENSIONS=1024
+EMBEDDING_DIMENSIONS=512
 ```
 
 Không trộn vector được tạo bởi provider/model/dimension khác nhau trong cùng index. `mock` provider chỉ dùng cho automated test, không dùng làm production retrieval data.

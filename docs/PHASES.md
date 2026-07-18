@@ -48,7 +48,7 @@ Các nền tảng có thể tái sử dụng sau migration:
 - FastAPI/Next.js skeleton;
 - PostgreSQL + pgvector;
 - MinIO/object storage service;
-- embedding service FPT `Vietnamese_Embedding` 1024 chiều;
+- embedding service FPT `Vietnamese_Embedding` 512 chiều;
 - base database/session và mock integration framework.
 
 Legacy modules hiện có như `tier2_board`, department specialists, Reviewer, DSCR/LTV calculator và credit contract operations không phải target implementation.

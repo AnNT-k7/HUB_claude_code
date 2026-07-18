@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     fpt_request_timeout_seconds: float = 60.0
     embedding_provider: str = "fpt"
     embedding_model: str = "Vietnamese_Embedding"
-    embedding_dimensions: int = 1024
+    embedding_dimensions: int = 512
     embedding_device: str = "cpu"
     embedding_batch_size: int = 16
     embedding_trust_remote_code: bool = True

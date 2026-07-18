@@ -21,7 +21,7 @@ from typing import Any, Iterable, Sequence
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND_DIR))
 
-EMBEDDING_DIMENSIONS = 1024
+EMBEDDING_DIMENSIONS = 512
 DEFAULT_BATCH_SIZE = 16
 BLOCKING_SOURCE_WARNING_CODES = {"EXTERNAL_INSTITUTION_REFERENCE"}
 
