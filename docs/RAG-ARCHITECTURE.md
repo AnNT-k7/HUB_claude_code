@@ -119,8 +119,8 @@ Toàn bộ quy trình RAG được chia làm 3 giai đoạn chính:
 
 | Giai đoạn | File / Folder chịu trách nhiệm | Mô tả Logic & Chức năng |
 | :--- | :--- | :--- |
-| **1. INDEX** | `backend/app/services/rag.py` <br> `backend/app/db/models.py` | • Phân loại văn bản vào đúng 1 trong 5 `chunk_type` chuẩn (`POLICY_RULE`, `CASE_EVIDENCE`, `STRUCTURED_FACT`, `LEGAL_CLAUSE`, `PROCESS_STEP`).<br>• Cắt đoạn theo token size chuẩn của từng loại.<br>• Chuyển đổi thành vector 1536 chiều và lưu vào `policy_embeddings` kèm JSONB `metadata_`. |
-| **2. QUERY** | `backend/app/services/rag.py` <br> *(Được gọi bởi các Specialist Agents)* | • Nhận `query`, `department` và tùy chọn `chunk_type` từ Specialist Agent.<br>• Chuyển `query` thành vector và chạy tìm kiếm **Cosine Similarity (`<=>`)**.<br>• **Khóa cứng bộ lọc:** `WHERE metadata_->>'department' = :dept AND metadata_->>'chunk_type' = :c_type`.<br>• Trả về Top $K$ đoạn chính xác nhất. |
+| **1. INDEX** | `backend/app/services/rag.py` <br> `backend/app/db/models.py` | • Phân loại văn bản vào đúng 1 trong 5 `chunk_type` chuẩn (`POLICY_RULE`, `CASE_EVIDENCE`, `STRUCTURED_FACT`, `LEGAL_CLAUSE`, `PROCESS_STEP`).<br>• Cắt đoạn theo token size chuẩn của từng loại.<br>• Chuyển đổi bằng FPT `Vietnamese_Embedding` thành vector 1024 chiều và lưu vào `policy_embeddings` kèm JSONB `metadata` (`metadata_` là tên thuộc tính ORM). |
+| **2. QUERY** | `backend/app/services/rag.py` <br> *(Được gọi bởi các Specialist Agents)* | • Nhận `query`, `department` và tùy chọn `chunk_type` từ Specialist Agent.<br>• Chuyển `query` thành vector và chạy tìm kiếm **Cosine Similarity (`<=>`)**.<br>• **Khóa cứng bộ lọc:** `WHERE metadata->>'department' = :dept AND metadata->>'chunk_type' = :c_type`.<br>• Trả về Top $K$ đoạn chính xác nhất. |
 | **3. RENEW PROMPT** | `backend/app/agents/tier2_board/specialists/*.py` <br> `docs/AI-PROMPT-GUIDE.md` | • Trước khi Agent gửi request cho LLM suy luận, tiêm (inject) các đoạn chính sách vừa tìm được vào `System Prompt`.<br>• Buộc LLM phải đối chiếu số liệu của khách hàng với đoạn chính sách này và trích dẫn `exact citation`. |
 
 ---
@@ -136,8 +136,7 @@ Khi nạp tài liệu chính sách mới, lập trình viên bắt buộc phải
 
 from sqlalchemy.orm import Session
 from app.db.models import PolicyEmbedding
-# Giả sử dùng LangChain hoặc OpenAI client để tạo vector
-# from langchain_openai import OpenAIEmbeddings
+# Local model được khởi tạo tập trung trong app/services/embeddings.py
 
 def index_policy_document(
     db: Session, 
@@ -152,7 +151,7 @@ def index_policy_document(
     
     # 2. Embedding & Save to DB
     for i, chunk in enumerate(chunks):
-        vector = generate_embedding(chunk)  # Trả về list[float] 1536 chiều
+        vector = generate_embedding(chunk)  # Trả về list[float] 1024 chiều
         
         record = PolicyEmbedding(
             content=chunk,
@@ -187,23 +186,24 @@ def search_policies(
     top_k: int = 5
 ) -> List[Dict[str, Any]]:
     query_vector = generate_embedding(query_text)
+    vector_string = f"[{','.join(map(str, query_vector))}]"
     
     # Sử dụng toán tử Cosine Distance <=> của pgvector kết hợp lọc JSONB metadata
     sql = text("""
-        SELECT content, metadata_
+        SELECT content_chunk, metadata
         FROM policy_embeddings
-        WHERE metadata_->>'department' = :dept
-        ORDER BY embedding <=> :q_vec
+        WHERE metadata->>'department' = :dept
+        ORDER BY embedding <=> CAST(:q_vec AS vector)
         LIMIT :k
     """)
     
     results = db.execute(
         sql, 
-        {"dept": department_filter, "q_vec": str(query_vector), "k": top_k}
+        {"dept": department_filter, "q_vec": vector_string, "k": top_k}
     ).fetchall()
     
     return [
-        {"content": row.content, "citation": row.metadata_} 
+        {"content": row.content_chunk, "citation": row.metadata}
         for row in results
     ]
 ```
@@ -261,7 +261,26 @@ def run_credit_agent_analysis(db: Session, case_data: dict) -> dict:
 
 ## 4. Bảng tra cứu từ khóa & Thuật ngữ nhanh cho Lập trình viên
 
-*   **`PolicyEmbedding`:** Bảng ORM trong `db/models.py`, chứa cột `embedding` kiểu `Vector(1536)` của extension `pgvector`.
-*   **`metadata_->>'department'`:** Cột JSONB dùng để phân vùng logic (Logical Partitioning), giúp 6 Specialist Agents không bị nhiễu thông tin (noise/hallucination) của nhau dù dùng chung 1 database.
+*   **`PolicyEmbedding`:** Bảng ORM trong `db/models.py`, chứa cột `embedding` kiểu `Vector(1024)` của extension `pgvector`.
+*   **`metadata->>'department'`:** Cột JSONB vật lý dùng để phân vùng logic (Logical Partitioning). Trong SQLAlchemy, thuộc tính Python tương ứng có tên `metadata_` để tránh xung đột với `Base.metadata`.
 *   **`<=>` (Cosine Distance):** Toán tử tối ưu nhất của `pgvector` để tìm kiếm độ tương đồng giữa câu hỏi và đoạn văn bản chính sách.
 *   **Zero-Hallucination:** Quy tắc bắt buộc mọi kết luận của Agent trên `Shared Board` đều phải có trường `evidence` chứa citation lấy ra từ bước Query RAG.
+
+---
+
+## 5. Chạy embedding cho dữ liệu đã chuẩn hóa
+
+Khởi động PostgreSQL/pgvector và kiểm tra đầu vào trước khi tải/chạy model local:
+
+```bash
+docker compose up -d postgres
+python backend/scripts/embed_processed_chunks.py --dry-run --departments collateral compliance credit
+```
+
+Embedding được cấu hình qua FPT AI Marketplace bằng `EMBEDDING_PROVIDER=fpt`, `EMBEDDING_MODEL=Vietnamese_Embedding`, `EMBEDDING_DIMENSIONS=1024` và `FPT_API_KEY`. Runtime query phải dùng chính model FPT này.
+
+```bash
+python backend/scripts/embed_processed_chunks.py --provider fpt --departments legal operations risk collateral compliance credit customer_relationship
+```
+
+Pipeline chỉ embedding `content_chunk`; citation, payload, checksum và source warning được giữ trong JSONB `metadata`. Index và query bắt buộc dùng cùng model FPT và cùng 1024 chiều. Script nạp theo batch và bỏ qua chunk đã tồn tại theo `content_sha256`, nên có thể chạy lại mà không ghi trùng. Chunk có cảnh báo `EXTERNAL_INSTITUTION_REFERENCE` bị chặn mặc định; chỉ dùng `--allow-external-source` sau khi có phê duyệt rõ ràng của domain owner. `--provider mock` hoặc alias `--mock` chỉ dành cho integration test cục bộ và không được dùng làm dữ liệu tìm kiếm production.

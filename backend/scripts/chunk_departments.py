@@ -1,4 +1,4 @@
-"""Normalize and chunk the collateral, compliance, and credit policy sources.
+"""Normalize and chunk department policy sources.
 
 This is intentionally a deterministic, embedding-free phase.  Markdown/TXT
 files are treated as canonical text when they are present; the original PDF,
@@ -24,6 +24,7 @@ TARGET_DEPARTMENTS = {
     "collateral": "COLLATERAL",
     "compliance": "COMPLIANCE",
     "credit": "CREDIT",
+    "customer_relationship": "CUSTOMER_RELATIONSHIP",
 }
 TEXT_SUFFIXES = {".md", ".txt"}
 SOURCE_SUFFIXES = {".pdf", ".docx", ".doc", ".md", ".txt"}
@@ -376,6 +377,12 @@ def infer_chunk_type(department: str, path: Path, section: dict[str, Any]) -> st
             return "LEGAL_CLAUSE"
         if section["section_id"].startswith(("Phụ lục", "Mẫu số")):
             return "STRUCTURED_FACT"
+        return "POLICY_RULE"
+    if department == "CUSTOMER_RELATIONSHIP":
+        if "biểu-phí" in name or "biểu phí" in name or "bieu-phi" in name:
+            return "STRUCTURED_FACT"
+        if "quy-định" in name or "quy định" in name or "nq-hdqt" in name:
+            return "LEGAL_CLAUSE"
         return "POLICY_RULE"
     # Credit policies and fee schedules are normative rules.  The source is
     # kept as a policy chunk; fee tables are represented as structured facts.
