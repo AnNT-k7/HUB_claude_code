@@ -22,6 +22,14 @@ class MockCreditLedgerResponse(BaseModel):
     delinquent: bool
 
 
+class MockComplianceResponse(BaseModel):
+    customer_id: str
+    kyc_status: str
+    aml_risk_level: str
+    sanctions_check_passed: bool
+    regulatory_inquiry_open: bool
+
+
 class MockOnboardingRequest(BaseModel):
     case_id: UUID
     company_name: str = Field(min_length=1, max_length=255)
@@ -80,6 +88,26 @@ def get_credit_ledger(customer_id: str) -> MockCreditLedgerResponse:
         customer_id=customer_id.strip().upper(),
         total_exposure=Decimal("0.00"),
         delinquent=False,
+    )
+
+
+@router.get(
+    "/compliance/{customer_id}",
+    response_model=MockComplianceResponse,
+)
+def get_compliance(customer_id: str) -> MockComplianceResponse:
+    normalized = customer_id.strip().upper()
+    if not normalized or normalized.startswith("INVALID"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unknown mock customer",
+        )
+    return MockComplianceResponse(
+        customer_id=normalized,
+        kyc_status="VERIFIED",
+        aml_risk_level="HIGH" if normalized.startswith("PEP") else "LOW",
+        sanctions_check_passed=not normalized.startswith("SANCTION"),
+        regulatory_inquiry_open=normalized.startswith("INQUIRY"),
     )
 
 

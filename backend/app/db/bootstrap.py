@@ -21,14 +21,19 @@ from app.db.models import (
     AuditOutcome,
     Case,
     CaseStatus,
+    Document,
+    DocumentStatus,
     PolicyDocument,
     PolicyEmbedding,
 )
 from app.db.session import session_scope
+from app.services.policy_catalog import parse_hhb_policy
+from app.services.rag import AGENT_KNOWLEDGE_KEYS, split_text
 
 
 SEED_NAMESPACE = "https://digital-expert-agents.local/demo"
 DEMO_CASE_ID = uuid5(NAMESPACE_URL, f"{SEED_NAMESPACE}/case/minh-an")
+DEMO_DOCUMENT_ID = uuid5(NAMESPACE_URL, f"{SEED_NAMESPACE}/document/minh-an-dossier")
 
 
 @dataclass(frozen=True)
@@ -53,6 +58,7 @@ class BootstrapResult:
     policy_documents_created: int
     policy_embeddings_created: int
     demo_case_created: bool
+    demo_document_created: bool
 
 
 class BootstrapEmbeddingProvider(Protocol):
@@ -355,6 +361,9 @@ def seed_demo_case(db: Session) -> bool:
         },
         "credit_financial_inputs": {
             "cash_available_for_debt_service": 1_530_000_000,
+            "net_profit_after_tax": 1_000_000_000,
+            "depreciation": 330_000_000,
+            "interest_expense": 200_000_000,
             "principal_due": 800_000_000,
             "interest_due": 200_000_000,
             "current_assets": 24_000_000_000,
@@ -407,6 +416,7 @@ def seed_demo_case(db: Session) -> bool:
         company_name="DEMO - Minh An Manufacturing JSC",
         requested_amount=Decimal("50000000000.00"),
         currency="VND",
+        created_by="demo-officer",
         status=CaseStatus.INGESTED.value,
         workflow_id="corporate_loan_v1",
         workflow_version="1.0",
@@ -442,11 +452,176 @@ def seed_demo_case(db: Session) -> bool:
     return True
 
 
+def seed_demo_case_document(
+    db: Session,
+    *,
+    content: str,
+    object_key: str,
+) -> bool:
+    """Attach the fictional credit package so the seeded case is demo-ready."""
+
+    if db.get(Document, DEMO_DOCUMENT_ID) is not None:
+        return False
+    if db.get(Case, DEMO_CASE_ID) is None:
+        raise ValueError("demo case must exist before its document is seeded")
+    payload = content.encode("utf-8")
+    content_hash = hashlib.sha256(payload).hexdigest()
+    document = Document(
+        id=DEMO_DOCUMENT_ID,
+        case_id=DEMO_CASE_ID,
+        document_type="CORPORATE_CREDIT_DOSSIER",
+        original_filename="minh-an-credit-dossier.txt",
+        object_key=object_key,
+        content_type="text/plain; charset=utf-8",
+        byte_size=len(payload),
+        sha256=content_hash,
+        extracted_text=content,
+        status=DocumentStatus.PARSED.value,
+    )
+    db.add(document)
+    db.add(
+        AuditLog(
+            id=_stable_uuid("audit/demo-document-created"),
+            case_id=DEMO_CASE_ID,
+            correlation_id=_stable_uuid("correlation/demo-bootstrap"),
+            actor_type="SYSTEM",
+            actor_id="database-bootstrap",
+            action="DOCUMENT_UPLOADED",
+            entity_type="document",
+            entity_id=str(DEMO_DOCUMENT_ID),
+            outcome=AuditOutcome.SUCCEEDED.value,
+            payload_trace={
+                "schema_version": 1,
+                "request": {"source": "demo_seed", "sha256": content_hash},
+                "response": {"object_key": object_key, "status": document.status},
+            },
+        )
+    )
+    return True
+
+
+def seed_hhb_policy(
+    db: Session,
+    *,
+    content: str,
+    source_object_key: str,
+    embedding_provider: BootstrapEmbeddingProvider,
+) -> tuple[int, int]:
+    """Seed the supplied HHB regulation into each authorized specialist scope."""
+
+    if embedding_provider.dimension != EMBEDDING_DIMENSIONS:
+        raise ValueError(
+            f"embedding provider dimension must be {EMBEDDING_DIMENSIONS}"
+        )
+    knowledge_bases = {
+        item.agent_key: item
+        for item in db.scalars(select(AgentKnowledgeBase)).all()
+    }
+    documents_created = 0
+    pending: list[
+        tuple[PolicyDocument, AgentKnowledgeBase, int, str, str, int]
+    ] = []
+    for section in parse_hhb_policy(content):
+        for agent_id in section.agent_ids:
+            agent_key = AGENT_KNOWLEDGE_KEYS[agent_id]
+            knowledge_base = knowledge_bases[agent_key]
+            title = f"QĐ-HHB-2026/01 — {section.section_id} {section.title}"
+            section_hash = _sha256(section.content)
+            document = db.scalar(
+                select(PolicyDocument).where(
+                    PolicyDocument.knowledge_base_id == knowledge_base.id,
+                    PolicyDocument.title == title,
+                    PolicyDocument.version == "2026.01",
+                )
+            )
+            if document is None:
+                document = PolicyDocument(
+                    id=_stable_uuid(
+                        f"hhb-policy/{agent_key}/{section.section_id}/2026.01"
+                    ),
+                    knowledge_base_id=knowledge_base.id,
+                    title=title,
+                    version="2026.01",
+                    source_object_key=source_object_key,
+                    sha256=section_hash,
+                    effective_at=datetime(2026, 2, 1, tzinfo=timezone.utc),
+                    active=True,
+                )
+                db.add(document)
+                db.flush()
+                documents_created += 1
+            elif document.sha256 != section_hash:
+                raise ValueError(
+                    f"HHB policy {section.section_id} changed without a new version"
+                )
+
+            for chunk in split_text(section.content, chunk_size=1_800, overlap=180):
+                content_hash = _sha256(chunk.content)
+                existing = db.scalar(
+                    select(PolicyEmbedding.id).where(
+                        PolicyEmbedding.policy_document_id == document.id,
+                        PolicyEmbedding.content_hash == content_hash,
+                    )
+                )
+                if existing is None:
+                    pending.append(
+                        (
+                            document,
+                            knowledge_base,
+                            chunk.index,
+                            chunk.content,
+                            section.section_id,
+                            section.line_number,
+                        )
+                    )
+
+    if not pending:
+        return documents_created, 0
+    vectors = embedding_provider.embed([item[3] for item in pending])
+    if len(vectors) != len(pending):
+        raise ValueError("embedding provider returned an unexpected vector count")
+    for item, vector in zip(pending, vectors, strict=True):
+        document, knowledge_base, chunk_index, chunk, section_id, line_number = item
+        if len(vector) != EMBEDDING_DIMENSIONS:
+            raise ValueError(
+                f"embedding provider must return {EMBEDDING_DIMENSIONS} dimensions"
+            )
+        content_hash = _sha256(chunk)
+        db.add(
+            PolicyEmbedding(
+                id=_stable_uuid(
+                    f"hhb-chunk/{knowledge_base.agent_key}/{section_id}/"
+                    f"{chunk_index}/{content_hash}"
+                ),
+                knowledge_base_id=knowledge_base.id,
+                policy_document_id=document.id,
+                chunk_index=chunk_index,
+                content_chunk=chunk,
+                content_hash=content_hash,
+                embedding=vector,
+                metadata_={
+                    "document_name": "Sổ tay QĐ-HHB-2026/01",
+                    "document_version": "2026.01",
+                    "section_id": section_id,
+                    "page_number": 1,
+                    "source_line_number": line_number,
+                    "agent_scope": knowledge_base.agent_key,
+                    "fictional_demo_policy": True,
+                },
+            )
+        )
+    return documents_created, len(pending)
+
+
 def bootstrap_database(
     db: Session,
     *,
     include_demo_policies: bool = False,
     include_demo_case: bool = False,
+    hhb_policy_content: str | None = None,
+    hhb_source_object_key: str = "policies/hhb/QD-HHB-2026-01.txt",
+    demo_case_document_content: str | None = None,
+    demo_case_document_object_key: str = "cases/demo/minh-an-credit-dossier.txt",
     embedding_provider: BootstrapEmbeddingProvider | None = None,
 ) -> BootstrapResult:
     """Seed post-migration reference data; safe to invoke repeatedly."""
@@ -457,11 +632,32 @@ def bootstrap_database(
         include_demo_policies=include_demo_policies,
     )
     case_created = seed_demo_case(db) if include_demo_case else False
+    demo_document_created = (
+        seed_demo_case_document(
+            db,
+            content=demo_case_document_content,
+            object_key=demo_case_document_object_key,
+        )
+        if include_demo_case and demo_case_document_content is not None
+        else False
+    )
+    if hhb_policy_content is not None:
+        if embedding_provider is None:
+            raise ValueError("HHB policy seeding requires a real embedding provider")
+        hhb_documents, hhb_embeddings = seed_hhb_policy(
+            db,
+            content=hhb_policy_content,
+            source_object_key=hhb_source_object_key,
+            embedding_provider=embedding_provider,
+        )
+        document_count += hhb_documents
+        embedding_count += hhb_embeddings
     return BootstrapResult(
         knowledge_bases_created=kb_count,
         policy_documents_created=document_count,
         policy_embeddings_created=embedding_count,
         demo_case_created=case_created,
+        demo_document_created=demo_document_created,
     )
 
 

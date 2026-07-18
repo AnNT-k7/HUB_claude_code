@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { DebateLogViewer } from "@/features/assessment/components/DebateLogViewer";
+import { LiveAssessmentPanel } from "@/features/assessment/components/LiveAssessmentPanel";
 import { RatioTable } from "@/features/assessment/components/RatioTable";
 import { SharedBoardGrid } from "@/features/assessment/components/SharedBoardGrid";
 import { SynthesisPanel } from "@/features/assessment/components/SynthesisPanel";
 import { useAssessmentMutation } from "@/features/assessment/hooks/useAssessmentMutation";
+import { useAssessmentRuntime } from "@/features/assessment/hooks/useAssessmentRuntime";
 import { useSharedBoardQuery } from "@/features/assessment/hooks/useSharedBoardQuery";
 import { RagCitationModal } from "@/features/approval/components/RagCitationModal";
 import { VerificationPanel } from "@/features/approval/components/VerificationPanel";
@@ -19,6 +21,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { EmptyState } from "@/shared/components/ui/empty-state";
+import { IconChevronLeft } from "@/shared/components/ui/icons";
 import { PageSkeleton, Skeleton } from "@/shared/components/ui/skeleton";
 import type { AgentCitation, CaseStatus } from "@/shared/types/api";
 import {
@@ -33,7 +36,6 @@ const RESTARTABLE_STATUSES: ReadonlySet<CaseStatus> = new Set([
   "INGESTED",
   "AWAITING_DOCS",
   "REVISION_REQUESTED",
-  "FAILED",
 ]);
 
 interface CaseWorkspaceProps {
@@ -49,6 +51,17 @@ export function CaseWorkspace({ caseId }: CaseWorkspaceProps) {
   const caseData = caseQuery.caseData;
   const boardEnabled = caseData !== null && caseData.status !== "INGESTED";
   const boardQuery = useSharedBoardQuery(caseId, boardEnabled);
+  const refreshCase = caseQuery.refresh;
+  const refreshBoard = boardQuery.refresh;
+  const handleRuntimeActivity = useCallback(() => {
+    refreshCase();
+    refreshBoard();
+  }, [refreshBoard, refreshCase]);
+  const runtimeQuery = useAssessmentRuntime(
+    caseId,
+    caseData !== null,
+    handleRuntimeActivity,
+  );
 
   const refreshAll = () => {
     caseQuery.refresh();
@@ -58,6 +71,26 @@ export function CaseWorkspace({ caseId }: CaseWorkspaceProps) {
   const startAssessment = async () => {
     try {
       await assessmentMutation.start(caseId);
+      runtimeQuery.refresh();
+      refreshAll();
+    } catch {
+      // The mutation renders a user-safe error.
+    }
+  };
+
+  const stopAssessment = async () => {
+    try {
+      await assessmentMutation.stop(caseId);
+      runtimeQuery.refresh();
+    } catch {
+      // The mutation renders a user-safe error.
+    }
+  };
+
+  const resumeAssessment = async () => {
+    try {
+      await assessmentMutation.resume(caseId);
+      runtimeQuery.refresh();
       refreshAll();
     } catch {
       // The mutation renders a user-safe error.
@@ -98,6 +131,9 @@ export function CaseWorkspace({ caseId }: CaseWorkspaceProps) {
   }
 
   const canStart = RESTARTABLE_STATUSES.has(caseData.status);
+  const canRecoverLegacyRun =
+    !runtimeQuery.runtime.run &&
+    ["TIER1_PLANNING", "TIER2_DEBATING"].includes(caseData.status);
 
   return (
     <main className="page-container py-7 sm:py-9">
@@ -105,7 +141,8 @@ export function CaseWorkspace({ caseId }: CaseWorkspaceProps) {
         href="/cases"
         className="inline-flex items-center gap-1 rounded-lg text-sm font-semibold text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
       >
-        ← Hồ sơ tín dụng
+        <IconChevronLeft className="h-4 w-4" />
+        Hồ sơ tín dụng
       </Link>
 
       <div className="mt-5 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -141,6 +178,10 @@ export function CaseWorkspace({ caseId }: CaseWorkspaceProps) {
           >
             {caseData.status === "INGESTED" ? "Bắt đầu thẩm định" : "Chạy lại thẩm định"}
           </Button>
+        ) : canRecoverLegacyRun ? (
+          <Button size="lg" isLoading={assessmentMutation.isStarting} onClick={resumeAssessment}>
+            Khôi phục phiên thẩm định
+          </Button>
         ) : null}
       </div>
 
@@ -158,6 +199,19 @@ export function CaseWorkspace({ caseId }: CaseWorkspaceProps) {
 
       <div className="mt-7 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-6">
+          {runtimeQuery.runtime.run ? (
+            <LiveAssessmentPanel
+              runtime={runtimeQuery.runtime}
+              board={boardQuery.board}
+              isLive={runtimeQuery.isLive}
+              isLoading={runtimeQuery.isLoading}
+              onStop={stopAssessment}
+              onResume={resumeAssessment}
+              isStopping={assessmentMutation.isStopping}
+              isResuming={assessmentMutation.isStarting}
+            />
+          ) : null}
+
           {!boardEnabled ? (
             <Card>
               <CardContent className="pt-6">
@@ -206,7 +260,11 @@ export function CaseWorkspace({ caseId }: CaseWorkspaceProps) {
 
           {boardQuery.board ? (
             <>
-              <SharedBoardGrid board={boardQuery.board} onCitationClick={setCitation} />
+              <SharedBoardGrid
+                board={boardQuery.board}
+                onCitationClick={setCitation}
+                currency={caseData.currency}
+              />
               <SynthesisPanel board={boardQuery.board} />
               <div className="grid gap-6 lg:grid-cols-2">
                 <RatioTable board={boardQuery.board} currency={caseData.currency} />
@@ -219,7 +277,6 @@ export function CaseWorkspace({ caseId }: CaseWorkspaceProps) {
               <VerificationPanel
                 caseId={caseId}
                 caseStatus={caseData.status}
-                existingApproval={caseData.approval}
                 consensusReached={boardQuery.board.consensus_reached}
                 onStateChanged={refreshAll}
               />
@@ -243,13 +300,10 @@ export function CaseWorkspace({ caseId }: CaseWorkspaceProps) {
                       </span>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-bold">
-                          {document.filename || `Tài liệu ${document.id.slice(0, 8)}`}
+                          {document.original_filename || `Tài liệu ${document.id.slice(0, 8)}`}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {formatFileSize(document.size_bytes)}
-                          {document.uploaded_at || document.created_at
-                            ? ` · ${formatDateTime(document.uploaded_at ?? document.created_at ?? "")}`
-                            : ""}
+                          {formatFileSize(document.byte_size)} · {formatDateTime(document.created_at)}
                         </p>
                       </div>
                     </li>

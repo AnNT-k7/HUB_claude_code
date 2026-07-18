@@ -277,6 +277,100 @@ class SharedBoardManager:
         )
         return self._save_validated(updated, expected_version)
 
+    def record_debate_response(
+        self,
+        case_id: UUID,
+        *,
+        round_number: int,
+        issue_code: str,
+        target_agent: AgentID,
+        specialist_response: str,
+        expected_version: int,
+    ) -> SharedBoardState:
+        """Record a refinement while leaving resolution to the next Reviewer pass."""
+
+        board = self._load_for_write(case_id, expected_version)
+        matched = False
+        debate_log: list[DebateRecord] = []
+        for record in board.debate_log:
+            is_target = (
+                record.round_number == round_number
+                and record.issue.code == issue_code
+                and record.issue.target_agent == target_agent
+                and record.status == DebateStatus.OPEN
+            )
+            if is_target:
+                matched = True
+                record = record.model_copy(
+                    update={"specialist_response": specialist_response}
+                )
+            debate_log.append(record)
+        if not matched:
+            raise SharedBoardTransitionError("Open debate issue was not found")
+        updated = board.model_copy(
+            update={"debate_log": debate_log, "updated_at": utc_now()},
+            deep=True,
+        )
+        return self._save_validated(updated, expected_version)
+
+    def accept_for_manual_review(
+        self,
+        case_id: UUID,
+        issues: Sequence[DebateRecord],
+        *,
+        expected_version: int,
+    ) -> SharedBoardState:
+        board = self._load_for_write(case_id, expected_version)
+        if board.current_debate_round < board.max_debate_rounds:
+            raise SharedBoardTransitionError(
+                "Cannot accept issues before the configured debate limit"
+            )
+        issue_map = {
+            (record.issue.code, record.issue.target_agent): record
+            for record in issues
+        }
+        debate_log: list[DebateRecord] = []
+        matched: set[tuple[str, AgentID]] = set()
+        for record in board.debate_log:
+            key = (record.issue.code, record.issue.target_agent)
+            if record.status == DebateStatus.OPEN and key in issue_map:
+                matched.add(key)
+                record = record.model_copy(
+                    update={
+                        "status": DebateStatus.ACCEPTED_FOR_MANUAL_REVIEW,
+                        "resolution": (
+                            "Unresolved after the configured debate limit; the human "
+                            "officer must review this issue explicitly."
+                        ),
+                        "resolved_at": utc_now(),
+                    }
+                )
+            debate_log.append(record)
+        for key, record in issue_map.items():
+            if key not in matched:
+                debate_log.append(
+                    record.model_copy(
+                        update={
+                            "status": DebateStatus.ACCEPTED_FOR_MANUAL_REVIEW,
+                            "resolution": (
+                                "Raised at the debate limit and transferred to human "
+                                "review without being treated as resolved."
+                            ),
+                            "resolved_at": utc_now(),
+                        }
+                    )
+                )
+        updated = board.model_copy(
+            update={
+                "debate_log": debate_log,
+                "status": BoardStatus.MAX_ROUNDS_REACHED,
+                "consensus_reached": False,
+                "updated_at": utc_now(),
+            },
+            deep=True,
+        )
+        return self._save_validated(updated, expected_version)
+
     def mark_consensus(
         self,
         case_id: UUID,

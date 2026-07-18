@@ -13,7 +13,11 @@ from app.agents.tier3_operations.operations import (
     OperationsBlockedError,
     OperationsInProgressError,
 )
-from app.api.dependencies import CurrentOfficer, ObjectStorageDependency
+from app.api.dependencies import (
+    CurrentOfficer,
+    ObjectStorageDependency,
+    require_case_access,
+)
 from app.db.models import Approval, AuditOutcome, Case, CaseStatus
 from app.db.session import get_db
 from app.schemas.api import (
@@ -44,6 +48,7 @@ def record_human_decision(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Case not found",
         )
+    require_case_access(case.created_by, officer)
 
     approval = db.scalar(select(Approval).where(Approval.case_id == case_id))
     target_status = CaseStatus(request.decision.value)
@@ -111,6 +116,13 @@ def execute_approved_operations(
     ] = None,
     db: Session = Depends(get_db),
 ) -> OperationExecutionResponse:
+    case = db.get(Case, case_id)
+    if case is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Case not found",
+        )
+    require_case_access(case.created_by, officer)
     try:
         return BankingOperationsAgent(db, storage).execute(
             case_id,

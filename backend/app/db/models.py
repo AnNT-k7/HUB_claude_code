@@ -82,6 +82,15 @@ class OperationStatus(str, Enum):
     FAILED = "FAILED"
 
 
+class AssessmentRunStatus(str, Enum):
+    QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
+    STOP_REQUESTED = "STOP_REQUESTED"
+    PAUSED = "PAUSED"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+
 NAMING_CONVENTION = {
     "ix": "ix_%(column_0_label)s",
     "uq": "uq_%(table_name)s_%(column_0_name)s",
@@ -116,6 +125,7 @@ class Case(Base):
         Numeric(20, 2), nullable=False
     )
     currency: Mapped[str] = mapped_column(String(3), nullable=False)
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[str] = mapped_column(
         String(32), nullable=False, default=CaseStatus.INGESTED.value
     )
@@ -170,6 +180,92 @@ class Document(Base):
     extracted_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
         String(32), nullable=False, default=DocumentStatus.UPLOADED.value
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
+class AssessmentRun(Base):
+    """Durable execution/checkpoint state for a single assessment attempt."""
+
+    __tablename__ = "assessment_runs"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('QUEUED', 'RUNNING', 'STOP_REQUESTED', 'PAUSED', "
+            "'COMPLETED', 'FAILED')",
+            name="valid_status",
+        ),
+        Index("ix_assessment_runs_case_id_created_at", "case_id", "created_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True), primary_key=True, default=uuid4
+    )
+    case_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("cases.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default=AssessmentRunStatus.QUEUED.value
+    )
+    current_stage: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="queued"
+    )
+    checkpoint_stage: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="plan"
+    )
+    stop_requested: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    started_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+class AssessmentEvent(Base):
+    """User-safe operational events for SSE and timeline replay."""
+
+    __tablename__ = "assessment_events"
+    __table_args__ = (
+        Index("ix_assessment_events_case_id_id", "case_id", "id"),
+        Index("ix_assessment_events_run_id_id", "run_id", "id"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    run_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("assessment_runs.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    case_id: Mapped[UUID] = mapped_column(
+        PostgreSQLUUID(as_uuid=True),
+        ForeignKey("cases.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    stage: Mapped[str] = mapped_column(String(64), nullable=False)
+    agent_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    evidence: Mapped[dict[str, object]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()

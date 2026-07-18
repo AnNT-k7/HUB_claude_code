@@ -15,6 +15,7 @@ def test_settings_are_valid_without_an_api_key(monkeypatch: pytest.MonkeyPatch) 
         _env_file=None,
         llm_api_key=None,
         embedding_provider="deterministic_test",
+        environment="test",
     )
 
     assert settings.llm_api_key is None
@@ -33,13 +34,13 @@ def test_corporate_loan_workflow_has_expected_version_and_execution_layers() -> 
     assert workflow.version == "1.0"
     assert [[step.id for step in layer] for layer in workflow.execution_layers()] == [
         ["understand_and_plan"],
+        ["customer_profile"],
         [
             "collateral_appraisal",
             "credit_analysis",
-            "customer_profile",
             "legal_compliance_review",
-            "risk_assessment",
         ],
+        ["risk_assessment"],
         ["reviewer_debate"],
         ["synthesize_assessment"],
         ["human_verification"],
@@ -56,4 +57,3 @@ def test_workflow_version_contract_and_case_version_guard() -> None:
 
     with pytest.raises(WorkflowLoadError, match="version mismatch"):
         get_workflow("corporate_loan_v1", expected_version="2.0")
-

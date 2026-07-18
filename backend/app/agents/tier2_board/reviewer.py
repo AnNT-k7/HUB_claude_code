@@ -207,7 +207,6 @@ class Reviewer:
 
         inputs = assessment.financial_inputs
         required_values = (
-            inputs.cash_available_for_debt_service,
             inputs.principal_due,
             inputs.interest_due,
             inputs.current_assets,
@@ -218,13 +217,30 @@ class Reviewer:
         if any(value is None for value in required_values):
             return []
         cash_available = inputs.cash_available_for_debt_service
+        if cash_available is None and all(
+            value is not None
+            for value in (
+                inputs.net_profit_after_tax,
+                inputs.depreciation,
+                inputs.interest_expense,
+            )
+        ):
+            assert inputs.net_profit_after_tax is not None
+            assert inputs.depreciation is not None
+            assert inputs.interest_expense is not None
+            cash_available = (
+                inputs.net_profit_after_tax
+                + inputs.depreciation
+                + inputs.interest_expense
+            )
+        if cash_available is None:
+            return []
         principal_due = inputs.principal_due
         interest_due = inputs.interest_due
         current_assets = inputs.current_assets
         current_liabilities = inputs.current_liabilities
         total_debt = inputs.total_debt
         total_equity = inputs.total_equity
-        assert cash_available is not None
         assert principal_due is not None
         assert interest_due is not None
         assert current_assets is not None

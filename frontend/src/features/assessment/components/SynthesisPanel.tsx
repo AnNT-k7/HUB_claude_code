@@ -1,6 +1,7 @@
 import { Alert } from "@/shared/components/ui/alert";
 import { Badge } from "@/shared/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { IconAlertTriangle, IconCheckCircle } from "@/shared/components/ui/icons";
 import type { SharedBoard } from "@/shared/types/api";
 
 interface SynthesisPanelProps {
@@ -8,7 +9,7 @@ interface SynthesisPanelProps {
 }
 
 export function SynthesisPanel({ board }: SynthesisPanelProps) {
-  const synthesis = board.final_synthesis;
+  const synthesis = board.final_summary;
 
   if (!synthesis) {
     if (!board.consensus_reached) return null;
@@ -26,32 +27,21 @@ export function SynthesisPanel({ board }: SynthesisPanelProps) {
           <p className="eyebrow">Tier 1 synthesis</p>
           <CardTitle>Đánh giá tổng hợp</CardTitle>
         </div>
-        <Badge
-          tone={
-            synthesis.recommendation === "PROCEED_TO_REVIEW"
-              ? "success"
-              : synthesis.recommendation === "REQUIRES_MORE_DATA"
-                ? "warning"
-                : "info"
-          }
-        >
-          {synthesis.recommendation === "PROCEED_TO_REVIEW"
-            ? "Sẵn sàng kiểm tra"
-            : synthesis.recommendation === "REQUIRES_MORE_DATA"
-              ? "Cần thêm dữ liệu"
-              : "Cần kiểm tra thủ công"}
+        <Badge tone={synthesis.status === "AWAITING_DOCS" ? "warning" : synthesis.overall_risk_level === "LOW" ? "success" : "info"}>
+          {synthesis.status === "AWAITING_DOCS" ? "Cần thêm dữ liệu" : `Rủi ro ${synthesis.overall_risk_level ?? "chưa xác định"}`}
         </Badge>
       </CardHeader>
       <CardContent>
-        <p className="text-sm leading-7 text-foreground">{synthesis.executive_summary}</p>
+        <p className="text-sm leading-7 text-foreground">{synthesis.executive_summary ?? synthesis.message}</p>
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
             <h3 className="text-sm font-bold text-emerald-900">Điểm mạnh</h3>
-            {synthesis.key_strengths.length > 0 ? (
+            {(synthesis.key_strengths?.length ?? 0) > 0 ? (
               <ul className="mt-2 space-y-2 text-sm text-emerald-950">
-                {synthesis.key_strengths.map((item) => (
+                {synthesis.key_strengths?.map((item) => (
                   <li key={item} className="flex gap-2">
-                    <span>✓</span><span>{item}</span>
+                    <IconCheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                    <span>{item}</span>
                   </li>
                 ))}
               </ul>
@@ -61,11 +51,12 @@ export function SynthesisPanel({ board }: SynthesisPanelProps) {
           </div>
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
             <h3 className="text-sm font-bold text-amber-950">Rủi ro trọng yếu</h3>
-            {synthesis.key_risks.length > 0 ? (
+            {(synthesis.key_risks?.length ?? 0) > 0 ? (
               <ul className="mt-2 space-y-2 text-sm text-amber-950">
-                {synthesis.key_risks.map((item) => (
+                {synthesis.key_risks?.map((item) => (
                   <li key={item} className="flex gap-2">
-                    <span>!</span><span>{item}</span>
+                    <IconAlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                    <span>{item}</span>
                   </li>
                 ))}
               </ul>
@@ -74,11 +65,11 @@ export function SynthesisPanel({ board }: SynthesisPanelProps) {
             )}
           </div>
         </div>
-        {synthesis.conditions && synthesis.conditions.length > 0 ? (
+        {synthesis.officer_attention_items && synthesis.officer_attention_items.length > 0 ? (
           <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
             <h3 className="text-sm font-bold text-blue-950">Điều kiện đề xuất</h3>
             <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-blue-950">
-              {synthesis.conditions.map((condition) => (
+              {synthesis.officer_attention_items.map((condition) => (
                 <li key={condition}>{condition}</li>
               ))}
             </ul>

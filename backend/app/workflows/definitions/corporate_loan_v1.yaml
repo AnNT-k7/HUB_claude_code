@@ -27,25 +27,25 @@ steps:
   - id: credit_analysis
     type: specialist
     agent: Credit
-    depends_on: [understand_and_plan]
+    depends_on: [customer_profile]
     description: Calculate DSCR, current ratio, leverage, and cite the applicable credit policies.
 
   - id: risk_assessment
     type: specialist
     agent: RiskManagement
-    depends_on: [understand_and_plan]
+    depends_on: [credit_analysis, legal_compliance_review, collateral_appraisal]
     description: Assess industry and concentration risks and assign a preliminary risk tier.
 
   - id: legal_compliance_review
     type: specialist
     agent: LegalCompliance
-    depends_on: [understand_and_plan]
+    depends_on: [customer_profile]
     description: Perform legal, governance, KYC, AML, sanctions, and litigation checks.
 
   - id: collateral_appraisal
     type: specialist
     agent: CollateralAppraisal
-    depends_on: [understand_and_plan]
+    depends_on: [customer_profile]
     description: Assess eligible collateral and calculate the Loan-to-Value ratio.
 
   - id: reviewer_debate

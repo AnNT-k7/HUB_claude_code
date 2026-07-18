@@ -40,13 +40,13 @@ export function DebateLogViewer({
         ) : (
           <ol className="relative ml-2 space-y-5 border-l border-slate-200">
             {orderedDebates.map((debate) => (
-              <li key={debate.id} className="relative pl-6">
+              <li key={`${debate.round_number}:${debate.issue.code}:${debate.logged_at}`} className="relative pl-6">
                 <span className="absolute -left-[7px] top-1.5 h-3 w-3 rounded-full bg-violet-500 ring-4 ring-violet-50" />
                 <div className="rounded-xl border border-border bg-slate-50/70 p-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone="purple">Vòng {debate.round_number}</Badge>
                     <span className="text-xs font-semibold text-muted-foreground">
-                      {agentLabel(debate.critic_agent)} → {agentLabel(debate.target_agent)}
+                      {agentLabel(debate.critic_agent)} → {agentLabel(debate.issue.target_agent)}
                     </span>
                     <span className="ml-auto text-xs text-muted-foreground">
                       {formatDateTime(debate.logged_at)}
@@ -57,7 +57,7 @@ export function DebateLogViewer({
                       Vấn đề phát hiện
                     </p>
                     <p className="mt-1 text-sm leading-6 text-foreground">
-                      {debate.error_identified}
+                      {debate.issue.description}
                     </p>
                   </div>
                   <div className="mt-3 border-t border-border pt-3">
@@ -65,7 +65,7 @@ export function DebateLogViewer({
                       Phản hồi / khắc phục
                     </p>
                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                      {debate.resolution_applied ?? "Đang chờ chuyên gia phản hồi."}
+                      {debate.resolution ?? debate.specialist_response ?? "Đang chờ chuyên gia phản hồi."}
                     </p>
                   </div>
                 </div>

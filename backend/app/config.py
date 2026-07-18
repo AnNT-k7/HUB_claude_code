@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     app_version: str = "1.0.0"
     environment: str = "development"
     app_debug: bool = False
+    auth_mode: str = "demo"
+    jwt_issuer: str | None = None
+    jwt_audience: str | None = None
+    jwt_jwks_url: str | None = None
+    policy_admin_roles: list[str] = Field(default_factory=lambda: ["policy_admin"])
+    case_admin_roles: list[str] = Field(default_factory=lambda: ["case_admin"])
+    enable_mock_apis: bool = True
     api_v1_prefix: str = "/api/v1"
     database_url: str = (
         "postgresql+psycopg2://postgres:postgres@localhost:5432/"
@@ -59,9 +66,14 @@ class Settings(BaseSettings):
 
     workflow_definition: Path = BACKEND_DIR / "app/workflows/definitions/corporate_loan_v1.yaml"
     max_debate_rounds: int = 3
-    seed_demo_policies: bool = True
+    seed_demo_policies: bool = False
     seed_demo_case: bool = True
+    seed_hhb_policy: bool = True
+    hhb_policy_path: Path = BACKEND_DIR / "resources/policies/QD-HHB-2026-01.txt"
     demo_officer_id: str = "demo-officer"
+    demo_case_document_path: Path = (
+        BACKEND_DIR / "resources/demo/minh-an-credit-dossier.txt"
+    )
     policy_admin_officer_ids: list[str] = Field(
         default_factory=lambda: ["demo-officer"]
     )
@@ -76,6 +88,10 @@ class Settings(BaseSettings):
             raise ValueError(
                 "EMBEDDING_PROVIDER must be deterministic_test or openai_compatible"
             )
+        if self.embedding_provider == "deterministic_test" and self.environment != "test":
+            raise ValueError(
+                "deterministic_test embeddings are restricted to the test environment"
+            )
         if self.llm_provider != "openai_compatible":
             raise ValueError("LLM_PROVIDER must be openai_compatible")
         if self.max_debate_rounds < 1:
@@ -84,6 +100,17 @@ class Settings(BaseSettings):
             raise ValueError("LLM_TEMPERATURE must be between 0 and 2")
         if self.agent_document_context_chars < 1_000:
             raise ValueError("AGENT_DOCUMENT_CONTEXT_CHARS must be at least 1000")
+        if self.auth_mode not in {"demo", "jwt"}:
+            raise ValueError("AUTH_MODE must be demo or jwt")
+        if self.auth_mode == "demo" and self.environment not in {
+            "development",
+            "test",
+        }:
+            raise ValueError("Demo header authentication is forbidden outside dev/test")
+        if self.auth_mode == "jwt" and not all(
+            (self.jwt_issuer, self.jwt_audience, self.jwt_jwks_url)
+        ):
+            raise ValueError("JWT issuer, audience, and JWKS URL are required")
         return self
 
 

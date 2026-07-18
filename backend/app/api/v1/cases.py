@@ -8,7 +8,11 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import CurrentOfficer, ObjectStorageDependency
+from app.api.dependencies import (
+    CurrentOfficer,
+    ObjectStorageDependency,
+    require_case_access,
+)
 from app.config import get_settings
 from app.db.models import (
     AuditOutcome,
@@ -42,6 +46,7 @@ def create_case(
         company_name=request.company_name,
         requested_amount=request.requested_amount,
         currency=request.currency,
+        created_by=officer.officer_id,
         status=CaseStatus.INGESTED.value,
         workflow_id="corporate_loan_v1",
         workflow_version="1.0",
@@ -71,9 +76,11 @@ def list_cases(
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ) -> list[CaseSummaryResponse]:
-    del officer
+    statement = select(Case)
+    if not officer.roles.intersection(get_settings().case_admin_roles):
+        statement = statement.where(Case.created_by == officer.officer_id)
     cases = db.scalars(
-        select(Case)
+        statement
         .order_by(Case.created_at.desc())
         .offset(offset)
         .limit(limit)
@@ -87,8 +94,7 @@ def get_case(
     officer: CurrentOfficer,
     db: Session = Depends(get_db),
 ) -> CaseDetailResponse:
-    del officer
-    case = _get_case_or_404(db, case_id)
+    case = _get_case_or_404(db, case_id, officer)
     documents = db.scalars(
         select(Document)
         .where(Document.case_id == case_id)
@@ -103,8 +109,7 @@ def list_documents(
     officer: CurrentOfficer,
     db: Session = Depends(get_db),
 ) -> list[DocumentResponse]:
-    del officer
-    _get_case_or_404(db, case_id)
+    _get_case_or_404(db, case_id, officer)
     documents = db.scalars(
         select(Document)
         .where(Document.case_id == case_id)
@@ -127,7 +132,7 @@ async def upload_document(
     db: Session = Depends(get_db),
 ) -> DocumentResponse:
     settings = get_settings()
-    case = _get_case_or_404(db, case_id)
+    case = _get_case_or_404(db, case_id, officer)
     content_type = (file.content_type or "").split(";", 1)[0].lower()
     if content_type not in settings.allowed_upload_types:
         raise HTTPException(
@@ -210,7 +215,6 @@ def get_document_download(
     storage: ObjectStorageDependency,
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
-    del officer
     document = db.scalar(
         select(Document).where(
             Document.id == document_id,
@@ -219,6 +223,8 @@ def get_document_download(
     )
     if document is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    case = _get_case_or_404(db, case_id, officer)
+    del case
     return {
         "url": storage.presigned_get_url(
             bucket=get_settings().minio_case_bucket,
@@ -228,10 +234,15 @@ def get_document_download(
     }
 
 
-def _get_case_or_404(db: Session, case_id: UUID) -> Case:
+def _get_case_or_404(
+    db: Session,
+    case_id: UUID,
+    officer: CurrentOfficer,
+) -> Case:
     case = db.get(Case, case_id)
     if case is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Case not found")
+    require_case_access(case.created_by, officer)
     return case
 
 

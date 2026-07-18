@@ -10,8 +10,7 @@ import { apiClient, type ApiRequestOptions } from "@/shared/utils/api-client";
 export async function listCases(
   options: ApiRequestOptions = {},
 ): Promise<CaseSummary[]> {
-  const response = await apiClient.get<CaseListResponse>("/cases", options);
-  return Array.isArray(response) ? response : response.items;
+  return apiClient.get<CaseListResponse>("/cases", options);
 }
 
 export function getCase(

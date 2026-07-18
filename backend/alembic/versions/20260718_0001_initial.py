@@ -29,6 +29,7 @@ def upgrade() -> None:
         sa.Column("company_name", sa.String(length=255), nullable=False),
         sa.Column("requested_amount", sa.Numeric(20, 2), nullable=False),
         sa.Column("currency", sa.String(length=3), nullable=False),
+        sa.Column("created_by", sa.String(length=255), nullable=False),
         sa.Column("status", sa.String(length=32), nullable=False),
         sa.Column("workflow_id", sa.String(length=100), nullable=False),
         sa.Column("workflow_version", sa.String(length=32), nullable=False),

@@ -106,10 +106,15 @@ async function request<TResponse>(
   externalSignal?.addEventListener("abort", handleExternalAbort, { once: true });
 
   try {
+    const headers = new Headers(inputHeaders);
+    const demoOfficerId = process.env.NEXT_PUBLIC_OFFICER_ID?.trim();
+    if (demoOfficerId && !headers.has("X-Officer-ID")) {
+      headers.set("X-Officer-ID", demoOfficerId);
+    }
     const response = await fetch(buildUrl(path), {
       ...fetchOptions,
       credentials: "include",
-      headers: new Headers(inputHeaders),
+      headers,
       signal: controller.signal,
     });
     const details = await parseBody(response);

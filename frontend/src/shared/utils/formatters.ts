@@ -73,7 +73,6 @@ const CASE_STATUS_LABELS: Record<CaseStatus, string> = {
   APPROVED: "Đã phê duyệt",
   REJECTED: "Đã từ chối",
   COMPLETED: "Hoàn tất",
-  FAILED: "Có lỗi",
 };
 
 export function caseStatusLabel(status: CaseStatus): string {
@@ -81,14 +80,13 @@ export function caseStatusLabel(status: CaseStatus): string {
 }
 
 const AGENT_LABELS: Record<AgentId, string> = {
+  BankingOrchestrator: "Điều phối tín dụng",
   CustomerRelationship: "Quan hệ khách hàng",
   Credit: "Tín dụng",
   RiskManagement: "Quản trị rủi ro",
   LegalCompliance: "Pháp lý & Tuân thủ",
-  Compliance: "Tuân thủ",
-  Legal: "Pháp lý",
   CollateralAppraisal: "Thẩm định tài sản",
-  Reviewer: "Reviewer",
+  ReviewerAgent: "Reviewer",
   BankingOperations: "Vận hành ngân hàng",
 };
 
@@ -112,6 +110,47 @@ export function workStatusLabel(
   status: TaskStatus | AssessmentStatus,
 ): string {
   return WORK_STATUS_LABELS[status] ?? status;
+}
+
+const RUNTIME_STATUS_LABELS: Record<string, string> = {
+  ...WORK_STATUS_LABELS,
+  QUEUED: "Đang xếp hàng",
+  STOP_REQUESTED: "Yêu cầu dừng",
+  PAUSED: "Tạm dừng",
+  FAILED: "Thất bại",
+  CHALLENGE: "Đang phản biện",
+};
+
+export function runtimeStatusLabel(status: string): string {
+  return RUNTIME_STATUS_LABELS[status] ?? status;
+}
+
+const KYC_STATUS_LABELS: Record<string, string> = {
+  VERIFIED: "Đã xác minh",
+  UNVERIFIED: "Chưa xác minh",
+  FAILED: "Không đạt",
+  UNKNOWN: "Chưa xác định",
+};
+
+export function kycStatusLabel(status: string): string {
+  return KYC_STATUS_LABELS[status] ?? status;
+}
+
+const RISK_LEVEL_LABELS: Record<string, string> = {
+  LOW: "Thấp",
+  MEDIUM: "Trung bình",
+  HIGH: "Cao",
+  UNASSIGNED: "Chưa xếp hạng",
+  UNKNOWN: "Chưa xác định",
+};
+
+export function riskLevelLabel(level: string): string {
+  return RISK_LEVEL_LABELS[level] ?? level;
+}
+
+export function boolLabel(value: boolean | null | undefined, whenTrue: string, whenFalse: string): string {
+  if (value === null || value === undefined) return "—";
+  return value ? whenTrue : whenFalse;
 }
 
 const DECISION_LABELS: Record<ApprovalDecision, string> = {

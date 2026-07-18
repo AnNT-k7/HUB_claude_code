@@ -1,0 +1,26 @@
+HỒ SƠ DEMO — KHÔNG PHẢI DỮ LIỆU KHÁCH HÀNG THẬT
+Mã hồ sơ: DEMO-MINH-AN-2026
+
+1. ĐƠN ĐỀ NGHỊ CẤP TÍN DỤNG
+Công ty Cổ phần Sản xuất Minh An (DEMO - Minh An Manufacturing JSC), mã đăng ký DEMO-REG-001, hoạt động trong ngành sản xuất 12 năm. Doanh nghiệp đề nghị khoản vay trung hạn 50.000.000.000 VND trong 36 tháng, lãi suất dự kiến 8%/năm để mở rộng công suất nhà máy.
+
+2. HỒ SƠ PHÁP LÝ VÀ CHỦ SỞ HỮU HƯỞNG LỢI
+Giấy chứng nhận đăng ký doanh nghiệp và điều lệ hiện hành đã được cung cấp. Cơ cấu quản trị hợp lệ; quyền sở hữu tài sản bảo đảm đã được đối chiếu. Tờ khai chủ sở hữu hưởng lợi đã được cung cấp. Doanh nghiệp công bố một vụ kiện thương mại chưa giải quyết với nghĩa vụ tiềm tàng 250.000.000 VND.
+
+3. SỐ LIỆU TÀI CHÍNH ĐÃ KIỂM TOÁN — ĐƠN VỊ VND
+Lợi nhuận sau thuế: 1.000.000.000
+Khấu hao: 330.000.000
+Chi phí lãi vay: 200.000.000
+Dòng tiền sẵn có để trả nợ: 1.530.000.000
+Nợ gốc đến hạn: 800.000.000
+Lãi vay đến hạn: 200.000.000
+Tài sản ngắn hạn: 24.000.000.000
+Nợ ngắn hạn: 12.000.000.000
+Tổng nợ: 30.000.000.000
+Vốn chủ sở hữu: 20.000.000.000
+
+4. TÀI SẢN BẢO ĐẢM
+Mã tài sản DEMO-COLLATERAL-001: quyền sử dụng đất và nhà xưởng thương mại phục vụ sản xuất. Giá trị thẩm định 80.000.000.000 VND; giá trị đủ điều kiện 80.000.000.000 VND. Hồ sơ quyền sở hữu đã được cung cấp để chuyên gia pháp lý xác minh.
+
+5. XÁC NHẬN PHẠM VI
+Tài liệu này chỉ phục vụ trình diễn kỹ thuật. Kết quả KYC, AML, kiểm tra trừng phạt và dư nợ hiện hữu phải được lấy từ hệ thống ngân hàng tin cậy qua Mock SHB API; không được suy diễn từ tài liệu do khách hàng cung cấp.

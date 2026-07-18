@@ -53,7 +53,6 @@ def _missing_financial_data(
     inputs: CreditFinancialInputs,
 ) -> list[MissingDataRequest]:
     required_fields = (
-        "cash_available_for_debt_service",
         "principal_due",
         "interest_due",
         "current_assets",
@@ -66,6 +65,17 @@ def _missing_financial_data(
         for field_name in required_fields
         if getattr(inputs, field_name) is None
     ]
+    if inputs.cash_available_for_debt_service is None:
+        numerator_fields = (
+            "net_profit_after_tax",
+            "depreciation",
+            "interest_expense",
+        )
+        missing_fields.extend(
+            field_name
+            for field_name in numerator_fields
+            if getattr(inputs, field_name) is None
+        )
     if not missing_fields:
         return []
     return [
@@ -122,6 +132,9 @@ def assess_credit(
                 requested_document_types=["AUDITED_FINANCIAL_STATEMENTS"],
                 requested_fields=[
                     "cash_available_for_debt_service",
+                    "net_profit_after_tax",
+                    "depreciation",
+                    "interest_expense",
                     "principal_due",
                     "interest_due",
                     "current_assets",
@@ -161,13 +174,20 @@ def assess_credit(
     # The missing-data guard above narrows these values for human readers; asserts
     # also prevent a future contract change from silently introducing guesses.
     cash_available = financial_inputs.cash_available_for_debt_service
+    if cash_available is None:
+        net_profit = financial_inputs.net_profit_after_tax
+        depreciation = financial_inputs.depreciation
+        interest_expense = financial_inputs.interest_expense
+        assert net_profit is not None
+        assert depreciation is not None
+        assert interest_expense is not None
+        cash_available = net_profit + depreciation + interest_expense
     principal_due = financial_inputs.principal_due
     interest_due = financial_inputs.interest_due
     current_assets = financial_inputs.current_assets
     current_liabilities = financial_inputs.current_liabilities
     total_debt = financial_inputs.total_debt
     total_equity = financial_inputs.total_equity
-    assert cash_available is not None
     assert principal_due is not None
     assert interest_due is not None
     assert current_assets is not None

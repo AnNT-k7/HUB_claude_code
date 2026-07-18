@@ -18,21 +18,7 @@ export function RagCitationModal({ citation, onClose }: RagCitationModalProps) {
       title="Căn cứ chính sách RAG"
       description="Nguồn nội bộ đã được agent sử dụng để hỗ trợ kết luận."
       footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            Đóng
-          </Button>
-          {citation?.source_url ? (
-            <a
-              href={citation.source_url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-white hover:bg-primary/90"
-            >
-              Mở tài liệu nguồn ↗
-            </a>
-          ) : null}
-        </>
+        <Button variant="ghost" onClick={onClose}>Đóng</Button>
       }
     >
       {citation ? (

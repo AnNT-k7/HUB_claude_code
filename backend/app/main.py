@@ -43,5 +43,6 @@ api_v1_router.include_router(cases.router)
 api_v1_router.include_router(orchestrator.router)
 api_v1_router.include_router(operations.router)
 api_v1_router.include_router(policies.router)
-api_v1_router.include_router(mock_endpoints.router)
+if settings.enable_mock_apis:
+    api_v1_router.include_router(mock_endpoints.router)
 app.include_router(api_v1_router, prefix=settings.api_v1_prefix)

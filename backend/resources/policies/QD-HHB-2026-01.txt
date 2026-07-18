@@ -1,0 +1,2210 @@
+================================================================================
+NGÂN HÀNG THƯƠNG MẠI CỔ PHẦN HỒNG HÀ (HONG HA COMMERCIAL JOINT STOCK BANK)
+TÊN VIẾT TẮT: HHB
+--------------------------------------------------------------------------------
+SỔ TAY QUY ĐỊNH NỘI BỘ VÀ QUY TRÌNH NGHIỆP VỤ
+Số hiệu: QĐ-HHB-2026/01
+Ban hành kèm theo Quyết định số 07/2026/QĐ-HĐQT ngày 05/01/2026 của Hội đồng
+quản trị Ngân hàng TMCP Hồng Hà.
+Hiệu lực: từ ngày 01/02/2026. Thay thế QĐ-HHB-2024/03.
+Cấp độ mật: NỘI BỘ (INTERNAL) — không phổ biến ra ngoài tổ chức.
+Đơn vị chủ trì soạn thảo: Phòng Pháp lý – Tuân thủ, Phòng Quản trị rủi ro.
+Chu kỳ rà soát: 12 tháng/lần hoặc đột xuất khi có thay đổi quy định pháp luật.
+================================================================================
+
+*** GHI CHÚ CHO NGƯỜI ĐỌC / HỆ THỐNG XỬ LÝ TÀI LIỆU ***
+Đây là tài liệu HƯ CẤU, mô phỏng một ngân hàng thương mại quy mô nhỏ tại Việt
+Nam, được xây dựng phục vụ mục đích thử nghiệm hệ thống truy xuất tri thức
+(RAG) và kiến trúc multi-agent. Các số liệu, ngưỡng, tên gọi trong tài liệu là
+giả định nhất quán nội bộ, KHÔNG phản ánh quy định của bất kỳ ngân hàng có thật
+nào, và KHÔNG được dùng làm căn cứ pháp lý hay tư vấn tài chính thực tế.
+
+--------------------------------------------------------------------------------
+PHẦN 0 — SIÊU DỮ LIỆU VÀ HƯỚNG DẪN TRA CỨU
+--------------------------------------------------------------------------------
+
+[ID: HHB-META-01] QUY ƯỚC ĐÁNH MÃ ĐIỀU KHOẢN
+
+Mỗi mục trong tài liệu này được gán một mã định danh duy nhất theo cấu trúc:
+    HHB-<NHÓM>-<SỐ THỨ TỰ>
+Trong đó <NHÓM> nhận các giá trị:
+    META : Siêu dữ liệu, hướng dẫn tra cứu.
+    GT   : Giới thiệu tổ chức, khẩu vị rủi ro, thẩm quyền.
+    CN   : Chức năng – nhiệm vụ – quyền hạn của phòng ban.
+    QT   : Quy trình nghiệp vụ (các bước, đầu vào, đầu ra).
+    TC   : Tiêu chí định lượng (chấm điểm, ngưỡng, công thức).
+    DM   : Danh mục ngành nghề, điều kiện loại trừ.
+    HS   : Danh mục hồ sơ, chứng từ.
+    TT   : Tuân thủ, KYC/AML, bảo mật.
+    OUT  : Chuẩn đầu ra (schema) của từng phòng ban.
+    PL   : Phụ lục, ví dụ minh họa, từ điển thuật ngữ.
+
+Khi một điều khoản viện dẫn điều khoản khác, mã định danh được ghi trong ngoặc
+vuông. Mỗi mục được viết theo nguyên tắc TỰ CHỨA (self-contained): người đọc chỉ
+cần đọc mục đó là đủ hiểu, không bắt buộc phải đọc mục liền trước.
+
+[ID: HHB-META-02] VIẾT TẮT CÁC PHÒNG BAN SỬ DỤNG XUYÊN SUỐT TÀI LIỆU
+
+    P.QHKH  : Phòng Quan hệ khách hàng.
+    P.TD    : Phòng Tín dụng.
+    P.QTRR  : Phòng Quản trị rủi ro.
+    P.PLTC  : Phòng Pháp lý – Tuân thủ.
+    P.TĐTS  : Phòng Thẩm định tài sản bảo đảm.
+    P.VHNV  : Phòng Vận hành nghiệp vụ.
+
+Các viết tắt nghiệp vụ khác: KHCN (khách hàng cá nhân); KHDN (khách hàng doanh
+nghiệp); TSBĐ (tài sản bảo đảm); XHTD (xếp hạng tín dụng nội bộ); HĐTD (Hội đồng
+tín dụng); UBTD (Ủy ban Tín dụng); GDBĐ (giao dịch bảo đảm); NLV (ngày làm việc);
+CIC (Trung tâm Thông tin tín dụng Quốc gia); LTV (Loan-to-Value — tỷ lệ cho vay
+trên giá trị tài sản); DTI (Debt-to-Income — tỷ lệ nợ trên thu nhập); DSCR (Debt
+Service Coverage Ratio — hệ số khả năng trả nợ); BCTC (báo cáo tài chính);
+BĐS (bất động sản); MMTB (máy móc thiết bị); TCTD (tổ chức tín dụng).
+
+[ID: HHB-META-03] THỨ TỰ ƯU TIÊN ÁP DỤNG KHI CÓ MÂU THUẪN
+
+Khi các quy định trong tài liệu này mâu thuẫn nhau, áp dụng theo thứ tự ưu tiên
+giảm dần:
+    1. Quy định pháp luật và văn bản của Ngân hàng Nhà nước (cao nhất, tuyệt đối).
+    2. Điều kiện từ chối tuyệt đối — knock-out [HHB-DM-03].
+    3. Ý kiến "KHÔNG ĐẠT" của P.PLTC [HHB-QT-09].
+    4. Danh mục ngành cấm cấp tín dụng [HHB-DM-01].
+    5. Ma trận quyết định tín dụng [HHB-TC-07].
+    6. Các quy định còn lại trong tài liệu này.
+    7. Đề xuất của đơn vị kinh doanh (P.QHKH, P.TD).
+Nguyên tắc: quy định NGHIÊM NGẶT HƠN luôn được áp dụng. Không cá nhân hoặc phòng
+ban nào được tự ý nới lỏng ngưỡng đã quy định; mọi ngoại lệ phải theo [HHB-QT-09].
+
+--------------------------------------------------------------------------------
+PHẦN I — GIỚI THIỆU TỔ CHỨC, KHẨU VỊ RỦI RO VÀ THẨM QUYỀN
+--------------------------------------------------------------------------------
+
+[ID: HHB-GT-01] TỔNG QUAN VỀ NGÂN HÀNG TMCP HỒNG HÀ (HHB)
+
+Ngân hàng TMCP Hồng Hà (HHB) là ngân hàng thương mại cổ phần quy mô nhỏ, thành
+lập năm 2008, hội sở chính đặt tại Hà Nội.
+    - Vốn điều lệ: 3.500 tỷ đồng.
+    - Tổng tài sản (31/12/2025): 48.200 tỷ đồng.
+    - Tổng dư nợ tín dụng (31/12/2025): 31.600 tỷ đồng.
+    - Tỷ lệ nợ xấu (NPL): 1,42%.
+    - Hệ số an toàn vốn (CAR): 11,8%.
+    - Mạng lưới: 01 Hội sở chính, 12 Chi nhánh, 30 Phòng giao dịch tại 09 tỉnh
+      thành, tập trung khu vực đồng bằng sông Hồng.
+    - Nhân sự: khoảng 1.850 người.
+    - Phân khúc mục tiêu: khách hàng cá nhân có thu nhập ổn định và doanh nghiệp
+      nhỏ và vừa (SME) có doanh thu dưới 300 tỷ đồng/năm.
+    - Cơ cấu dư nợ: KHCN 44%, KHDN (chủ yếu SME) 56%.
+
+HHB xác định định vị là "ngân hàng bán lẻ và SME khu vực", không tham gia các
+nghiệp vụ đầu tư phức tạp, không cấp tín dụng cho các dự án quy mô rất lớn vượt
+năng lực vốn.
+
+[ID: HHB-GT-02] KHẨU VỊ RỦI RO TÍN DỤNG (RISK APPETITE) NĂM 2026
+
+Hội đồng quản trị HHB phê duyệt khẩu vị rủi ro tín dụng năm 2026 với các giới
+hạn bắt buộc sau. Đây là các giới hạn cứng ở cấp danh mục, P.QTRR chịu trách
+nhiệm theo dõi và cảnh báo:
+    - Tỷ lệ nợ xấu toàn hàng mục tiêu: ≤ 2,0%. Ngưỡng cảnh báo: 1,8%.
+    - Tăng trưởng tín dụng năm 2026: ≤ 14% (trong hạn mức NHNN giao).
+    - Dư nợ một khách hàng: ≤ 12% vốn tự có của HHB.
+    - Dư nợ một khách hàng và người có liên quan: ≤ 20% vốn tự có.
+    - Dư nợ nhóm ngành hạn chế [HHB-DM-02]: ≤ 12% tổng dư nợ.
+    - Dư nợ cho vay không có tài sản bảo đảm (tín chấp): ≤ 8% tổng dư nợ.
+    - Dư nợ khách hàng xếp hạng từ B trở xuống: ≤ 5% tổng dư nợ.
+    - Dư nợ có TSBĐ là bất động sản: ≤ 55% tổng dư nợ.
+    - Tỷ lệ vốn ngắn hạn cho vay trung dài hạn: ≤ 30%.
+Nguyên tắc nền: HHB chấp nhận rủi ro tín dụng có kiểm soát, ưu tiên chất lượng
+tài sản hơn tăng trưởng quy mô. Khi một chỉ tiêu chạm ngưỡng cảnh báo, P.QTRR có
+quyền yêu cầu tạm dừng cấp mới cho phân khúc tương ứng cho đến khi có ý kiến của
+Ủy ban Tín dụng.
+
+[ID: HHB-GT-03] CƠ CẤU TỔ CHỨC VÀ SÁU PHÒNG NGHIỆP VỤ
+
+Sơ đồ quản trị:
+    Đại hội đồng cổ đông
+      └── Hội đồng quản trị (HĐQT)
+            ├── Ủy ban Tín dụng (UBTD)
+            ├── Ủy ban Quản lý rủi ro
+            ├── Ban Kiểm soát ─── Kiểm toán nội bộ (độc lập, tuyến 3)
+            └── Tổng Giám đốc
+                  ├── Hội đồng tín dụng Hội sở (HĐTD HS)
+                  ├── Khối Kinh doanh
+                  │     ├── [1] Phòng Quan hệ khách hàng (P.QHKH)
+                  │     └── [2] Phòng Tín dụng (P.TD)
+                  ├── Khối Quản trị rủi ro
+                  │     ├── [3] Phòng Quản trị rủi ro (P.QTRR)
+                  │     ├── [4] Phòng Pháp lý – Tuân thủ (P.PLTC)
+                  │     └── [5] Phòng Thẩm định tài sản bảo đảm (P.TĐTS)
+                  └── Khối Vận hành
+                        └── [6] Phòng Vận hành nghiệp vụ (P.VHNV)
+
+Nguyên tắc tổ chức bắt buộc: chức năng BÁN HÀNG (P.QHKH), chức năng THẨM ĐỊNH
+(P.TD, P.TĐTS), chức năng KIỂM SOÁT RỦI RO (P.QTRR, P.PLTC) và chức năng TÁC
+NGHIỆP (P.VHNV) phải tách biệt về nhân sự và báo cáo. Một cá nhân không được đồng
+thời đề xuất và phê duyệt cùng một khoản vay.
+
+[ID: HHB-GT-04] MÔ HÌNH BA TUYẾN BẢO VỆ (THREE LINES OF DEFENCE)
+
+HHB áp dụng mô hình ba tuyến bảo vệ trong quản trị rủi ro tín dụng:
+    - Tuyến 1 (nhận diện và sở hữu rủi ro): P.QHKH, P.TD, P.VHNV. Trực tiếp tạo
+      ra và vận hành khoản vay; chịu trách nhiệm đầu tiên về chất lượng hồ sơ,
+      tính trung thực của thông tin và tuân thủ quy trình.
+    - Tuyến 2 (kiểm soát độc lập): P.QTRR, P.PLTC, P.TĐTS. Rà soát độc lập với
+      tuyến 1; có quyền phản đối, yêu cầu bổ sung điều kiện hoặc phủ quyết trong
+      phạm vi thẩm quyền [HHB-QT-09].
+    - Tuyến 3 (bảo đảm độc lập): Kiểm toán nội bộ, trực thuộc Ban Kiểm soát. Hậu
+      kiểm ngẫu nhiên tối thiểu 5% số hồ sơ đã giải ngân mỗi quý và 100% hồ sơ
+      có giá trị trên 50 tỷ đồng.
+Hệ quả vận hành: ý kiến của tuyến 2 KHÔNG phải là "tham khảo". Tuyến 1 không được
+bỏ qua ý kiến tuyến 2; nếu không đồng ý thì phải trình lên cấp thẩm quyền cao hơn
+theo cơ chế leo thang tại [HHB-QT-09].
+
+[ID: HHB-GT-05] THẨM QUYỀN PHÊ DUYỆT TÍN DỤNG
+
+Thẩm quyền được xác định theo TỔNG DƯ NỢ CẤP TÍN DỤNG của một khách hàng tại HHB
+sau khi cộng thêm khoản đề nghị vay mới (bao gồm cả dư nợ hiện hữu, hạn mức thẻ
+tín dụng, bảo lãnh, L/C — không tính khoản vay cầm cố sổ tiết kiệm do chính HHB
+phát hành).
+
+    Cấp 1 — Giám đốc Phòng giao dịch:
+        KHCN: ≤ 1 tỷ đồng. KHDN: không có thẩm quyền.
+        Điều kiện: TSBĐ là BĐS đô thị có sổ hoặc sổ tiết kiệm HHB; XHTD ≥ A.
+    Cấp 2 — Giám đốc Chi nhánh:
+        KHCN: ≤ 3 tỷ đồng. KHDN: ≤ 5 tỷ đồng.
+        Điều kiện: XHTD ≥ BBB; không thuộc ngành hạn chế [HHB-DM-02].
+    Cấp 3 — Hội đồng tín dụng Chi nhánh (HĐTD CN):
+        KHCN: ≤ 8 tỷ đồng. KHDN: ≤ 15 tỷ đồng.
+        Thành phần: Giám đốc Chi nhánh (Chủ tịch), Trưởng P.TD Chi nhánh, cán bộ
+        P.QTRR phụ trách địa bàn. Quyết định theo đa số; cán bộ P.QTRR có quyền
+        bảo lưu ý kiến bằng văn bản.
+    Cấp 4 — Hội đồng tín dụng Hội sở (HĐTD HS):
+        KHCN: ≤ 20 tỷ đồng. KHDN: ≤ 60 tỷ đồng.
+        Thành phần: 01 Phó Tổng Giám đốc phụ trách tín dụng (Chủ tịch), Giám đốc
+        Khối Quản trị rủi ro, Trưởng P.TD Hội sở, Trưởng P.QTRR, Trưởng P.PLTC.
+        Quyết định hợp lệ khi có tối thiểu 4/5 thành viên dự họp và đạt ≥ 3/5
+        phiếu thuận.
+    Cấp 5 — Ủy ban Tín dụng (UBTD):
+        Mọi khách hàng: ≤ 150 tỷ đồng.
+        Thành phần: 02 thành viên HĐQT, Tổng Giám đốc, Giám đốc Khối Quản trị rủi
+        ro, Trưởng P.PLTC. Quyết định hợp lệ khi đạt ≥ 4/5 phiếu thuận.
+    Cấp 6 — Hội đồng quản trị (HĐQT):
+        Trên 150 tỷ đồng, hoặc mọi trường hợp cấp tín dụng cho người có liên quan
+        theo [HHB-TT-03], hoặc mọi ngoại lệ chính sách vượt thẩm quyền UBTD.
+
+Quy tắc nâng cấp thẩm quyền bắt buộc (nâng đúng 01 cấp so với mức xác định theo
+quy mô dư nợ nêu trên), áp dụng khi có bất kỳ yếu tố nào sau đây:
+    (a) P.QTRR nêu ý kiến "PHẢN ĐỐI" hoặc "ĐỒNG Ý CÓ ĐIỀU KIỆN CAO" [HHB-QT-05].
+    (b) Khách hàng thuộc ngành hạn chế [HHB-DM-02].
+    (c) XHTD của khách hàng ở hạng CCC [HHB-TC-03].
+    (d) Tỷ lệ bảo đảm dưới mức tối thiểu quy định tại [HHB-TC-07].
+    (e) Khoản vay có cấu phần tín chấp trên 30% số tiền vay.
+    (f) Khách hàng đã từng bị chuyển nhóm nợ 2 trở lên trong 24 tháng gần nhất.
+Trường hợp có từ hai yếu tố trở lên, vẫn chỉ nâng 01 cấp, nhưng phải ghi rõ toàn
+bộ các yếu tố trong tờ trình.
+
+--------------------------------------------------------------------------------
+PHẦN II — CHỨC NĂNG, NHIỆM VỤ, QUYỀN HẠN CỦA SÁU PHÒNG NGHIỆP VỤ
+--------------------------------------------------------------------------------
+
+[ID: HHB-CN-01] PHÒNG QUAN HỆ KHÁCH HÀNG (P.QHKH)
+
+Định vị: Tuyến bảo vệ thứ nhất — đơn vị kinh doanh, đầu mối duy nhất tiếp xúc
+khách hàng. Nhân sự chủ chốt: Chuyên viên quan hệ khách hàng (RM).
+
+Chức năng chính:
+    1. Tìm kiếm, tiếp thị, tư vấn sản phẩm; tiếp nhận nhu cầu vay.
+    2. Hướng dẫn khách hàng lập hồ sơ; kiểm tra tính ĐẦY ĐỦ và tính HỢP LỆ HÌNH
+       THỨC của hồ sơ theo [HHB-HS-01], [HHB-HS-02], [HHB-HS-03].
+    3. Thực hiện định danh khách hàng (KYC) theo [HHB-TT-01].
+    4. Đối chiếu bản gốc – bản sao, ký xác nhận "đã đối chiếu bản chính".
+    5. Khảo sát thực địa nơi cư trú/trụ sở/địa điểm kinh doanh, chụp ảnh hiện
+       trạng, lập Biên bản khảo sát thực tế (mẫu BM-01).
+    6. Là đầu mối liên hệ khi các phòng khác cần bổ sung thông tin.
+    7. Chăm sóc khách hàng sau giải ngân, phối hợp P.TD thu hồi nợ.
+
+Quyền hạn:
+    - Từ chối tiếp nhận hồ sơ ngay tại quầy nếu thiếu chứng từ bắt buộc hoặc
+      khách hàng thuộc ngành cấm [HHB-DM-01] hoặc thuộc điều kiện knock-out hiển
+      nhiên [HHB-DM-03].
+    - Đề xuất (KHÔNG phải quyết định) mức cho vay, lãi suất, thời hạn.
+
+Giới hạn nghiêm cấm:
+    - KHÔNG được thẩm định tín dụng, KHÔNG được định giá TSBĐ, KHÔNG được chấm
+      điểm XHTD, KHÔNG được phê duyệt.
+    - KHÔNG được cam kết với khách hàng về kết quả phê duyệt dưới bất kỳ hình
+      thức nào trước khi có quyết định của cấp thẩm quyền.
+    - KHÔNG được tiếp nhận hồ sơ của người có liên quan đến chính mình.
+
+Trách nhiệm giải trình: chịu trách nhiệm về tính có thật của khách hàng, tính
+xác thực của việc đối chiếu chứng từ và tính trung thực của biên bản khảo sát.
+
+[ID: HHB-CN-02] PHÒNG TÍN DỤNG (P.TD)
+
+Định vị: Tuyến bảo vệ thứ nhất — đơn vị thẩm định chuyên môn. Nhân sự chủ chốt:
+Chuyên viên phân tích tín dụng (CA).
+
+Chức năng chính:
+    1. Thẩm định năng lực pháp lý chủ thể vay, năng lực tài chính, phương án vay
+       vốn và nguồn trả nợ [HHB-QT-02].
+    2. Tra cứu và phân tích báo cáo CIC của khách hàng và người liên quan.
+    3. Phân tích BCTC (KHDN): kiểm tra tính hợp lý, đối chiếu chéo với sao kê
+       ngân hàng, tờ khai thuế, hóa đơn đầu ra.
+    4. Tính toán các chỉ số DTI, DSCR theo [HHB-TC-04].
+    5. Chấm điểm và xếp hạng tín dụng nội bộ theo [HHB-TC-01] hoặc [HHB-TC-02].
+    6. Xây dựng lịch trả nợ dự kiến, kiểm nghiệm khả năng trả nợ dưới kịch bản
+       căng thẳng (stress test đơn giản: lãi suất +2%/năm, doanh thu -20%).
+    7. Lập Tờ trình thẩm định tín dụng (mẫu BM-02) — văn bản trung tâm của hồ sơ.
+    8. Bảo vệ tờ trình trước Hội đồng tín dụng.
+    9. Sau giải ngân: kiểm tra mục đích sử dụng vốn, phân loại nhóm nợ, cảnh báo
+       sớm [HHB-QT-08].
+
+Quyền hạn:
+    - Yêu cầu P.QHKH bổ sung hồ sơ; số lần yêu cầu bổ sung không hạn chế nhưng
+      mỗi lần phải liệt kê đầy đủ, không được yêu cầu nhỏ giọt.
+    - Đề xuất "ĐỒNG Ý", "ĐỒNG Ý CÓ ĐIỀU KIỆN" hoặc "TỪ CHỐI".
+    - Đề xuất cấu trúc khoản vay khác với đề nghị của khách hàng (giảm số tiền,
+      rút ngắn kỳ hạn, yêu cầu bổ sung TSBĐ, yêu cầu bổ sung bên bảo lãnh).
+
+Giới hạn nghiêm cấm:
+    - KHÔNG được tự định giá TSBĐ (thuộc P.TĐTS) — chỉ được sử dụng kết quả định
+      giá do P.TĐTS phát hành.
+    - KHÔNG được kết luận về tính pháp lý phức tạp của tài sản hoặc hợp đồng
+      (thuộc P.PLTC).
+    - KHÔNG được phê duyệt khoản vay do chính mình thẩm định.
+
+Trách nhiệm giải trình: chịu trách nhiệm về tính chính xác của số liệu tính toán,
+tính hợp lý của lập luận thẩm định và tính đầy đủ của việc nhận diện rủi ro.
+
+[ID: HHB-CN-03] PHÒNG QUẢN TRỊ RỦI RO (P.QTRR)
+
+Định vị: Tuyến bảo vệ thứ hai — kiểm soát độc lập, không chịu chỉ tiêu kinh doanh.
+
+Chức năng chính:
+    1. Tái thẩm định độc lập hồ sơ do P.TD trình [HHB-QT-05]: kiểm tra lại logic,
+       kiểm tra lại số liệu, phản biện giả định.
+    2. Phê chuẩn hoặc điều chỉnh kết quả XHTD do P.TD chấm; kết quả của P.QTRR là
+       kết quả CUỐI CÙNG được sử dụng để ra quyết định.
+    3. Kiểm tra khoản vay so với các giới hạn danh mục trong khẩu vị rủi ro
+       [HHB-GT-02]: giới hạn một khách hàng, giới hạn ngành, giới hạn tín chấp.
+    4. Xây dựng, hiệu chuẩn (calibrate) và giám sát mô hình XHTD; kiểm định lại
+       tối thiểu 12 tháng/lần.
+    5. Xác định mức lãi suất tối thiểu dựa trên rủi ro theo [HHB-TC-06].
+    6. Quản lý danh mục: theo dõi tập trung tín dụng, cảnh báo sớm, phân loại nợ
+       và trích lập dự phòng.
+    7. Lập Báo cáo tái thẩm định rủi ro (mẫu BM-04).
+    8. Báo cáo Ủy ban Quản lý rủi ro hàng tháng.
+
+Quyền hạn (mạnh nhất trong các phòng thuộc tuyến 2 về mặt tín dụng):
+    - PHẢN ĐỐI khoản vay. Ý kiến "PHẢN ĐỐI" không tự động chấm dứt hồ sơ nhưng
+      buộc phải NÂNG 01 CẤP THẨM QUYỀN phê duyệt [HHB-GT-05] và ý kiến phản đối
+      phải được đọc nguyên văn trước Hội đồng.
+    - Áp đặt điều kiện tiên quyết trước giải ngân mà cấp phê duyệt không được xóa
+      bỏ, chỉ có thể sửa đổi khi có ý kiến bằng văn bản của chính P.QTRR.
+    - Yêu cầu tạm dừng cấp mới cho một phân khúc/ngành khi chạm ngưỡng cảnh báo
+      danh mục.
+    - Yêu cầu định giá lại TSBĐ bởi tổ chức thẩm định giá độc lập bên ngoài.
+
+Giới hạn nghiêm cấm:
+    - KHÔNG được tiếp xúc trực tiếp khách hàng để đàm phán điều kiện vay.
+    - KHÔNG được sửa nội dung tờ trình của P.TD; chỉ được nêu ý kiến riêng bằng
+      văn bản độc lập.
+
+[ID: HHB-CN-04] PHÒNG PHÁP LÝ – TUÂN THỦ (P.PLTC)
+
+Định vị: Tuyến bảo vệ thứ hai — kiểm soát tuân thủ pháp luật và quy định nội bộ.
+
+Chức năng chính:
+    1. Rà soát tư cách pháp lý của chủ thể vay: năng lực hành vi dân sự (KHCN);
+       tư cách pháp nhân, thẩm quyền người đại diện, thẩm quyền quyết định vay vốn
+       theo điều lệ (KHDN) [HHB-QT-04].
+    2. Rà soát tính pháp lý của TSBĐ: quyền sở hữu, tình trạng tranh chấp, quy
+       hoạch, hạn chế chuyển nhượng, sự đồng thuận của đồng sở hữu.
+    3. Kiểm tra tuân thủ AML/CFT (phòng chống rửa tiền, tài trợ khủng bố), sàng
+       lọc danh sách cấm vận, danh sách đen, PEP [HHB-TT-02].
+    4. Kiểm tra danh mục ngành cấm/hạn chế [HHB-DM-01], [HHB-DM-02].
+    5. Kiểm tra quy định về người có liên quan và hạn chế cấp tín dụng
+       [HHB-TT-03].
+    6. Soạn thảo, chuẩn hóa và phê chuẩn hợp đồng tín dụng, hợp đồng bảo đảm.
+    7. Hướng dẫn thủ tục công chứng và đăng ký giao dịch bảo đảm.
+    8. Lập Báo cáo rà soát pháp lý – tuân thủ (mẫu BM-05).
+
+Quyền hạn (quyền PHỦ QUYẾT TUYỆT ĐỐI):
+    - Kết luận "KHÔNG ĐẠT" của P.PLTC về mặt pháp lý hoặc tuân thủ có hiệu lực
+      PHỦ QUYẾT. Hồ sơ bị chấm dứt ngay, không có cấp nào — kể cả HĐQT — được phê
+      duyệt vượt qua kết luận này [HHB-QT-09]. Chỉ khi khách hàng khắc phục được
+      nguyên nhân và P.PLTC phát hành kết luận mới thì hồ sơ mới được khôi phục.
+    - Loại trừ một tài sản khỏi danh mục TSBĐ vì lý do pháp lý, độc lập với kết
+      quả định giá của P.TĐTS.
+    - Yêu cầu báo cáo giao dịch đáng ngờ (STR) lên cơ quan có thẩm quyền mà không
+      cần sự đồng ý của đơn vị kinh doanh, và không được tiết lộ cho khách hàng.
+
+Giới hạn nghiêm cấm:
+    - KHÔNG được nêu ý kiến về hiệu quả kinh doanh hay khả năng trả nợ (thuộc
+      P.TD, P.QTRR). Phạm vi kết luận của P.PLTC chỉ giới hạn ở pháp lý và tuân thủ.
+
+[ID: HHB-CN-05] PHÒNG THẨM ĐỊNH TÀI SẢN BẢO ĐẢM (P.TĐTS)
+
+Định vị: Tuyến bảo vệ thứ hai — định giá độc lập.
+
+Chức năng chính:
+    1. Khảo sát hiện trạng TSBĐ tại thực địa; chụp ảnh có gắn tọa độ GPS và mốc
+       thời gian; lập Biên bản khảo sát tài sản.
+    2. Xác định giá trị thị trường của TSBĐ theo các phương pháp chuẩn [HHB-QT-03]:
+       so sánh trực tiếp, chi phí, thu nhập, thặng dư.
+    3. Xác định mức cho vay tối đa trên TSBĐ bằng cách áp dụng tỷ lệ LTV
+       [HHB-TC-05].
+    4. Đánh giá tính thanh khoản của tài sản và ước tính thời gian xử lý dự kiến.
+    5. Cảnh báo các rủi ro vật lý: xuống cấp, hư hỏng, có người thứ ba chiếm giữ,
+       đang cho thuê dài hạn, đường vào không đủ rộng, nằm trong quy hoạch.
+    6. Định giá lại định kỳ theo [HHB-QT-08].
+    7. Lập Chứng thư/Biên bản định giá TSBĐ (mẫu BM-03).
+
+Quyền hạn:
+    - Kết quả định giá của P.TĐTS là DUY NHẤT được sử dụng trong hồ sơ. Không
+      phòng nào được sử dụng giá do khách hàng tự khai, giá rao bán trên mạng, hay
+      giá do P.QHKH ước tính.
+    - Từ chối nhận tài sản làm TSBĐ nếu không thể tiếp cận khảo sát thực địa, hoặc
+      tài sản không xác định được ranh giới, hoặc không có thị trường tham chiếu.
+    - Đề xuất thuê tổ chức thẩm định giá độc lập bên ngoài (bắt buộc thuê ngoài
+      khi giá trị tài sản ước tính > 30 tỷ đồng, hoặc tài sản là dây chuyền sản
+      xuất chuyên dụng, hoặc tài sản hình thành trong tương lai).
+
+Giới hạn nghiêm cấm:
+    - KHÔNG được kết luận về tính pháp lý của giấy tờ sở hữu (thuộc P.PLTC).
+      P.TĐTS chỉ định giá trên giả định hồ sơ pháp lý hợp lệ, và phải ghi rõ giả
+      định này trong chứng thư.
+    - KHÔNG được điều chỉnh giá trị định giá theo yêu cầu của đơn vị kinh doanh.
+    - Cán bộ định giá không được định giá tài sản của người có liên quan.
+
+[ID: HHB-CN-06] PHÒNG VẬN HÀNH NGHIỆP VỤ (P.VHNV)
+
+Định vị: Tuyến bảo vệ thứ nhất — tác nghiệp, kiểm soát tuân thủ điều kiện.
+
+Chức năng chính:
+    1. Kiểm soát sau phê duyệt: đối chiếu hợp đồng đã ký với nội dung phê duyệt;
+       xác nhận 100% điều kiện tiên quyết đã được đáp ứng [HHB-QT-07].
+    2. Nhập liệu, mở tài khoản vay, thiết lập lịch trả nợ trên hệ thống core banking.
+    3. Nhập kho và quản lý bản gốc hồ sơ TSBĐ; quản lý xuất/nhập kho.
+    4. Thực hiện giải ngân theo đúng phương thức đã phê duyệt.
+    5. Hạch toán thu nợ gốc, lãi, phí; xử lý tất toán, giải chấp.
+    6. Đối soát số liệu cuối ngày, lưu trữ chứng từ.
+
+Quyền hạn:
+    - DỪNG GIẢI NGÂN (quyền "hard stop") nếu phát hiện bất kỳ điều kiện tiên
+      quyết nào chưa hoàn thành, hoặc hợp đồng sai lệch so với phê duyệt, hoặc
+      chứng từ chứng minh mục đích sử dụng vốn không khớp. Quyền này không phụ
+      thuộc vào áp lực từ đơn vị kinh doanh.
+    - Yêu cầu P.PLTC xác nhận lại nếu hợp đồng có dấu hiệu sai lệch.
+
+Giới hạn nghiêm cấm:
+    - KHÔNG được thẩm định lại nội dung tín dụng hay đánh giá lại rủi ro.
+    - KHÔNG được tự ý sửa đổi điều khoản hợp đồng.
+    - KHÔNG được giải ngân bằng tiền mặt cho khoản vay > 100 triệu đồng, trừ
+      trường hợp được cấp phê duyệt chấp thuận riêng bằng văn bản.
+
+--------------------------------------------------------------------------------
+PHẦN III — QUY TRÌNH THẨM ĐỊNH VÀ PHÊ DUYỆT CẤP TÍN DỤNG
+Mã quy trình: QT-TD-2026. Đây là quy trình trọng tâm của tài liệu này.
+--------------------------------------------------------------------------------
+
+[ID: HHB-QT-00] PHẠM VI ÁP DỤNG, ĐỊNH NGHĨA VÀ SƠ ĐỒ LUỒNG TỔNG THỂ
+
+Phạm vi: áp dụng cho toàn bộ nghiệp vụ cấp tín dụng của HHB, bao gồm cho vay
+KHCN, cho vay KHDN, cấp hạn mức tín dụng, bảo lãnh và mở L/C. Không áp dụng cho
+cho vay cầm cố sổ tiết kiệm do chính HHB phát hành (theo quy trình rút gọn
+QT-TD-2026/RG, hoàn tất trong ngày, chỉ cần P.QHKH và P.VHNV).
+
+Định nghĩa "thẩm định vay nợ" trong tài liệu này: toàn bộ chuỗi hoạt động từ khi
+tiếp nhận đề nghị vay vốn đến khi có quyết định phê duyệt/từ chối, gồm 06 bước
+đầu (B1–B6); hai bước sau (B7–B8) thuộc giai đoạn thực hiện và giám sát.
+
+Sơ đồ luồng tổng thể (dạng văn bản):
+
+    [Khách hàng]
+        │ đề nghị vay
+        ▼
+    B1. TIẾP NHẬN & KYC ................................ P.QHKH   (1 NLV)
+        │ hồ sơ đủ điều kiện hình thức
+        ▼
+    B2. THẨM ĐỊNH TÍN DỤNG ............................. P.TD     (3–5 NLV)
+        │ (khi P.TD xác nhận hồ sơ hợp lệ, ba nhánh dưới đây
+        │  được kích hoạt SONG SONG, không tuần tự)
+        ├──────────────────┬──────────────────┐
+        ▼                  ▼                  ▼
+    B3. ĐỊNH GIÁ TSBĐ   B4. RÀ SOÁT       (B2 tiếp tục hoàn
+        P.TĐTS              PHÁP LÝ           thiện tờ trình)
+        (2–4 NLV)           P.PLTC (2 NLV)
+        └──────────────────┴──────────────────┘
+                           │ hợp nhất kết quả
+                           ▼
+    B5. TÁI THẨM ĐỊNH RỦI RO ĐỘC LẬP ................... P.QTRR   (3 NLV)
+        │ (chỉ bắt đầu khi đã có ĐỦ kết quả B2 + B3 + B4)
+        ▼
+    B6. PHÊ DUYỆT ...................................... Cấp thẩm quyền (2 NLV)
+        │ [HHB-GT-05]
+        ├── TỪ CHỐI ──> Thông báo khách hàng qua P.QHKH, lưu hồ sơ 05 năm
+        ▼ PHÊ DUYỆT / PHÊ DUYỆT CÓ ĐIỀU KIỆN
+    B7. HỢP ĐỒNG – CÔNG CHỨNG – ĐĂNG KÝ GDBĐ – GIẢI NGÂN  P.PLTC + P.VHNV (3 NLV)
+        ▼
+    B8. GIÁM SÁT SAU GIẢI NGÂN ......................... P.TD + P.QHKH + P.QTRR
+
+Nguyên tắc song song hóa (quan trọng khi phân rã tác vụ): B3 và B4 KHÔNG phụ
+thuộc lẫn nhau và KHÔNG phụ thuộc vào kết quả cuối của B2 — cả ba có thể chạy
+đồng thời ngay sau khi hồ sơ được xác nhận hợp lệ ở cuối B1. Ngược lại, B5 là
+điểm hợp nhất bắt buộc (join point): P.QTRR không được bắt đầu tái thẩm định khi
+còn thiếu bất kỳ đầu ra nào của B2, B3, B4.
+
+Nguyên tắc dừng sớm (early termination): nếu tại BẤT KỲ bước nào phát hiện một
+điều kiện knock-out [HHB-DM-03] hoặc P.PLTC kết luận "KHÔNG ĐẠT", quy trình dừng
+ngay lập tức, các bước còn lại bị hủy, không cần chờ kết quả các nhánh song song.
+
+[ID: HHB-QT-01] BƯỚC 1 — TIẾP NHẬN HỒ SƠ VÀ ĐỊNH DANH KHÁCH HÀNG
+Phòng chịu trách nhiệm chính: P.QHKH. SLA: 01 NLV.
+
+Đầu vào: Giấy đề nghị vay vốn (mẫu BM-00) và bộ hồ sơ khách hàng cung cấp.
+
+Các việc phải làm, theo đúng thứ tự:
+    1.1. Định danh khách hàng (KYC) theo [HHB-TT-01]: đối chiếu giấy tờ tùy thân
+         bản gốc, xác thực khuôn mặt, xác định người thụ hưởng cuối cùng.
+    1.2. Sàng lọc sơ bộ ngành nghề so với Danh mục ngành cấm [HHB-DM-01]. Nếu
+         thuộc ngành cấm: TỪ CHỐI NGAY tại bước này, không tiếp nhận hồ sơ.
+    1.3. Kiểm tra danh mục hồ sơ theo checklist [HHB-HS-01] (KHCN) hoặc
+         [HHB-HS-02] (KHDN), và [HHB-HS-03] (TSBĐ). Chỉ kiểm tra tính ĐẦY ĐỦ và
+         HỢP LỆ HÌNH THỨC (đúng mẫu, còn hiệu lực, có chữ ký, có dấu), KHÔNG
+         đánh giá nội dung.
+    1.4. Đối chiếu bản sao với bản gốc, ký và ghi rõ "Đã đối chiếu bản chính",
+         ghi ngày, họ tên.
+    1.5. Khảo sát thực địa nơi cư trú (KHCN) hoặc trụ sở và địa điểm sản xuất
+         kinh doanh (KHDN). Bắt buộc có ảnh chụp và Biên bản khảo sát thực tế
+         (mẫu BM-01).
+    1.6. Nhập hồ sơ lên hệ thống, hệ thống tự sinh Mã hồ sơ tín dụng theo cấu
+         trúc: HHB-<năm>-<mã chi nhánh>-<số thứ tự 5 chữ số>.
+         Ví dụ: HHB-2026-HN01-00427.
+    1.7. Chuyển hồ sơ điện tử sang P.TD kèm Phiếu bàn giao hồ sơ.
+
+Tiêu chí hoàn thành bước (Definition of Done):
+    - Checklist hồ sơ đạt 100% mục bắt buộc.
+    - KYC đạt kết quả "khớp".
+    - Có Biên bản khảo sát thực tế kèm tối thiểu 04 ảnh.
+    - Có Mã hồ sơ tín dụng.
+
+Đầu ra: Bộ hồ sơ số hóa đầy đủ + BM-01 + Phiếu bàn giao.
+
+Xử lý ngoại lệ:
+    - Thiếu chứng từ: thông báo khách hàng bằng văn bản trong 01 NLV, liệt kê
+      ĐẦY ĐỦ MỘT LẦN. Hồ sơ ở trạng thái "Chờ bổ sung", tối đa 15 NLV; quá hạn
+      thì tự động đóng, khách hàng phải nộp lại từ đầu.
+    - Khách hàng không đồng ý cho khảo sát thực địa: từ chối tiếp nhận.
+
+[ID: HHB-QT-02] BƯỚC 2 — THẨM ĐỊNH TÍN DỤNG
+Phòng chịu trách nhiệm chính: P.TD.
+SLA: 03 NLV nếu tổng dư nợ ≤ 10 tỷ đồng; 05 NLV nếu > 10 tỷ đồng.
+
+Đầu vào: Bộ hồ sơ và BM-01 từ B1.
+
+Các nội dung thẩm định bắt buộc — thực hiện đủ 06 khối, không được bỏ khối nào:
+
+    2.1. THẨM ĐỊNH TƯ CÁCH VÀ NHÂN THÂN (sơ bộ, ở mức nghiệp vụ):
+         - KHCN: độ tuổi (tại thời điểm vay ≥ 20 và tại thời điểm kết thúc khoản
+           vay ≤ 65 đối với người làm công ăn lương, ≤ 70 đối với chủ hộ kinh
+           doanh); tình trạng cư trú (thường trú/tạm trú dài hạn tại địa bàn HHB
+           có chi nhánh, tối thiểu 12 tháng); tình trạng hôn nhân và sự đồng
+           thuận của vợ/chồng.
+         - KHDN: thời gian hoạt động thực tế ≥ 24 tháng; ngành nghề đăng ký khớp
+           với hoạt động thực tế; không có thay đổi chủ sở hữu chi phối trong 12
+           tháng gần nhất (nếu có thì phải giải trình).
+         - Ghi chú: kết luận PHÁP LÝ về tư cách chủ thể thuộc P.PLTC ở B4. P.TD
+           chỉ đánh giá ở góc độ nghiệp vụ và nêu nghi vấn nếu có.
+
+    2.2. TRA CỨU VÀ PHÂN TÍCH CIC (bắt buộc, không có ngoại lệ):
+         - Tra cứu CIC của: khách hàng vay; vợ/chồng (KHCN); chủ sở hữu ≥ 20%
+           vốn và người đại diện pháp luật (KHDN); bên bảo lãnh (nếu có).
+         - Xác định nhóm nợ cao nhất trong 36 tháng gần nhất.
+         - Đếm số TCTD đang có quan hệ tín dụng và tổng dư nợ tại các TCTD khác.
+         - Đếm số lần tra cứu CIC bởi TCTD khác trong 03 tháng gần nhất (trên 04
+           lần là dấu hiệu cảnh báo khách hàng đang tìm vốn nhiều nơi).
+         - Quy tắc cứng: khách hàng hoặc vợ/chồng có nợ nhóm 3, 4, 5 tại bất kỳ
+           TCTD nào trong 36 tháng gần nhất → knock-out [HHB-DM-03], dừng quy trình.
+
+    2.3. THẨM ĐỊNH NĂNG LỰC TÀI CHÍNH VÀ NGUỒN TRẢ NỢ:
+         - KHCN: xác định thu nhập ổn định hàng tháng. Chỉ công nhận:
+              (a) Lương qua tài khoản ngân hàng: công nhận 100%, cần sao kê 06
+                  tháng và hợp đồng lao động còn hiệu lực ≥ 12 tháng.
+              (b) Lương tiền mặt: công nhận tối đa 70%, bắt buộc có xác nhận của
+                  đơn vị sử dụng lao động và bảng lương có dấu.
+              (c) Thu nhập cho thuê tài sản: công nhận 70% giá trị hợp đồng thuê,
+                  cần hợp đồng thuê công chứng và sao kê nhận tiền 06 tháng.
+              (d) Thu nhập từ hộ kinh doanh: công nhận 50% lợi nhuận bình quân
+                  12 tháng, cần sổ sách và sao kê dòng tiền.
+              (e) Thu nhập từ cổ tức, đầu tư chứng khoán: KHÔNG công nhận.
+              (f) Thu nhập bất thường, tiền thưởng không định kỳ: KHÔNG công nhận.
+           Tính DTI theo [HHB-TC-04].
+         - KHDN: phân tích BCTC 02 năm gần nhất và số liệu lũy kế kỳ hiện tại.
+              (a) Đối chiếu chéo bắt buộc: doanh thu trên BCTC ↔ tờ khai thuế GTGT
+                  ↔ sao kê tài khoản ngân hàng. Chênh lệch > 15% phải được giải
+                  trình bằng văn bản và ghi rõ trong tờ trình.
+              (b) Kiểm tra chất lượng khoản phải thu: tuổi nợ, tập trung vào một
+                  khách hàng lớn (> 40% khoản phải thu là dấu hiệu cảnh báo).
+              (c) Kiểm tra hàng tồn kho: vòng quay, hàng chậm luân chuyển.
+              (d) Tính DSCR theo [HHB-TC-04].
+              (e) BCTC được kiểm toán là bắt buộc nếu dư nợ đề nghị > 20 tỷ đồng.
+
+    2.4. THẨM ĐỊNH PHƯƠNG ÁN VAY VỐN:
+         - Mục đích vay phải cụ thể, hợp pháp, và chứng minh được bằng chứng từ
+           (hợp đồng mua bán, báo giá, dự toán). Mục đích chung chung như "bổ
+           sung vốn lưu động" phải kèm bảng kê nhu cầu vốn chi tiết.
+         - Tính hợp lý của số tiền vay: số tiền đề nghị không được vượt quá nhu
+           cầu thực tế chứng minh được. Với vốn lưu động, hạn mức tối đa được tính
+           theo công thức:
+              Nhu cầu vốn lưu động = (Chi phí sản xuất kinh doanh trong kỳ /
+                                      Vòng quay vốn lưu động) − Vốn tự có tham gia
+                                      − Vốn huy động từ nguồn khác
+         - Thời hạn vay phải phù hợp chu kỳ kinh doanh hoặc thời gian khấu hao tài
+           sản đầu tư. Trần thời hạn: vay tiêu dùng có TSBĐ ≤ 10 năm; vay mua nhà
+           ≤ 25 năm; vay mua ô tô ≤ 07 năm; vay vốn lưu động ≤ 12 tháng; vay đầu
+           tư tài sản cố định ≤ 08 năm.
+         - Vốn tự có tối thiểu của khách hàng tham gia phương án: vay mua nhà ≥
+           30%; vay mua ô tô ≥ 30%; vay đầu tư dự án ≥ 30%; vay vốn lưu động ≥ 20%.
+
+    2.5. CHẤM ĐIỂM XẾP HẠNG TÍN DỤNG NỘI BỘ:
+         - Áp dụng [HHB-TC-01] cho KHCN hoặc [HHB-TC-02] cho KHDN.
+         - Ghi rõ điểm từng tiêu chí thành phần, không chỉ ghi điểm tổng.
+         - Kết quả của P.TD là kết quả SƠ BỘ; kết quả chính thức do P.QTRR phê
+           chuẩn tại B5.
+
+    2.6. KIỂM NGHIỆM CĂNG THẲNG (stress test) — bắt buộc nếu dư nợ > 5 tỷ đồng:
+         - Kịch bản 1: lãi suất tăng 2%/năm.
+         - Kịch bản 2: thu nhập/doanh thu giảm 20%.
+         - Kịch bản 3 (kết hợp): cả hai điều kiện trên đồng thời.
+         - Yêu cầu: ở Kịch bản 3, DSCR phải ≥ 1,0 (KHDN) hoặc DTI ≤ 70% (KHCN).
+           Nếu không đạt, P.TD phải đề xuất giảm số tiền vay hoặc kéo dài kỳ hạn.
+
+Đầu ra bắt buộc: Tờ trình thẩm định tín dụng (mẫu BM-02), gồm tối thiểu:
+    - Thông tin khách hàng và mã hồ sơ.
+    - Đề nghị vay và cấu trúc khoản vay đề xuất (số tiền, kỳ hạn, lãi suất, lịch
+      trả nợ, phương thức giải ngân).
+    - Phân tích 06 khối nêu trên, kèm số liệu.
+    - Bảng điểm XHTD sơ bộ và hạng.
+    - DTI hoặc DSCR, kết quả stress test.
+    - Danh sách rủi ro nhận diện được và biện pháp giảm thiểu tương ứng.
+    - Đề xuất kết luận: ĐỒNG Ý / ĐỒNG Ý CÓ ĐIỀU KIỆN / TỪ CHỐI, kèm lý do.
+    - Chữ ký cán bộ thẩm định và Trưởng P.TD.
+
+Tiêu chí hoàn thành bước: có BM-02 đủ 06 khối phân tích, có báo cáo CIC đính kèm
+không quá 30 ngày, có bảng điểm XHTD chi tiết.
+
+[ID: HHB-QT-03] BƯỚC 3 — THẨM ĐỊNH TÀI SẢN BẢO ĐẢM
+Phòng chịu trách nhiệm chính: P.TĐTS. Chạy SONG SONG với B4.
+SLA: 02 NLV với BĐS đô thị có sổ; 04 NLV với BĐS khác, MMTB, phương tiện vận tải;
+07 NLV nếu phải thuê thẩm định giá độc lập bên ngoài.
+
+Đầu vào: hồ sơ pháp lý tài sản [HHB-HS-03], thông tin khoản vay đề nghị.
+
+Các việc phải làm:
+    3.1. KIỂM TRA ĐIỀU KIỆN NHẬN TÀI SẢN: tài sản phải (a) thuộc quyền sở hữu/sử
+         dụng hợp pháp của bên bảo đảm; (b) không có tranh chấp; (c) được phép
+         giao dịch; (d) xác định được ranh giới/nhận dạng cụ thể; (e) có thị
+         trường tham chiếu để định giá. Nếu không thỏa mãn (d) hoặc (e), P.TĐTS
+         từ chối nhận tài sản.
+    3.2. KHẢO SÁT THỰC ĐỊA BẮT BUỘC: không được định giá "trên giấy". Biên bản
+         khảo sát phải có ảnh gắn tọa độ GPS và mốc thời gian, tối thiểu 06 ảnh
+         (mặt tiền, toàn cảnh, nội thất/bên trong, đường vào, ranh giới, số nhà).
+         Với BĐS: đo đạc thực tế và đối chiếu với sơ đồ trên sổ; chênh lệch diện
+         tích > 5% phải ghi rõ và định giá theo diện tích NHỎ HƠN.
+    3.3. LỰA CHỌN PHƯƠNG PHÁP ĐỊNH GIÁ:
+         - Phương pháp so sánh trực tiếp (mặc định cho BĐS nhà ở, đất ở, ô tô):
+           lấy tối thiểu 03 tài sản so sánh, giao dịch trong vòng 06 tháng, cùng
+           khu vực bán kính ≤ 2 km (đô thị) hoặc ≤ 5 km (nông thôn). Điều chỉnh
+           theo các yếu tố: vị trí, diện tích, hình dáng thửa, mặt tiền, hướng,
+           chất lượng công trình, pháp lý. Tổng mức điều chỉnh gộp không vượt quá
+           ±25%; nếu vượt, tài sản so sánh đó bị loại.
+         - Phương pháp chi phí (cho công trình xây dựng trên đất, MMTB): giá trị =
+           chi phí thay thế mới − hao mòn tích lũy.
+         - Phương pháp thu nhập (cho BĐS cho thuê, khách sạn): vốn hóa dòng tiền
+           thuần từ cho thuê, tỷ suất vốn hóa lấy theo mặt bằng thị trường, ghi rõ
+           nguồn.
+         - Phương pháp thặng dư (cho đất có tiềm năng phát triển): CHỈ áp dụng khi
+           có ý kiến chấp thuận của Trưởng P.TĐTS và phải nêu rõ trong chứng thư.
+         - Bắt buộc dùng ít nhất 02 phương pháp và đối chiếu chéo nếu giá trị ước
+           tính > 10 tỷ đồng; chênh lệch giữa 02 phương pháp > 15% phải giải trình
+           và lấy giá trị THẤP HƠN.
+    3.4. NGUYÊN TẮC THẬN TRỌNG: khi có nhiều mức giá hợp lý, luôn chọn mức THẤP
+         NHẤT trong khoảng hợp lý. Giá trị định giá không được vượt quá giá mua
+         thực tế ghi trên hợp đồng nếu tài sản được mua trong vòng 12 tháng gần
+         nhất (trừ khi có biến động thị trường được chứng minh bằng dữ liệu).
+    3.5. XÁC ĐỊNH MỨC CHO VAY TỐI ĐA TRÊN TSBĐ:
+             Mức cho vay tối đa trên TSBĐ = Σ (Giá trị định giá_i × LTV_i)
+         với LTV_i tra theo [HHB-TC-05] tương ứng từng loại tài sản.
+    3.6. ĐÁNH GIÁ TÍNH THANH KHOẢN, phân thành 03 mức:
+         - Cao: dự kiến xử lý được trong ≤ 06 tháng (sổ tiết kiệm, BĐS nhà ở đô
+           thị có sổ, ô tô phổ thông).
+         - Trung bình: 06–18 tháng (BĐS thương mại, nhà xưởng tiêu chuẩn).
+         - Thấp: > 18 tháng (đất nông nghiệp, MMTB chuyên dụng, BĐS vùng sâu).
+         Nếu thanh khoản "Thấp", LTV áp dụng bị TRỪ THÊM 10 điểm phần trăm so với
+         mức tại [HHB-TC-05].
+    3.7. CẢNH BÁO RỦI RO VẬT LÝ/HIỆN TRẠNG: nhà đang có người thuê dài hạn, có
+         người thứ ba chiếm giữ, đang tranh chấp ranh giới trên thực địa, đường
+         vào < 2 m, nằm trong hành lang an toàn hoặc chỉ giới quy hoạch, công
+         trình xây sai phép so với giấy phép.
+
+Đầu ra bắt buộc: Chứng thư định giá TSBĐ (mẫu BM-03), gồm:
+    - Mô tả tài sản, vị trí, diện tích, hiện trạng.
+    - Phương pháp định giá đã dùng và lập luận.
+    - Bảng tài sản so sánh (nếu dùng phương pháp so sánh).
+    - GIÁ TRỊ ĐỊNH GIÁ (VNĐ) — con số duy nhất, không nêu khoảng.
+    - LTV áp dụng và MỨC CHO VAY TỐI ĐA TRÊN TSBĐ.
+    - Xếp loại thanh khoản.
+    - Danh sách cảnh báo hiện trạng.
+    - Các giả định và hạn chế (bắt buộc ghi: "Chứng thư này được lập trên giả
+      định hồ sơ pháp lý của tài sản là hợp lệ; kết luận pháp lý thuộc P.PLTC").
+    - Thời hạn hiệu lực của chứng thư: 06 tháng kể từ ngày phát hành.
+
+[ID: HHB-QT-04] BƯỚC 4 — RÀ SOÁT PHÁP LÝ VÀ TUÂN THỦ
+Phòng chịu trách nhiệm chính: P.PLTC. Chạy SONG SONG với B3.
+SLA: 02 NLV; 04 NLV nếu có yếu tố nước ngoài hoặc cảnh báo AML cần điều tra tăng
+cường.
+
+Đầu vào: hồ sơ pháp lý khách hàng và tài sản, thông tin KYC từ B1.
+
+Các nội dung rà soát bắt buộc — 06 khối:
+
+    4.1. TƯ CÁCH CHỦ THỂ:
+         - KHCN: đủ 18 tuổi trở lên và có năng lực hành vi dân sự đầy đủ; giấy tờ
+           tùy thân còn hiệu lực; nếu đã kết hôn thì phải có sự đồng thuận của
+           vợ/chồng đối với việc vay và thế chấp tài sản chung; nếu tài sản là
+           tài sản riêng thì phải có căn cứ chứng minh.
+         - KHDN: giấy chứng nhận đăng ký doanh nghiệp còn hiệu lực; điều lệ; xác
+           định người đại diện theo pháp luật và phạm vi ủy quyền; kiểm tra THẨM
+           QUYỀN QUYẾT ĐỊNH VAY VỐN theo điều lệ (nhiều điều lệ quy định giao dịch
+           vượt X% tổng tài sản phải có nghị quyết của Hội đồng thành viên/Đại hội
+           đồng cổ đông — thiếu nghị quyết này là lỗi pháp lý nghiêm trọng, hợp
+           đồng có nguy cơ vô hiệu).
+         - Kiểm tra doanh nghiệp không thuộc diện đang giải thể, phá sản, tạm
+           ngừng kinh doanh, hoặc bị cưỡng chế thuế.
+
+    4.2. PHÁP LÝ TÀI SẢN BẢO ĐẢM:
+         - Quyền sở hữu/sử dụng: giấy chứng nhận đứng tên đúng bên bảo đảm; nếu
+           bên bảo đảm là bên thứ ba thì phải có văn bản đồng ý dùng tài sản bảo
+           đảm cho nghĩa vụ của người khác.
+         - Đồng sở hữu: phải có chữ ký của TẤT CẢ đồng sở hữu; thiếu một chữ ký là
+           lỗi knock-out về pháp lý.
+         - Tình trạng thế chấp hiện hữu: tra cứu hệ thống đăng ký GDBĐ. Tài sản
+           đang thế chấp tại TCTD khác → không nhận, trừ trường hợp có văn bản
+           đồng ý giải chấp và thực hiện đồng thời (thủ tục "giải chấp – thế chấp
+           cùng ngày") được P.PLTC chấp thuận trước.
+         - Tranh chấp: kiểm tra thông tin ngăn chặn, kê biên, quyết định của tòa
+           án hoặc cơ quan thi hành án.
+         - Quy hoạch: kiểm tra tài sản có thuộc quy hoạch giải tỏa, thu hồi. Nếu
+           thuộc quy hoạch treo hoặc có chỉ giới → khuyến nghị không nhận.
+         - Hạn chế chuyển nhượng: đất tái định cư còn trong thời hạn hạn chế
+           chuyển nhượng, đất được giao có điều kiện → không nhận.
+         - Tài sản là nhà ở hình thành trong tương lai: phải có hợp đồng mua bán
+           với chủ đầu tư đủ điều kiện bán, và có văn bản của chủ đầu tư xác nhận
+           chưa thế chấp căn hộ đó.
+
+    4.3. SÀNG LỌC AML/CFT VÀ DANH SÁCH CẤM VẬN theo [HHB-TT-02]:
+         - Đối chiếu khách hàng, người đại diện, chủ sở hữu hưởng lợi cuối cùng và
+           bên bảo lãnh với danh sách cấm vận quốc tế, danh sách đen nội bộ, danh
+           sách cá nhân có ảnh hưởng chính trị (PEP).
+         - Kết quả "trùng khớp thật" (true match) với danh sách cấm vận → KHÔNG
+           ĐẠT tuyệt đối, đồng thời lập báo cáo nội bộ.
+         - Kết quả PEP → không tự động từ chối, nhưng buộc áp dụng thẩm định tăng
+           cường (EDD) và phải có phê duyệt của cấp Ban Điều hành trở lên.
+         - Đánh giá rủi ro rửa tiền của khách hàng: Thấp / Trung bình / Cao. Rủi
+           ro Cao → bắt buộc EDD và nâng 01 cấp thẩm quyền.
+
+    4.4. KIỂM TRA NGÀNH NGHỀ: đối chiếu với Danh mục ngành cấm [HHB-DM-01] (kết
+         luận KHÔNG ĐẠT) và Danh mục ngành hạn chế [HHB-DM-02] (đánh dấu, chuyển
+         P.QTRR kiểm tra room ngành).
+
+    4.5. KIỂM TRA NGƯỜI CÓ LIÊN QUAN VÀ HẠN CHẾ CẤP TÍN DỤNG theo [HHB-TT-03]:
+         xác định khách hàng có thuộc đối tượng bị cấm cấp tín dụng hoặc hạn chế
+         cấp tín dụng hay không, và có thuộc nhóm khách hàng liên quan làm phát
+         sinh giới hạn tập trung hay không.
+
+    4.6. KIỂM TRA TÍNH HỢP PHÁP CỦA MỤC ĐÍCH SỬ DỤNG VỐN: mục đích không được
+         thuộc các nhu cầu vốn không được cho vay (ví dụ: để trả nợ khoản vay tại
+         chính HHB hoặc TCTD khác không đúng quy định, để đầu tư kinh doanh ngành
+         cấm, để góp vốn/mua cổ phần không đúng quy định, để đảo nợ).
+
+Đầu ra bắt buộc: Báo cáo rà soát pháp lý – tuân thủ (mẫu BM-05), gồm:
+    - Kết luận tổng thể, chọn duy nhất một trong ba giá trị:
+         ĐẠT — không có vướng mắc pháp lý/tuân thủ.
+         ĐẠT CÓ ĐIỀU KIỆN — được tiếp tục, nhưng phải hoàn tất các điều kiện tiên
+             quyết cụ thể trước khi giải ngân. Phải liệt kê từng điều kiện, mỗi
+             điều kiện phải KIỂM CHỨNG ĐƯỢC bằng một chứng từ xác định.
+         KHÔNG ĐẠT — phủ quyết tuyệt đối, hồ sơ chấm dứt [HHB-QT-09].
+    - Kết luận riêng cho từng khối 4.1–4.6.
+    - Với mỗi lỗi phát hiện: mô tả lỗi, căn cứ, mức độ (nghiêm trọng/trung
+      bình/nhẹ), và cách khắc phục nếu có.
+    - Danh sách tài sản bị LOẠI TRỪ khỏi TSBĐ vì lý do pháp lý (nếu có).
+    - Kết quả sàng lọc AML và mức rủi ro rửa tiền.
+    - Danh sách điều kiện tiên quyết trước giải ngân.
+
+Lưu ý phối hợp: nếu P.PLTC loại trừ một tài sản, P.TĐTS phải tính lại Mức cho vay
+tối đa trên TSBĐ mà KHÔNG bao gồm tài sản đó, và P.TD phải điều chỉnh tờ trình.
+
+[ID: HHB-QT-05] BƯỚC 5 — TÁI THẨM ĐỊNH RỦI RO ĐỘC LẬP
+Phòng chịu trách nhiệm chính: P.QTRR. Đây là ĐIỂM HỢP NHẤT bắt buộc.
+SLA: 03 NLV. Bắt đầu tính từ khi nhận ĐỦ đầu ra của B2, B3 và B4.
+
+Điều kiện tiên quyết để khởi động B5 (kiểm tra đủ mới làm):
+    - Có BM-02 (tờ trình P.TD) đã ký bởi Trưởng P.TD.
+    - Có BM-03 (chứng thư định giá P.TĐTS) còn hiệu lực.
+    - Có BM-05 (báo cáo P.PLTC) với kết luận ĐẠT hoặc ĐẠT CÓ ĐIỀU KIỆN. Nếu là
+      KHÔNG ĐẠT thì không có B5 — hồ sơ đã chấm dứt tại B4.
+Thiếu bất kỳ đầu vào nào: P.QTRR trả hồ sơ về phòng thiếu, không bắt đầu đếm SLA.
+
+Các việc phải làm:
+    5.1. KIỂM TRA TÍNH NHẤT QUÁN CHÉO giữa ba đầu vào. Danh sách đối chiếu bắt buộc:
+         - Số tiền vay đề nghị trong BM-02 ≤ Mức cho vay tối đa trên TSBĐ trong
+           BM-03 (sau khi trừ các tài sản bị P.PLTC loại trừ)? Nếu không, đây là
+           mâu thuẫn nghiêm trọng, phải trả hồ sơ.
+         - Danh mục tài sản trong BM-02, BM-03, BM-05 có trùng khớp?
+         - Thông tin chủ sở hữu tài sản trong BM-03 khớp với BM-05?
+         - Ngành nghề trong BM-02 khớp với kết luận ngành nghề trong BM-05?
+         - Thời hạn vay trong BM-02 có nằm trong trần quy định [HHB-QT-02, 2.4]?
+    5.2. TÁI TÍNH TOÁN ĐỘC LẬP: P.QTRR tự tính lại DTI/DSCR và điểm XHTD từ dữ
+         liệu gốc, KHÔNG chép lại kết quả của P.TD. Chênh lệch điểm XHTD > 5 điểm
+         so với P.TD phải được giải thích trong báo cáo.
+    5.3. PHÊ CHUẨN XẾP HẠNG TÍN DỤNG: P.QTRR ra hạng CHÍNH THỨC theo [HHB-TC-03].
+         P.QTRR được quyền hạ hạng thủ công tối đa 02 bậc (override) khi có yếu tố
+         định tính bất lợi không nắm bắt được bởi mô hình (ví dụ: thông tin tiêu
+         cực trên truyền thông, ngành đang suy thoái mạnh, mô hình kinh doanh phụ
+         thuộc một khách hàng duy nhất). Mọi override phải nêu lý do bằng văn bản.
+         P.QTRR KHÔNG được nâng hạng thủ công.
+    5.4. PHẢN BIỆN GIẢ ĐỊNH: rà soát các giả định trong phương án của khách hàng
+         (tăng trưởng doanh thu, tỷ suất lợi nhuận, vòng quay vốn). Giả định lạc
+         quan hơn mức bình quân ngành 03 năm gần nhất phải bị chất vấn và điều
+         chỉnh về mức thận trọng.
+    5.5. KIỂM TRA GIỚI HẠN DANH MỤC theo khẩu vị rủi ro [HHB-GT-02]:
+         - Dư nợ khách hàng sau khi cấp / vốn tự có ≤ 12%?
+         - Dư nợ khách hàng và người liên quan / vốn tự có ≤ 20%?
+         - Room ngành hạn chế còn đủ?
+         - Room tín chấp toàn hàng còn đủ?
+         - Tỷ trọng dư nợ hạng B trở xuống còn trong giới hạn?
+         Nếu chạm bất kỳ giới hạn nào: PHẢN ĐỐI, hoặc yêu cầu giảm quy mô khoản vay.
+    5.6. ÁP DỤNG MA TRẬN QUYẾT ĐỊNH [HHB-TC-07] để xác định kết luận cơ sở.
+    5.7. XÁC ĐỊNH LÃI SUẤT TỐI THIỂU theo rủi ro, theo [HHB-TC-06]. Cấp phê duyệt
+         không được duyệt lãi suất thấp hơn mức sàn này.
+    5.8. XÁC ĐỊNH CẤP PHÊ DUYỆT theo [HHB-GT-05], bao gồm cả việc áp dụng quy tắc
+         nâng cấp thẩm quyền nếu có.
+
+Đầu ra bắt buộc: Báo cáo tái thẩm định rủi ro (mẫu BM-04), gồm:
+    - Kết luận, chọn duy nhất một trong bốn giá trị:
+         ĐỒNG Ý — không có ý kiến khác biệt đáng kể với P.TD.
+         ĐỒNG Ý CÓ ĐIỀU KIỆN — chấp thuận kèm điều kiện bắt buộc.
+         ĐỒNG Ý CÓ ĐIỀU KIỆN CAO — chấp thuận nhưng rủi ro cao; TỰ ĐỘNG kích hoạt
+             nâng 01 cấp thẩm quyền [HHB-GT-05].
+         PHẢN ĐỐI — không đồng ý; hồ sơ KHÔNG bị chấm dứt nhưng bắt buộc nâng 01
+             cấp thẩm quyền và ý kiến phản đối phải được đọc nguyên văn tại phiên
+             họp phê duyệt.
+    - Hạng XHTD chính thức và điểm số; ghi rõ có override hay không.
+    - DTI/DSCR do P.QTRR tự tính; đối chiếu với số của P.TD.
+    - Bảng kiểm tra tính nhất quán chéo (mục 5.1) với kết quả từng dòng.
+    - Kết quả kiểm tra giới hạn danh mục.
+    - Số tiền cho vay TỐI ĐA mà P.QTRR chấp nhận (có thể thấp hơn đề nghị).
+    - Lãi suất sàn theo rủi ro.
+    - Danh sách điều kiện tiên quyết trước giải ngân do P.QTRR đặt ra.
+    - Danh sách điều kiện duy trì trong suốt thời hạn vay (covenants).
+    - Cấp phê duyệt xác định và căn cứ.
+
+[ID: HHB-QT-06] BƯỚC 6 — PHÊ DUYỆT
+Phòng chịu trách nhiệm chính: cấp thẩm quyền theo [HHB-GT-05]. SLA: 02 NLV kể từ
+ngày nhận đủ hồ sơ trình (05 NLV nếu thuộc thẩm quyền UBTD hoặc HĐQT do phải chờ
+lịch họp).
+
+Hồ sơ trình phê duyệt bắt buộc gồm 04 văn bản: BM-02 (P.TD), BM-03 (P.TĐTS),
+BM-05 (P.PLTC), BM-04 (P.QTRR). Thiếu bất kỳ văn bản nào, hồ sơ không được đưa ra
+phê duyệt.
+
+Trình tự phiên họp Hội đồng (áp dụng từ Cấp 3 trở lên):
+    6.1. P.TD trình bày tờ trình (tối đa 10 phút).
+    6.2. P.TĐTS trình bày kết quả định giá và cảnh báo hiện trạng (tối đa 5 phút).
+    6.3. P.PLTC trình bày kết luận pháp lý – tuân thủ và điều kiện tiên quyết.
+    6.4. P.QTRR trình bày báo cáo tái thẩm định. Nếu là "PHẢN ĐỐI", ý kiến phản
+         đối được đọc nguyên văn và ghi vào biên bản.
+    6.5. Chất vấn và biểu quyết.
+    6.6. Lập Biên bản họp Hội đồng và Quyết định phê duyệt (mẫu BM-06).
+
+Kết luận phê duyệt, chọn một trong bốn:
+    - PHÊ DUYỆT: đồng ý theo đúng đề xuất.
+    - PHÊ DUYỆT CÓ ĐIỀU KIỆN: đồng ý kèm các điều kiện tiên quyết và/hoặc điều
+      kiện duy trì.
+    - PHÊ DUYỆT ĐIỀU CHỈNH: đồng ý nhưng thay đổi cấu trúc (giảm số tiền, rút
+      ngắn kỳ hạn, tăng lãi suất, yêu cầu bổ sung TSBĐ hoặc bên bảo lãnh). Phải
+      thông báo lại khách hàng và có xác nhận đồng ý của khách hàng.
+    - TỪ CHỐI: nêu rõ lý do.
+
+Ràng buộc bắt buộc đối với cấp phê duyệt (không được vi phạm):
+    (a) Không được duyệt số tiền vượt quá Mức cho vay tối đa trên TSBĐ tại BM-03
+        (đã trừ tài sản bị loại trừ), trừ phần tín chấp được phép theo [HHB-TC-07].
+    (b) Không được duyệt lãi suất thấp hơn lãi suất sàn theo rủi ro tại BM-04.
+    (c) Không được XÓA BỎ điều kiện tiên quyết do P.PLTC hoặc P.QTRR đặt ra. Chỉ
+        được sửa đổi khi chính phòng đặt ra điều kiện đó đồng ý bằng văn bản.
+    (d) Không được phê duyệt khi BM-05 kết luận KHÔNG ĐẠT.
+    (e) Thành viên có xung đột lợi ích phải khai báo và không tham gia biểu quyết.
+
+Thông báo kết quả: P.QHKH thông báo khách hàng trong 01 NLV kể từ ngày có quyết
+định. Với trường hợp TỪ CHỐI: thông báo bằng văn bản, chỉ nêu lý do ở mức khái
+quát, KHÔNG được tiết lộ nội dung báo cáo CIC, kết quả sàng lọc AML, hoặc điểm
+XHTD nội bộ.
+
+Lưu hồ sơ: mọi hồ sơ, kể cả bị từ chối, được lưu tối thiểu 05 năm (10 năm với hồ
+sơ có cảnh báo AML).
+
+[ID: HHB-QT-07] BƯỚC 7 — HỢP ĐỒNG, CÔNG CHỨNG, ĐĂNG KÝ GDBĐ VÀ GIẢI NGÂN
+Phòng chịu trách nhiệm chính: P.PLTC (soạn hợp đồng) và P.VHNV (kiểm soát và giải
+ngân). SLA: 03 NLV, chưa kể thời gian chờ cơ quan công chứng và đăng ký GDBĐ.
+
+Trình tự bắt buộc — KHÔNG được đảo thứ tự:
+    7.1. P.PLTC soạn/rà soát hợp đồng tín dụng và hợp đồng bảo đảm, bảo đảm nội
+         dung khớp 100% với Quyết định phê duyệt BM-06.
+    7.2. Ký hợp đồng: khách hàng, bên bảo đảm, và tất cả đồng sở hữu ký trước mặt
+         cán bộ ngân hàng hoặc công chứng viên.
+    7.3. Công chứng hợp đồng bảo đảm (bắt buộc với BĐS).
+    7.4. Đăng ký giao dịch bảo đảm tại cơ quan đăng ký có thẩm quyền. Chỉ khi có
+         xác nhận đăng ký thành công, biện pháp bảo đảm mới có hiệu lực đối kháng
+         với bên thứ ba.
+    7.5. Nhập kho bản gốc giấy tờ sở hữu TSBĐ vào kho quỹ; P.VHNV lập biên bản
+         nhập kho có hai chữ ký (thủ kho và kiểm soát viên).
+    7.6. P.VHNV KIỂM SOÁT TRƯỚC GIẢI NGÂN — checklist bắt buộc, tất cả phải "Có":
+         (a) Hợp đồng tín dụng và hợp đồng bảo đảm đã ký đầy đủ chữ ký.
+         (b) Hợp đồng bảo đảm đã công chứng (nếu bắt buộc).
+         (c) Đã đăng ký GDBĐ thành công, có xác nhận.
+         (d) Bản gốc giấy tờ TSBĐ đã nhập kho.
+         (e) Đã mua bảo hiểm tài sản với người thụ hưởng là HHB (nếu là điều kiện).
+         (f) 100% điều kiện tiên quyết của P.PLTC (BM-05) đã hoàn tất.
+         (g) 100% điều kiện tiên quyết của P.QTRR (BM-04) đã hoàn tất.
+         (h) Chứng từ chứng minh mục đích sử dụng vốn khớp với phương án đã duyệt.
+         (i) Vốn tự có của khách hàng đã tham gia đủ tỷ lệ (với vay mua nhà/ô tô/
+             đầu tư: yêu cầu bằng chứng khách hàng đã thanh toán phần vốn tự có
+             TRƯỚC khi HHB giải ngân).
+         (j) Số tiền, lãi suất, kỳ hạn trên hệ thống khớp với BM-06.
+         Bất kỳ mục nào "Không" → P.VHNV DỪNG GIẢI NGÂN, không có ngoại lệ.
+    7.7. Giải ngân theo nguyên tắc:
+         - Mặc định: chuyển khoản trực tiếp cho bên thụ hưởng (người bán, nhà cung
+           cấp, nhà thầu). Đây là nguyên tắc bắt buộc với vay mua nhà, mua ô tô,
+           mua hàng hóa.
+         - Giải ngân vào tài khoản khách hàng: chỉ khi bên thụ hưởng không có tài
+           khoản, hoặc là thanh toán nhiều khoản nhỏ lẻ, và phải được cấp phê
+           duyệt chấp thuận riêng.
+         - Giải ngân tiền mặt: cấm với khoản > 100 triệu đồng, trừ khi có phê
+           duyệt riêng bằng văn bản của Giám đốc Chi nhánh trở lên.
+         - Giải ngân theo tiến độ với vay đầu tư xây dựng: mỗi lần giải ngân phải
+           có biên bản nghiệm thu khối lượng.
+    7.8. P.VHNV hạch toán, kích hoạt lịch trả nợ, lưu chứng từ.
+
+[ID: HHB-QT-08] BƯỚC 8 — GIÁM SÁT SAU GIẢI NGÂN
+Phòng chịu trách nhiệm: P.TD (chủ trì), P.QHKH (thực hiện tiếp xúc), P.QTRR (giám
+sát danh mục), P.TĐTS (định giá lại).
+
+    8.1. Kiểm tra mục đích sử dụng vốn:
+         - Lần đầu: trong vòng 30 ngày kể từ ngày giải ngân (10 ngày với vay vốn
+           lưu động).
+         - Định kỳ: 06 tháng/lần với vay trung dài hạn; 03 tháng/lần với KHDN.
+         - Phát hiện sử dụng vốn sai mục đích → thu hồi nợ trước hạn toàn bộ và
+           chuyển nhóm nợ theo quy định.
+    8.2. Định giá lại TSBĐ (P.TĐTS):
+         - BĐS: 12 tháng/lần.
+         - MMTB, phương tiện vận tải, hàng tồn kho: 06 tháng/lần.
+         - Cổ phiếu niêm yết: định giá theo giá thị trường hàng ngày.
+         - Đột xuất khi thị trường biến động > 15% hoặc có sự kiện ảnh hưởng tài sản.
+         - Nếu giá trị giảm làm tỷ lệ bảo đảm xuống dưới ngưỡng tối thiểu
+           [HHB-TC-07]: yêu cầu khách hàng bổ sung TSBĐ trong 30 ngày hoặc trả nợ
+           một phần để khôi phục tỷ lệ.
+    8.3. Cảnh báo sớm (P.TD phát hiện, P.QTRR tổng hợp). Dấu hiệu bắt buộc theo dõi:
+         - Chậm trả gốc hoặc lãi từ 05 ngày trở lên.
+         - Doanh thu sụt giảm > 20% so với cùng kỳ.
+         - Số dư tài khoản thanh toán tại HHB giảm bất thường > 40%.
+         - Bị TCTD khác chuyển nhóm nợ (phát hiện qua CIC hàng tháng).
+         - Thay đổi người đại diện pháp luật hoặc chủ sở hữu chi phối.
+         - Có thông tin tiêu cực trên truyền thông, bị khởi kiện, bị cưỡng chế thuế.
+         - Tài sản bảo đảm bị hư hỏng, bị kê biên.
+    8.4. Phân loại nợ và trích lập dự phòng (P.QTRR): thực hiện hàng tháng theo
+         quy định của NHNN; kết quả phân loại nợ lấy theo nhóm nợ CAO NHẤT giữa
+         phân loại nội bộ và phân loại theo CIC.
+    8.5. Xử lý nợ có vấn đề: khi khách hàng chuyển nhóm 2, hồ sơ được chuyển sang
+         chế độ theo dõi đặc biệt; từ nhóm 3, chuyển bộ phận xử lý nợ.
+
+[ID: HHB-QT-09] QUY TẮC PHỐI HỢP LIÊN PHÒNG VÀ XỬ LÝ XUNG ĐỘT Ý KIẾN
+
+Đây là quy tắc quyết định khi các phòng cho kết luận khác nhau. Áp dụng theo thứ
+tự từ trên xuống; gặp quy tắc nào khớp thì dừng, không xét tiếp.
+
+    R1 — PHỦ QUYẾT PHÁP LÝ (tuyệt đối):
+         Nếu BM-05 của P.PLTC kết luận "KHÔNG ĐẠT" → hồ sơ CHẤM DỨT ngay. Không
+         cấp nào được phê duyệt. Không có cơ chế leo thang. Chỉ khôi phục khi
+         khách hàng khắc phục nguyên nhân và P.PLTC phát hành BM-05 mới.
+
+    R2 — KNOCK-OUT:
+         Nếu bất kỳ điều kiện nào tại [HHB-DM-03] được kích hoạt bởi bất kỳ phòng
+         nào → hồ sơ CHẤM DỨT ngay, các bước còn lại bị hủy.
+
+    R3 — TRẦN GIÁ TRỊ TÀI SẢN:
+         Số tiền cho vay không bao giờ được vượt Mức cho vay tối đa trên TSBĐ tại
+         BM-03 cộng với phần tín chấp được phép theo [HHB-TC-07]. Nếu P.TD đề xuất
+         cao hơn, số tiền tự động bị cắt xuống mức trần này; P.TD không có quyền
+         phản đối con số định giá, chỉ có quyền đề nghị P.TĐTS định giá lại kèm
+         căn cứ mới.
+
+    R4 — PHẢN ĐỐI CỦA QUẢN TRỊ RỦI RO:
+         Nếu BM-04 kết luận "PHẢN ĐỐI" hoặc "ĐỒNG Ý CÓ ĐIỀU KIỆN CAO" → hồ sơ
+         KHÔNG bị chấm dứt, nhưng bắt buộc nâng 01 cấp thẩm quyền [HHB-GT-05] và
+         ý kiến phản đối phải được đọc nguyên văn tại phiên họp, ghi vào biên bản.
+         Nếu cấp cao hơn vẫn phê duyệt trái ý kiến P.QTRR, quyết định đó có hiệu
+         lực, nhưng phải báo cáo Ủy ban Quản lý rủi ro trong kỳ họp gần nhất và
+         P.QTRR được bảo lưu ý kiến bằng văn bản trong hồ sơ.
+
+    R5 — MÂU THUẪN SỐ LIỆU:
+         Nếu số liệu giữa các báo cáo mâu thuẫn (ví dụ giá trị tài sản trong BM-02
+         khác BM-03), luôn lấy số liệu của phòng CÓ THẨM QUYỀN CHUYÊN MÔN:
+             Giá trị và LTV của TSBĐ  → P.TĐTS (BM-03).
+             Tư cách pháp lý, tính pháp lý tài sản, AML → P.PLTC (BM-05).
+             Hạng XHTD chính thức, lãi suất sàn, giới hạn danh mục → P.QTRR (BM-04).
+             Phương án vay, nhu cầu vốn, lịch trả nợ → P.TD (BM-02).
+             Thông tin nhân thân, hiện trạng thực địa khách hàng → P.QHKH (BM-01).
+         Phòng có số liệu sai phải phát hành lại báo cáo; SLA của bước đó tính lại.
+
+    R6 — QUY TẮC THẬN TRỌNG:
+         Khi hai phòng đều có thẩm quyền và cho kết quả khác nhau trong vùng chồng
+         lấn, áp dụng kết quả BẤT LỢI HƠN cho việc cấp tín dụng.
+
+    R7 — HỢP NHẤT ĐIỀU KIỆN:
+         Điều kiện tiên quyết từ các phòng được HỢP (union), không phải giao. Điều
+         kiện của P.PLTC và P.QTRR đều phải được đáp ứng đầy đủ, không được bù trừ.
+
+    R8 — NGOẠI LỆ CHÍNH SÁCH (policy exception):
+         Mọi đề nghị cấp tín dụng lệch khỏi quy định tại tài liệu này (trừ các nội
+         dung thuộc R1, R2 — không có ngoại lệ) phải: (a) được lập thành Tờ trình
+         ngoại lệ riêng, nêu rõ điều khoản bị lệch và mức độ lệch; (b) có ý kiến
+         bằng văn bản của P.QTRR và P.PLTC; (c) được phê duyệt bởi cấp cao hơn 01
+         bậc so với cấp thẩm quyền thông thường; (d) được thống kê và báo cáo Ủy
+         ban Quản lý rủi ro hàng quý. Số lượng ngoại lệ của một chi nhánh vượt 5%
+         số hồ sơ trong quý → chi nhánh bị dừng quyền phê duyệt Cấp 2 trong quý
+         tiếp theo.
+
+    R9 — HẾT HẠN HIỆU LỰC:
+         Chứng thư định giá BM-03 có hiệu lực 06 tháng; báo cáo CIC có hiệu lực
+         30 ngày; Quyết định phê duyệt BM-06 có hiệu lực 90 ngày kể từ ngày ký.
+         Quá hạn → phải làm lại bước tương ứng trước khi tiếp tục.
+
+[ID: HHB-QT-10] BẢNG SLA VÀ MA TRẬN RACI CỦA QUY TRÌNH QT-TD-2026
+
+Bảng SLA (NLV = ngày làm việc):
+    B1  Tiếp nhận & KYC ............. P.QHKH ..... 1 NLV
+    B2  Thẩm định tín dụng .......... P.TD ....... 3 NLV (≤10 tỷ) / 5 NLV (>10 tỷ)
+    B3  Thẩm định TSBĐ .............. P.TĐTS ..... 2 NLV (BĐS đô thị có sổ)
+                                                   4 NLV (tài sản khác)
+                                                   7 NLV (thuê định giá độc lập)
+    B4  Rà soát pháp lý – tuân thủ .. P.PLTC ..... 2 NLV (4 NLV nếu có EDD)
+    B5  Tái thẩm định rủi ro ........ P.QTRR ..... 3 NLV
+    B6  Phê duyệt ................... Cấp TQ ..... 2 NLV (5 NLV nếu UBTD/HĐQT)
+    B7  Hợp đồng & giải ngân ........ P.PLTC+P.VHNV 3 NLV (chưa kể chờ cơ quan
+                                                   công chứng, đăng ký GDBĐ)
+
+Tổng thời gian cam kết với khách hàng (do B3 và B4 chạy song song với B2):
+    - KHCN, TSBĐ là BĐS đô thị có sổ, dư nợ ≤ 3 tỷ: tối đa 09 NLV đến khi có
+      quyết định phê duyệt; 12 NLV đến khi giải ngân.
+    - KHDN SME, dư nợ ≤ 15 tỷ: tối đa 13 NLV đến khi có quyết định phê duyệt;
+      16 NLV đến khi giải ngân.
+    - Hồ sơ thuộc thẩm quyền UBTD/HĐQT: tối đa 22 NLV đến khi có quyết định.
+Thời gian chờ khách hàng bổ sung hồ sơ KHÔNG tính vào SLA (đồng hồ tạm dừng).
+
+Ma trận RACI (R = thực hiện, A = chịu trách nhiệm cuối cùng, C = được hỏi ý kiến,
+I = được thông báo):
+
+    Hoạt động                        P.QHKH  P.TD   P.QTRR  P.PLTC  P.TĐTS  P.VHNV
+    ------------------------------   ------  -----  ------  ------  ------  ------
+    B1 Tiếp nhận, KYC                 R/A     I      -       C       -       -
+    B1 Khảo sát thực địa khách hàng   R/A     I      -       -       -       -
+    B2 Phân tích tài chính, CIC       C       R/A    C       -       -       -
+    B2 Chấm điểm XHTD (sơ bộ)         -       R/A    C       -       -       -
+    B2 Lập tờ trình BM-02             C       R/A    I       I       I       -
+    B3 Khảo sát & định giá TSBĐ       C       I      I       C       R/A     -
+    B3 Xác định LTV, mức cho vay tối đa -     I      C       -       R/A     -
+    B4 Rà soát tư cách pháp lý        C       I      I       R/A     -       -
+    B4 Rà soát pháp lý TSBĐ           C       I      I       R/A     C       -
+    B4 Sàng lọc AML/CFT               C       I      I       R/A     -       -
+    B5 Kiểm tra nhất quán chéo        -       C      R/A     C       C       -
+    B5 Phê chuẩn XHTD chính thức      -       C      R/A     -       -       -
+    B5 Kiểm tra giới hạn danh mục     -       I      R/A     I       -       -
+    B5 Xác định lãi suất sàn          I       C      R/A     -       -       -
+    B6 Trình và bảo vệ hồ sơ          C       R      C       C       C       -
+    B6 Quyết định phê duyệt           I       I      C       C       I       I
+    B7 Soạn thảo hợp đồng             C       C      I       R/A     I       C
+    B7 Công chứng, đăng ký GDBĐ       R       I      -       A       -       C
+    B7 Kiểm soát trước giải ngân      I       I      I       C       I       R/A
+    B7 Giải ngân, hạch toán           I       I      -       -       -       R/A
+    B8 Kiểm tra mục đích sử dụng vốn  R       A      I       -       -       I
+    B8 Định giá lại TSBĐ              C       I      I       -       R/A     I
+    B8 Cảnh báo sớm, phân loại nợ     C       R      A       -       -       I
+
+--------------------------------------------------------------------------------
+PHẦN IV — BỘ TIÊU CHÍ ĐỊNH LƯỢNG
+--------------------------------------------------------------------------------
+
+[ID: HHB-TC-01] MÔ HÌNH XẾP HẠNG TÍN DỤNG NỘI BỘ — KHÁCH HÀNG CÁ NHÂN (KHCN)
+
+Điểm tổng = Σ (Điểm tiêu chí_i × Trọng số_i). Mỗi tiêu chí chấm thang 0–100.
+Điểm tổng nằm trong khoảng 0–100, làm tròn 01 chữ số thập phân.
+
+    Tiêu chí                                        Trọng số
+    T1. Lịch sử tín dụng (CIC)                        25%
+    T2. Khả năng trả nợ (DTI và tính ổn định thu nhập) 25%
+    T3. Nhân thân và nghề nghiệp                      15%
+    T4. Tài sản tích lũy                              15%
+    T5. Quan hệ với HHB                               10%
+    T6. Mục đích vay và nguồn trả nợ                  10%
+                                                    -----
+                                                     100%
+
+Thang điểm chi tiết:
+
+T1 — LỊCH SỬ TÍN DỤNG (CIC), 25%:
+    100 : Có lịch sử tín dụng ≥ 24 tháng, luôn nhóm 1, không có ngày quá hạn nào.
+     85 : Có lịch sử ≥ 12 tháng, nhóm 1, có ≤ 02 lần quá hạn dưới 10 ngày.
+     70 : Có lịch sử ≥ 12 tháng, nhóm 1, có 03–05 lần quá hạn dưới 10 ngày.
+     60 : Chưa từng có quan hệ tín dụng (hồ sơ trắng — thin file).
+     50 : Từng nhóm 2 trong khoảng 12–24 tháng trước, đã tất toán sạch.
+     30 : Đang hoặc từng nhóm 2 trong 12 tháng gần nhất.
+      0 : Từng nhóm 3, 4 hoặc 5 trong 36 tháng gần nhất → KNOCK-OUT [HHB-DM-03].
+    Điều chỉnh trừ điểm (áp dụng sau khi chọn mức trên, sàn 0):
+    −10 nếu đang có quan hệ tín dụng tại ≥ 04 TCTD.
+    −10 nếu bị ≥ 05 TCTD tra cứu CIC trong 03 tháng gần nhất.
+
+T2 — KHẢ NĂNG TRẢ NỢ, 25%: điểm = (Điểm DTI × 0,7) + (Điểm ổn định thu nhập × 0,3).
+    Điểm DTI (DTI tính theo [HHB-TC-04]):
+        100 : DTI ≤ 35%.
+         80 : 35% < DTI ≤ 45%.
+         60 : 45% < DTI ≤ 55%.
+         40 : 55% < DTI ≤ 60%.
+          0 : DTI > 60% → KNOCK-OUT.
+    Điểm ổn định thu nhập:
+        100 : Lương qua tài khoản, hợp đồng lao động không xác định thời hạn,
+              thâm niên tại đơn vị hiện tại ≥ 36 tháng.
+         80 : Lương qua tài khoản, thâm niên 12–36 tháng.
+         60 : Thu nhập từ hộ kinh doanh hoạt động ≥ 24 tháng, có sổ sách.
+         40 : Lương tiền mặt hoặc thu nhập không ổn định, thâm niên < 12 tháng.
+          0 : Không chứng minh được thu nhập bằng chứng từ.
+
+T3 — NHÂN THÂN VÀ NGHỀ NGHIỆP, 15%: điểm = trung bình cộng 04 chỉ số con.
+    (a) Độ tuổi: 30–50 tuổi = 100; 25–30 hoặc 50–60 = 75; 20–25 hoặc 60–65 = 50;
+        ngoài khoảng = 0 (kiểm tra thêm trần tuổi tại [HHB-QT-02, 2.1]).
+    (b) Trình độ: sau đại học = 100; đại học = 85; cao đẳng/trung cấp = 70;
+        THPT = 55; dưới THPT = 40.
+    (c) Tính chất nghề nghiệp: công chức/viên chức, bác sĩ, giáo viên, quân đội,
+        công an = 100; nhân viên doanh nghiệp lớn/FDI = 85; nhân viên doanh
+        nghiệp SME = 70; chủ hộ kinh doanh = 60; lao động tự do, thời vụ = 30.
+    (d) Nơi cư trú: thường trú tại địa bàn ≥ 36 tháng, sở hữu nhà = 100; thường
+        trú ≥ 12 tháng = 80; tạm trú dài hạn ≥ 12 tháng = 60; tạm trú < 12
+        tháng = 30.
+
+T4 — TÀI SẢN TÍCH LŨY, 15%: dựa trên tổng giá trị tài sản ròng của hộ gia đình
+    (tài sản − nợ), chứng minh được bằng chứng từ.
+        100 : ≥ 10 lần số tiền vay đề nghị.
+         85 : 5–10 lần.
+         70 : 3–5 lần.
+         55 : 1,5–3 lần.
+         40 : 1–1,5 lần.
+         20 : < 1 lần.
+
+T5 — QUAN HỆ VỚI HHB, 10%:
+        100 : Khách hàng ≥ 24 tháng, có tài khoản trả lương hoặc tiền gửi tại HHB,
+              từng vay và tất toán đúng hạn tại HHB.
+         80 : Khách hàng ≥ 12 tháng, có giao dịch thường xuyên.
+         60 : Khách hàng ≥ 06 tháng.
+         50 : Khách hàng mới (mở quan hệ cùng lúc với đề nghị vay).
+         20 : Từng có nợ quá hạn tại HHB (đã tất toán).
+
+T6 — MỤC ĐÍCH VAY VÀ NGUỒN TRẢ NỢ, 10%:
+        100 : Mua nhà để ở (chính chủ ở), vốn tự có ≥ 40%, nguồn trả nợ từ lương.
+         85 : Mua nhà để ở, vốn tự có 30–40%; hoặc vay tiêu dùng có TSBĐ mục đích
+              rõ ràng (sửa nhà, học phí, y tế) có chứng từ.
+         70 : Mua ô tô phục vụ nhu cầu cá nhân; bổ sung vốn kinh doanh hộ có
+              phương án cụ thể.
+         55 : Vay tiêu dùng mục đích tổng hợp, có bảng kê nhu cầu vốn.
+         30 : Mục đích liên quan đầu tư BĐS thứ hai trở lên (đánh dấu ngành hạn
+              chế [HHB-DM-02]).
+          0 : Mục đích không hợp pháp hoặc thuộc nhu cầu vốn không được cho vay
+              [HHB-QT-04, 4.6] → KNOCK-OUT.
+
+Ví dụ tính (bắt buộc trình bày theo dạng này trong tờ trình):
+    Khách hàng A: T1=85, T2 = (100×0,7)+(100×0,3) = 100, T3 = (100+85+85+80)/4 =
+    87,5; T4=70; T5=80; T6=85.
+    Điểm tổng = 85×0,25 + 100×0,25 + 87,5×0,15 + 70×0,15 + 80×0,10 + 85×0,10
+              = 21,25 + 25,00 + 13,125 + 10,50 + 8,00 + 8,50 = 86,375 ≈ 86,4
+    Tra [HHB-TC-03]: 86,4 thuộc khoảng 83,0–89,9 → hạng AA.
+
+[ID: HHB-TC-02] MÔ HÌNH XẾP HẠNG TÍN DỤNG NỘI BỘ — KHÁCH HÀNG DOANH NGHIỆP (KHDN)
+
+Điểm tổng = Σ (Điểm tiêu chí_i × Trọng số_i), thang 0–100.
+
+    Tiêu chí                                        Trọng số
+    D1. Chỉ tiêu tài chính                            40%
+    D2. Lịch sử tín dụng (CIC)                        20%
+    D3. Ngành nghề và vị thế thị trường               15%
+    D4. Quản trị và kinh nghiệm chủ doanh nghiệp      15%
+    D5. Quan hệ với HHB                               10%
+                                                    -----
+                                                     100%
+
+D1 — CHỈ TIÊU TÀI CHÍNH, 40%: gồm 05 chỉ số con, mỗi chỉ số chiếm 20% của D1
+     (tức 8% điểm tổng). Số liệu lấy từ BCTC năm gần nhất; nếu có BCTC kiểm toán
+     thì bắt buộc dùng bản kiểm toán.
+
+    (a) Hệ số Nợ phải trả / Vốn chủ sở hữu (D/E):
+            ≤ 1,0        → 100
+            1,0 < D/E ≤ 2,0 → 75
+            2,0 < D/E ≤ 3,0 → 50
+            3,0 < D/E ≤ 4,0 → 25
+            > 4,0        → 0  (và là dấu hiệu cảnh báo nghiêm trọng)
+            Vốn chủ sở hữu âm → KNOCK-OUT [HHB-DM-03].
+    (b) Hệ số thanh toán hiện hành (Tài sản ngắn hạn / Nợ ngắn hạn):
+            ≥ 1,5 → 100; 1,2–1,5 → 75; 1,0–1,2 → 50; 0,8–1,0 → 25; < 0,8 → 0.
+    (c) Tỷ suất lợi nhuận trên vốn chủ sở hữu (ROE):
+            ≥ 15% → 100; 10–15% → 75; 5–10% → 50; 0–5% → 25; < 0 → 0.
+            Lỗ 02 năm liên tiếp → KNOCK-OUT [HHB-DM-03].
+    (d) Hệ số khả năng trả nợ (DSCR), tính theo [HHB-TC-04]:
+            ≥ 2,0 → 100; 1,5–2,0 → 80; 1,2–1,5 → 60; 1,0–1,2 → 30; < 1,0 → 0.
+            DSCR < 1,0 → KNOCK-OUT [HHB-DM-03].
+    (e) Tăng trưởng doanh thu bình quân 02 năm gần nhất:
+            ≥ 15% → 100; 5–15% → 75; 0–5% → 50; −10%–0% → 25; < −10% → 0.
+
+D2 — LỊCH SỬ TÍN DỤNG (CIC), 20%: áp dụng thang điểm giống T1 tại [HHB-TC-01],
+     xét trên doanh nghiệp VÀ người đại diện pháp luật VÀ chủ sở hữu ≥ 20% vốn;
+     lấy điểm THẤP NHẤT trong các chủ thể này.
+
+D3 — NGÀNH NGHỀ VÀ VỊ THẾ THỊ TRƯỜNG, 15%: điểm = trung bình cộng 03 chỉ số con.
+    (a) Triển vọng ngành: ngành tăng trưởng ổn định, thiết yếu (thực phẩm, y tế,
+        giáo dục, logistics, điện, nước) = 100; ngành ổn định (sản xuất công
+        nghiệp phụ trợ, thương mại hàng tiêu dùng) = 80; ngành chu kỳ (xây dựng,
+        vật liệu xây dựng, vận tải) = 60; ngành hạn chế [HHB-DM-02] = 30;
+        ngành cấm [HHB-DM-01] = 0 → KNOCK-OUT.
+    (b) Vị thế của doanh nghiệp: có thương hiệu/thị phần rõ ràng trong địa bàn,
+        khách hàng đa dạng = 100; hoạt động ổn định, khách hàng khá đa dạng = 75;
+        phụ thuộc 01 khách hàng chiếm 40–60% doanh thu = 50; phụ thuộc 01 khách
+        hàng > 60% doanh thu = 25.
+    (c) Thời gian hoạt động thực tế: ≥ 10 năm = 100; 5–10 năm = 80; 3–5 năm = 60;
+        2–3 năm = 40; < 2 năm = 0 → KNOCK-OUT [HHB-DM-03].
+
+D4 — QUẢN TRỊ VÀ KINH NGHIỆM CHỦ DOANH NGHIỆP, 15%: trung bình cộng 03 chỉ số.
+    (a) Kinh nghiệm của người điều hành trong ngành: ≥ 10 năm = 100; 5–10 = 80;
+        3–5 = 60; < 3 = 40.
+    (b) Chất lượng thông tin tài chính: BCTC được kiểm toán bởi công ty kiểm toán
+        được chấp thuận = 100; BCTC có kiểm toán (đơn vị khác) = 85; BCTC tự lập
+        khớp tờ khai thuế, chênh lệch ≤ 5% = 70; chênh lệch 5–15% = 50; chênh
+        lệch > 15% chưa giải trình được = 0.
+    (c) Tính minh bạch quản trị: có hệ thống kế toán và kiểm soát nội bộ rõ ràng,
+        tách bạch tài chính doanh nghiệp và cá nhân chủ = 100; cơ bản tách
+        bạch = 70; có dấu hiệu lẫn lộn dòng tiền doanh nghiệp và cá nhân = 30.
+
+D5 — QUAN HỆ VỚI HHB, 10%: áp dụng thang điểm giống T5 tại [HHB-TC-01], bổ sung:
+    +10 (tối đa 100) nếu doanh thu chuyển qua tài khoản HHB ≥ 50% tổng doanh thu.
+
+[ID: HHB-TC-03] BẢNG QUY ĐỔI ĐIỂM SANG HẠNG VÀ CHÍNH SÁCH TÍN DỤNG TƯƠNG ỨNG
+
+    Hạng  Khoảng điểm   Diễn giải rủi ro           Chính sách cấp tín dụng
+    ----  -----------   ------------------------   ------------------------------
+    AAA   90,0–100      Rủi ro rất thấp            Cấp bình thường. Được xem xét
+                                                   tín chấp một phần. Ưu tiên lãi
+                                                   suất tốt nhất.
+    AA    83,0–89,9     Rủi ro thấp                Cấp bình thường. Được xem xét
+                                                   tín chấp một phần.
+    A     77,0–82,9     Rủi ro thấp                Cấp bình thường. Không tín chấp
+                                                   toàn phần.
+    BBB   71,0–76,9     Rủi ro trung bình          Cấp bình thường, yêu cầu TSBĐ
+                                                   theo [HHB-TC-07].
+    BB    65,0–70,9     Rủi ro trung bình cao      Cấp CÓ ĐIỀU KIỆN. Bắt buộc TSBĐ
+                                                   phủ ≥ 100%. Giám sát chặt.
+    B     58,0–64,9     Rủi ro cao                 Cấp CÓ ĐIỀU KIỆN, thẩm quyền từ
+                                                   HĐTD CN trở lên. TSBĐ phủ ≥
+                                                   100%, thanh khoản Cao/Trung bình.
+    CCC   50,0–57,9     Rủi ro rất cao             Chỉ HĐTD HS trở lên. Bắt buộc
+                                                   nâng 01 cấp thẩm quyền. TSBĐ phủ
+                                                   ≥ 120%, thanh khoản Cao.
+    CC    42,0–49,9     Rủi ro nghiêm trọng        TỪ CHỐI cấp mới.
+    C     35,0–41,9     Nguy cơ mất vốn            TỪ CHỐI cấp mới.
+    D     < 35,0        Đã/đang mất vốn            TỪ CHỐI cấp mới.
+
+Quy tắc bổ sung:
+    - Không cấp tín dụng mới cho khách hàng hạng CC, C, D dưới bất kỳ hình thức
+      nào, trừ cho vay cầm cố sổ tiết kiệm do chính HHB phát hành.
+    - Khách hàng hiện hữu bị hạ xuống CC trở xuống: dừng giải ngân phần hạn mức
+      chưa sử dụng, chuyển theo dõi đặc biệt.
+    - Hạng chính thức do P.QTRR phê chuẩn tại [HHB-QT-05]. P.QTRR được hạ tối đa
+      02 bậc bằng override có lý do; không được nâng bậc.
+
+[ID: HHB-TC-04] CÔNG THỨC TÍNH DTI VÀ DSCR
+
+DTI (Debt-to-Income) — áp dụng cho KHCN:
+
+    DTI = (Tổng nghĩa vụ trả nợ hàng tháng) / (Thu nhập ròng ổn định hàng tháng)
+
+    Tử số bao gồm, không được bỏ sót:
+        - Gốc + lãi hàng tháng của khoản vay đang đề nghị (tính theo tháng có số
+          tiền phải trả CAO NHẤT trong lịch trả nợ, không lấy bình quân).
+        - Gốc + lãi hàng tháng của TẤT CẢ khoản vay hiện hữu tại HHB và các TCTD
+          khác theo CIC.
+        - 5% hạn mức thẻ tín dụng đã cấp (kể cả chưa sử dụng), cộng dồn mọi thẻ.
+        - Nghĩa vụ bảo lãnh cá nhân đã phát sinh (nếu có).
+    Mẫu số:
+        - Thu nhập ròng sau thuế và bảo hiểm, chỉ tính các nguồn được công nhận
+          theo [HHB-QT-02, 2.3], đã áp dụng tỷ lệ công nhận tương ứng.
+        - Được cộng thu nhập của vợ/chồng nếu vợ/chồng đồng ký với tư cách người
+          đồng trả nợ.
+    Ngưỡng bắt buộc:
+        - Thu nhập ròng hộ gia đình > 30 triệu đồng/tháng: DTI ≤ 60%.
+        - Thu nhập ròng hộ gia đình 15–30 triệu đồng/tháng: DTI ≤ 50%.
+        - Thu nhập ròng hộ gia đình < 15 triệu đồng/tháng: DTI ≤ 40%.
+        - Ngoài ra, thu nhập còn lại sau khi trừ toàn bộ nghĩa vụ trả nợ phải
+          ≥ 4 triệu đồng/người/tháng cho từng thành viên phụ thuộc trong hộ.
+          Đây là ràng buộc ĐỘC LẬP với ngưỡng DTI; vi phạm → từ chối.
+
+    Ví dụ tính: Khách hàng B thu nhập lương qua tài khoản 42 triệu/tháng; vợ
+    không đồng trả nợ; có 02 con. Đang có khoản vay ô tô trả 6 triệu/tháng và
+    thẻ tín dụng hạn mức 80 triệu. Đề nghị vay mua nhà, tháng trả cao nhất là
+    18 triệu.
+        Tử số = 18 + 6 + (5% × 80 = 4) = 28 triệu.
+        Mẫu số = 42 triệu.
+        DTI = 28 / 42 = 66,7% > 60% → vi phạm ngưỡng → KNOCK-OUT.
+        Kết luận của P.TD: đề xuất giảm số tiền vay hoặc kéo dài kỳ hạn để đưa
+        khoản trả hàng tháng xuống ≤ 42×0,60 − 6 − 4 = 15,2 triệu đồng/tháng.
+
+DSCR (Debt Service Coverage Ratio) — áp dụng cho KHDN:
+
+    DSCR = (Lợi nhuận sau thuế + Khấu hao + Chi phí lãi vay)
+           / (Nợ gốc phải trả trong kỳ + Chi phí lãi vay trong kỳ)
+
+    Trong đó:
+        - Kỳ tính là 12 tháng tiếp theo kể từ thời điểm thẩm định.
+        - Nợ gốc phải trả bao gồm nghĩa vụ tại HHB và tất cả TCTD khác.
+        - Số liệu lợi nhuận và khấu hao lấy theo BCTC năm gần nhất, đã điều chỉnh
+          loại bỏ các khoản thu nhập bất thường (thanh lý tài sản, hoàn nhập dự
+          phòng, thu nhập tài chính một lần).
+    Ngưỡng bắt buộc:
+        - DSCR ≥ 1,2: đạt yêu cầu cơ bản.
+        - 1,0 ≤ DSCR < 1,2: chỉ chấp nhận nếu XHTD ≥ A và TSBĐ phủ ≥ 120%.
+        - DSCR < 1,0: KNOCK-OUT [HHB-DM-03].
+        - Ở kịch bản stress (doanh thu −20% và lãi suất +2%/năm) [HHB-QT-02, 2.6],
+          DSCR phải ≥ 1,0.
+
+    Ví dụ tính: Doanh nghiệp C có LNST 4,2 tỷ; khấu hao 1,8 tỷ; chi phí lãi vay
+    1,5 tỷ. Trong 12 tháng tới phải trả gốc 3,0 tỷ và lãi ước tính 1,6 tỷ.
+        Tử số = 4,2 + 1,8 + 1,5 = 7,5 tỷ.
+        Mẫu số = 3,0 + 1,6 = 4,6 tỷ.
+        DSCR = 7,5 / 4,6 = 1,63 → thuộc khoảng 1,5–2,0 → điểm D1(d) = 80.
+
+[ID: HHB-TC-05] BẢNG TỶ LỆ CHO VAY TỐI ĐA TRÊN GIÁ TRỊ TÀI SẢN BẢO ĐẢM (LTV)
+
+    Loại tài sản bảo đảm                                        LTV tối đa
+    ---------------------------------------------------------   ----------
+    Sổ/thẻ tiết kiệm, tiền gửi có kỳ hạn do chính HHB phát hành     95%
+    Sổ tiết kiệm do TCTD khác trong nước phát hành                  90%
+    Trái phiếu Chính phủ, tín phiếu Kho bạc                         90%
+    Trái phiếu doanh nghiệp niêm yết, xếp hạng cao                  50%
+    Trái phiếu doanh nghiệp riêng lẻ                                 0% (không nhận)
+    Nhà ở, đất ở tại đô thị có giấy chứng nhận, đường ô tô vào      70%
+    Nhà ở, đất ở tại đô thị, đường vào < 3 m hoặc ngõ sâu > 50 m    60%
+    Nhà ở, đất ở tại nông thôn có giấy chứng nhận                    55%
+    Bất động sản thương mại, văn phòng, mặt bằng kinh doanh          60%
+    Nhà xưởng, kho trên đất thuê trả tiền hàng năm                   40%
+    Nhà xưởng, kho trên đất thuê trả tiền một lần cho cả thời hạn    55%
+    Đất nông nghiệp có giấy chứng nhận                               40%
+    Nhà ở hình thành trong tương lai (dự án đủ điều kiện bán)        60%
+    Ô tô mới 100%, đăng ký lần đầu                                   70%
+    Ô tô đã qua sử dụng ≤ 05 năm                                     50%
+    Ô tô đã qua sử dụng > 05 năm                                      0% (không nhận)
+    Máy móc thiết bị phổ thông, còn ≥ 60% giá trị còn lại            50%
+    Máy móc thiết bị chuyên dụng, đặc chủng                          30%
+    Phương tiện thủy nội địa                                         40%
+    Hàng tồn kho luân chuyển (có kiểm soát kho)                      40%
+    Khoản phải thu từ hợp đồng đầu ra (có xác nhận bên mua)          40%
+    Cổ phiếu niêm yết thuộc rổ VN30                                  50%
+    Cổ phiếu niêm yết khác (HOSE, HNX)                               30%
+    Cổ phiếu UPCoM, cổ phiếu chưa niêm yết                            0% (không nhận)
+    Chứng chỉ quỹ mở                                                 40%
+    Vàng miếng (gửi kho HHB)                                         70%
+    Quyền tài sản, quyền khai thác, thương hiệu                       0% (không nhận)
+
+Quy tắc điều chỉnh LTV (áp dụng cộng dồn, sàn 0%):
+    - Thanh khoản xếp loại "Thấp" theo [HHB-QT-03, 3.6]: LTV − 10 điểm %.
+    - Tài sản thuộc sở hữu của bên thứ ba (không phải khách hàng vay): LTV − 5
+      điểm %, và bắt buộc bên thứ ba ký hợp đồng bảo đảm có công chứng.
+    - Tài sản nằm ngoài địa bàn có chi nhánh/PGD của HHB: LTV − 10 điểm %, và
+      bắt buộc phê duyệt từ Cấp 3 trở lên.
+    - Tài sản có cảnh báo hiện trạng theo [HHB-QT-03, 3.7]: LTV − 10 điểm %.
+    - Khoản vay có kỳ hạn > 10 năm và TSBĐ là BĐS: LTV − 5 điểm %.
+
+Công thức tổng hợp:
+    Mức cho vay tối đa trên TSBĐ = Σ_i (Giá trị định giá_i × LTV điều chỉnh_i)
+
+    Ví dụ: TSBĐ gồm (1) nhà đất đô thị có sổ, ô tô vào được, định giá 6,0 tỷ,
+    nhưng đang cho thuê dài hạn 5 năm (cảnh báo hiện trạng); (2) sổ tiết kiệm HHB
+    500 triệu.
+        Tài sản 1: LTV cơ sở 70% − 10 (cảnh báo hiện trạng) = 60% → 6,0 × 0,60
+                   = 3,60 tỷ.
+        Tài sản 2: LTV 95% → 0,5 × 0,95 = 0,475 tỷ.
+        Mức cho vay tối đa trên TSBĐ = 3,60 + 0,475 = 4,075 tỷ đồng.
+
+[ID: HHB-TC-06] LÃI SUẤT SÀN THEO RỦI RO VÀ BIỂU PHÍ
+
+Lãi suất cho vay tối thiểu (lãi suất sàn) do P.QTRR xác định tại [HHB-QT-05, 5.7]:
+
+    Lãi suất sàn = Lãi suất cơ sở + Biên độ theo hạng XHTD + Điều chỉnh theo TSBĐ
+                   + Điều chỉnh theo kỳ hạn
+
+    Lãi suất cơ sở HHB năm 2026: 7,5%/năm (do Hội đồng ALCO công bố hàng quý).
+
+    Biên độ theo hạng XHTD:
+        AAA: +0,5%   AA: +0,8%   A: +1,2%   BBB: +1,8%
+        BB:  +2,5%   B:  +3,5%   CCC: +4,5%
+        CC trở xuống: không cấp tín dụng.
+
+    Điều chỉnh theo TSBĐ chủ yếu (chiếm tỷ trọng lớn nhất trong giá trị bảo đảm):
+        Sổ tiết kiệm HHB, trái phiếu Chính phủ:  −1,0%
+        BĐS nhà ở đô thị có sổ:                   0,0%
+        BĐS khác, nhà xưởng:                     +0,3%
+        Ô tô:                                    +0,5%
+        MMTB, hàng tồn kho, khoản phải thu:      +0,8%
+        Cổ phiếu, chứng chỉ quỹ:                 +1,0%
+        Phần tín chấp (không có TSBĐ):           +2,0%
+
+    Điều chỉnh theo kỳ hạn:
+        ≤ 12 tháng: 0,0%;  > 12–60 tháng: +0,3%;  > 60–120 tháng: +0,6%;
+        > 120 tháng: +1,0%.
+
+    Ví dụ: Khách hàng hạng AA, TSBĐ là nhà đất đô thị có sổ, vay 20 năm.
+        Lãi suất sàn = 7,5 + 0,8 + 0,0 + 1,0 = 9,3%/năm.
+        Cấp phê duyệt KHÔNG được duyệt lãi suất thấp hơn 9,3%/năm [HHB-QT-06(b)].
+
+Biểu phí liên quan (đồng thời là một phần của chi phí vay khách hàng phải được
+thông báo trước tại B1):
+    - Phí thẩm định TSBĐ: 500.000 đ/tài sản (BĐS); 300.000 đ/tài sản (động sản);
+      chi phí thực tế nếu thuê thẩm định giá độc lập.
+    - Phí trả nợ trước hạn: năm 1: 3% số tiền trả trước hạn; năm 2: 2%; năm 3:
+      1%; từ năm 4: miễn.
+    - Phí cam kết rút vốn (với hạn mức chưa sử dụng của KHDN): 0,3%/năm.
+    - Phí quản lý tài sản bảo đảm: 200.000 đ/tài sản/năm.
+    - Lãi suất quá hạn: 150% lãi suất trong hạn, áp dụng trên phần dư nợ quá hạn.
+    - Lãi phạt chậm trả lãi: 10%/năm trên số lãi chậm trả.
+
+[ID: HHB-TC-07] MA TRẬN QUYẾT ĐỊNH TÍN DỤNG
+
+Định nghĩa Tỷ lệ bảo đảm (Coverage):
+    Tỷ lệ bảo đảm = (Mức cho vay tối đa trên TSBĐ [HHB-TC-05]) / (Số tiền vay
+                     đề nghị) × 100%
+Diễn giải: Tỷ lệ bảo đảm 100% nghĩa là TSBĐ (sau khi đã chiết khấu bằng LTV) vừa
+đủ phủ số tiền vay. Dưới 100% nghĩa là có một phần khoản vay không có TSBĐ phủ —
+gọi là phần TÍN CHẤP.
+    Phần tín chấp = Số tiền vay − Mức cho vay tối đa trên TSBĐ (nếu dương).
+
+Ma trận quyết định — tra theo Hạng XHTD chính thức (do P.QTRR phê chuẩn) và Tỷ lệ
+bảo đảm:
+
+    Hạng   Tỷ lệ bảo đảm  Kết luận cơ sở                     Ghi chú
+    -----  -------------  ---------------------------------  ---------------------
+    AAA    ≥ 70%          ĐỒNG Ý                             Tín chấp tối đa 30%
+    AAA    50–70%         ĐỒNG Ý CÓ ĐIỀU KIỆN                Nâng 01 cấp thẩm quyền
+    AAA    < 50%          TỪ CHỐI hoặc giảm số tiền vay
+    AA     ≥ 75%          ĐỒNG Ý                             Tín chấp tối đa 25%
+    AA     55–75%         ĐỒNG Ý CÓ ĐIỀU KIỆN                Nâng 01 cấp thẩm quyền
+    AA     < 55%          TỪ CHỐI hoặc giảm số tiền vay
+    A      ≥ 85%          ĐỒNG Ý                             Tín chấp tối đa 15%
+    A      70–85%         ĐỒNG Ý CÓ ĐIỀU KIỆN                Nâng 01 cấp thẩm quyền
+    A      < 70%          TỪ CHỐI hoặc giảm số tiền vay
+    BBB    ≥ 95%          ĐỒNG Ý                             Tín chấp tối đa 5%
+    BBB    85–95%         ĐỒNG Ý CÓ ĐIỀU KIỆN                Nâng 01 cấp thẩm quyền
+    BBB    < 85%          TỪ CHỐI hoặc giảm số tiền vay
+    BB     ≥ 100%         ĐỒNG Ý CÓ ĐIỀU KIỆN                Không tín chấp
+    BB     < 100%         TỪ CHỐI hoặc giảm số tiền vay
+    B      ≥ 100%         ĐỒNG Ý CÓ ĐIỀU KIỆN                HĐTD CN trở lên; TSBĐ
+                                                             thanh khoản Cao/TB
+    B      < 100%         TỪ CHỐI
+    CCC    ≥ 120%         ĐỒNG Ý CÓ ĐIỀU KIỆN CAO            HĐTD HS trở lên; TSBĐ
+                                                             thanh khoản Cao
+    CCC    < 120%         TỪ CHỐI
+    CC/C/D  bất kỳ        TỪ CHỐI                            Không có ngoại lệ
+
+Trần tín chấp tuyệt đối (áp dụng đồng thời với ma trận trên):
+    - KHCN: phần tín chấp ≤ 500 triệu đồng và ≤ 10 lần thu nhập ròng hàng tháng.
+    - KHDN: phần tín chấp ≤ 3 tỷ đồng và ≤ 15% vốn chủ sở hữu của doanh nghiệp.
+    - Chỉ khách hàng hạng A trở lên mới được cấu phần tín chấp.
+    - Tổng dư nợ tín chấp toàn hàng ≤ 8% tổng dư nợ [HHB-GT-02]; P.QTRR kiểm tra
+      room này tại [HHB-QT-05, 5.5].
+
+Cách sử dụng ma trận (thứ tự bắt buộc):
+    Bước 1: Kiểm tra knock-out [HHB-DM-03]. Có bất kỳ mục nào → TỪ CHỐI, dừng.
+    Bước 2: Kiểm tra kết luận P.PLTC. "KHÔNG ĐẠT" → TỪ CHỐI, dừng [HHB-QT-09 R1].
+    Bước 3: Lấy Hạng XHTD chính thức từ P.QTRR.
+    Bước 4: Tính Tỷ lệ bảo đảm từ BM-03 (đã trừ tài sản bị P.PLTC loại trừ).
+    Bước 5: Tra ma trận → kết luận cơ sở.
+    Bước 6: Kiểm tra trần tín chấp và giới hạn danh mục. Vi phạm → giảm số tiền
+            vay xuống mức tuân thủ, rồi quay lại Bước 4 tính lại Tỷ lệ bảo đảm.
+    Bước 7: Xác định cấp phê duyệt [HHB-GT-05], áp dụng quy tắc nâng cấp nếu có.
+
+    Ví dụ tổng hợp: Khách hàng hạng BBB, đề nghị vay 4,0 tỷ, Mức cho vay tối đa
+    trên TSBĐ là 4,075 tỷ (theo ví dụ tại [HHB-TC-05]).
+        Tỷ lệ bảo đảm = 4,075 / 4,0 = 101,9% ≥ 95% → Kết luận cơ sở: ĐỒNG Ý.
+        Phần tín chấp = 4,0 − 4,075 = âm → không có tín chấp.
+        Dư nợ 4,0 tỷ, KHCN → Cấp 3 (HĐTD Chi nhánh, trần KHCN 8 tỷ).
+        Không có yếu tố nâng cấp → phê duyệt tại HĐTD Chi nhánh.
+
+--------------------------------------------------------------------------------
+PHẦN V — DANH MỤC NGÀNH NGHỀ VÀ ĐIỀU KIỆN LOẠI TRỪ
+--------------------------------------------------------------------------------
+
+[ID: HHB-DM-01] DANH MỤC NGÀNH NGHỀ CẤM CẤP TÍN DỤNG
+
+HHB KHÔNG cấp tín dụng dưới bất kỳ hình thức nào cho các hoạt động sau. Phát hiện
+tại bất kỳ bước nào → P.PLTC kết luận KHÔNG ĐẠT, hồ sơ chấm dứt [HHB-QT-09 R1]:
+    1. Sản xuất, kinh doanh, vận chuyển ma túy và tiền chất ma túy.
+    2. Sản xuất, mua bán vũ khí, khí tài quân sự, vật liệu nổ (trừ đơn vị được
+       Nhà nước cho phép và có giấy phép còn hiệu lực — trường hợp này phải trình
+       HĐQT).
+    3. Kinh doanh mại dâm, mua bán người, mua bán bộ phận cơ thể người.
+    4. Cờ bạc, cá độ, casino, game đổi thưởng trái phép; kinh doanh xổ số tự phát.
+    5. Kinh doanh, khai thác, đầu tư tiền mã hóa, tài sản mã hóa, sàn giao dịch
+       tiền ảo, đào coin.
+    6. Kinh doanh đa cấp không phép, huy động vốn theo mô hình kim tự tháp,
+       "ponzi", "app cho vay ngang hàng" không có giấy phép.
+    7. Sản xuất, kinh doanh hóa chất, động thực vật hoang dã thuộc danh mục cấm.
+    8. Kinh doanh dịch vụ đòi nợ.
+    9. Hoạt động buôn lậu, gian lận thương mại, hàng giả, hàng nhái, xâm phạm
+       quyền sở hữu trí tuệ.
+   10. Sản xuất, kinh doanh sản phẩm, dịch vụ thuộc danh mục cấm đầu tư kinh
+       doanh theo pháp luật hiện hành.
+   11. Doanh nghiệp/cá nhân thuộc danh sách cấm vận quốc tế hoặc danh sách đen
+       nội bộ của HHB.
+
+[ID: HHB-DM-02] DANH MỤC NGÀNH NGHỀ HẠN CHẾ CẤP TÍN DỤNG
+
+Được cấp nhưng phải kiểm soát chặt. Hệ quả bắt buộc khi khách hàng thuộc nhóm này:
+    (a) Nâng 01 cấp thẩm quyền phê duyệt [HHB-GT-05].
+    (b) P.QTRR bắt buộc kiểm tra room ngành: tổng dư nợ nhóm hạn chế ≤ 12% tổng
+        dư nợ toàn hàng [HHB-GT-02]. Hết room → PHẢN ĐỐI, không cấp mới.
+    (c) Điểm tiêu chí triển vọng ngành D3(a) tối đa 30 điểm [HHB-TC-02].
+    (d) Không được cấp tín chấp dưới bất kỳ hình thức nào.
+    (e) Kiểm tra sau giải ngân với tần suất tăng gấp đôi so với [HHB-QT-08, 8.1].
+
+Danh mục:
+    1. Kinh doanh bất động sản để đầu tư/đầu cơ (mua đi bán lại; mua BĐS thứ hai
+       trở lên không nhằm mục đích ở). Không bao gồm: vay mua nhà thứ nhất để ở.
+    2. Đầu tư, kinh doanh chứng khoán; cho vay để mua cổ phiếu.
+    3. Khai thác khoáng sản, đá, cát sỏi.
+    4. Đóng tàu, vận tải biển viễn dương.
+    5. Sản xuất thép, xi măng (ngành thừa công suất, chu kỳ mạnh).
+    6. Kinh doanh vàng miếng, ngoại tệ.
+    7. Xây dựng dân dụng theo hợp đồng thầu phụ (rủi ro chuỗi thanh toán).
+    8. Kinh doanh dịch vụ giải trí có điều kiện: karaoke, vũ trường, quán bar,
+       massage.
+    9. Nuôi trồng thủy sản quy mô lớn phụ thuộc thời tiết, chăn nuôi tập trung
+       (rủi ro dịch bệnh).
+   10. Kinh doanh nông sản xuất khẩu theo mùa vụ, không có hợp đồng bao tiêu.
+   11. Giáo dục tư nhân có yếu tố huy động học phí trả trước dài hạn.
+   12. Doanh nghiệp có giao dịch chủ yếu với đối tác tại quốc gia thuộc danh sách
+       giám sát tăng cường về phòng chống rửa tiền.
+
+[ID: HHB-DM-03] ĐIỀU KIỆN TỪ CHỐI TUYỆT ĐỐI (KNOCK-OUT)
+
+Đây là danh sách kiểm tra bắt buộc. Bất kỳ mục nào được kích hoạt bởi bất kỳ
+phòng nào, tại bất kỳ bước nào → quy trình DỪNG NGAY, các bước còn lại bị hủy,
+không có cơ chế leo thang, không có ngoại lệ chính sách [HHB-QT-09 R2].
+
+Nhóm KO-A — Lịch sử tín dụng và nghĩa vụ nợ:
+    A1. Khách hàng hoặc vợ/chồng (KHCN), hoặc doanh nghiệp / người đại diện pháp
+        luật / chủ sở hữu ≥ 20% vốn (KHDN) có nợ nhóm 3, 4 hoặc 5 tại bất kỳ TCTD
+        nào trong 36 tháng gần nhất.
+    A2. Khách hàng đang có nợ quá hạn tại HHB.
+    A3. Khách hàng có tên trong danh sách khách hàng bị từ chối phục vụ của HHB.
+    A4. Khách hàng đang bị khởi kiện đòi nợ, đang bị thi hành án về nghĩa vụ tài
+        chính, hoặc đang trong thủ tục phá sản.
+
+Nhóm KO-B — Chỉ số tài chính:
+    B1. KHCN: DTI > 60% (hoặc vượt ngưỡng tương ứng theo mức thu nhập tại
+        [HHB-TC-04]).
+    B2. KHCN: thu nhập còn lại sau nghĩa vụ nợ < 4 triệu đồng/người phụ thuộc/tháng.
+    B3. KHDN: DSCR < 1,0.
+    B4. KHDN: vốn chủ sở hữu âm.
+    B5. KHDN: lỗ 02 năm tài chính liên tiếp gần nhất.
+    B6. Không chứng minh được nguồn thu nhập/doanh thu bằng chứng từ.
+
+Nhóm KO-C — Pháp lý và tuân thủ (do P.PLTC phát hiện):
+    C1. Trùng khớp thật với danh sách cấm vận quốc tế hoặc danh sách khủng bố.
+    C2. Ngành nghề thuộc danh mục cấm [HHB-DM-01].
+    C3. Mục đích vay không hợp pháp, hoặc thuộc nhu cầu vốn không được cho vay,
+        hoặc nhằm đảo nợ.
+    C4. Doanh nghiệp không còn tư cách pháp nhân, đang giải thể, hoặc bị thu hồi
+        giấy chứng nhận đăng ký doanh nghiệp.
+    C5. Thiếu chữ ký của một hoặc nhiều đồng sở hữu TSBĐ, hoặc thiếu sự đồng thuận
+        của vợ/chồng đối với tài sản chung, và không khắc phục được.
+    C6. Thiếu nghị quyết của cơ quan có thẩm quyền của doanh nghiệp đối với giao
+        dịch vay vốn vượt thẩm quyền người đại diện theo điều lệ, và không bổ sung
+        được.
+    C7. TSBĐ đang bị kê biên, ngăn chặn, hoặc đang tranh chấp có căn cứ.
+    C8. Khách hàng thuộc đối tượng KHÔNG được cấp tín dụng theo [HHB-TT-03].
+
+Nhóm KO-D — Trung thực và gian lận:
+    D1. Phát hiện hồ sơ giả mạo: giấy tờ tùy thân giả, sổ đỏ giả, BCTC/tờ khai
+        thuế giả, xác nhận thu nhập giả, hợp đồng lao động khống.
+    D2. Khách hàng cố ý che giấu nghĩa vụ nợ hiện hữu, phát hiện qua đối chiếu CIC.
+    D3. Khách hàng cố ý khai sai mục đích sử dụng vốn.
+    D4. Khách hàng không hợp tác cung cấp thông tin cho việc định danh (KYC) hoặc
+        thẩm định tăng cường (EDD).
+    Hệ quả bổ sung của nhóm KO-D: ngoài việc từ chối, khách hàng bị đưa vào danh
+    sách đen nội bộ của HHB trong 05 năm; P.PLTC đánh giá nghĩa vụ báo cáo giao
+    dịch đáng ngờ.
+
+Nhóm KO-E — Tài sản bảo đảm:
+    E1. Không thể tiếp cận khảo sát thực địa TSBĐ.
+    E2. TSBĐ không xác định được ranh giới hoặc không nhận dạng được cụ thể.
+    E3. TSBĐ thuộc loại có LTV = 0% theo [HHB-TC-05] và đây là TSBĐ duy nhất.
+    E4. Tỷ lệ bảo đảm dưới mức tối thiểu theo ma trận [HHB-TC-07] và khách hàng
+        không đồng ý giảm số tiền vay hoặc bổ sung TSBĐ.
+
+Nhóm KO-F — Xếp hạng:
+    F1. Hạng XHTD chính thức là CC, C hoặc D [HHB-TC-03].
+
+--------------------------------------------------------------------------------
+PHẦN VI — DANH MỤC HỒ SƠ
+--------------------------------------------------------------------------------
+
+[ID: HHB-HS-01] DANH MỤC HỒ SƠ — KHÁCH HÀNG CÁ NHÂN
+
+Nhóm 1 — Hồ sơ pháp lý (bắt buộc):
+    1.1. Giấy đề nghị vay vốn theo mẫu BM-00, có chữ ký khách hàng.
+    1.2. Căn cước công dân/hộ chiếu của khách hàng, còn hiệu lực (bản gốc để đối
+         chiếu + bản sao).
+    1.3. Căn cước công dân của vợ/chồng (nếu đã kết hôn).
+    1.4. Giấy xác nhận thông tin cư trú hoặc giấy tờ chứng minh nơi cư trú.
+    1.5. Giấy chứng nhận kết hôn, hoặc giấy xác nhận tình trạng hôn nhân, hoặc
+         quyết định ly hôn (nếu có).
+    1.6. Văn bản đồng ý của vợ/chồng về việc vay vốn và thế chấp tài sản chung.
+
+Nhóm 2 — Hồ sơ chứng minh thu nhập (bắt buộc ít nhất một nhóm nguồn):
+    2.1. Nguồn lương: hợp đồng lao động còn hiệu lực; sao kê tài khoản nhận lương
+         06 tháng gần nhất có xác nhận của ngân hàng; bảng lương hoặc xác nhận
+         thu nhập của đơn vị sử dụng lao động (bắt buộc nếu nhận lương tiền mặt);
+         quyết định bổ nhiệm/nâng lương (nếu có).
+    2.2. Nguồn cho thuê tài sản: giấy tờ sở hữu tài sản cho thuê; hợp đồng cho
+         thuê có công chứng; sao kê nhận tiền thuê 06 tháng.
+    2.3. Nguồn hộ kinh doanh: giấy chứng nhận đăng ký hộ kinh doanh; sổ sách bán
+         hàng, hóa đơn 12 tháng; sao kê tài khoản kinh doanh 12 tháng; chứng từ
+         nộp thuế khoán.
+
+Nhóm 3 — Hồ sơ phương án vay (bắt buộc):
+    3.1. Chứng từ chứng minh mục đích: hợp đồng mua bán nhà đất/căn hộ; hợp đồng
+         mua ô tô và báo giá; dự toán sửa chữa nhà; giấy báo học phí; hồ sơ y tế.
+    3.2. Chứng minh vốn tự có tham gia: sao kê tài khoản, xác nhận số dư, biên
+         lai đã thanh toán đợt đầu cho bên bán.
+    3.3. Bảng kê nhu cầu vốn (nếu mục đích tổng hợp).
+
+Nhóm 4 — Hồ sơ TSBĐ: theo [HHB-HS-03].
+
+Nhóm 5 — Hồ sơ bổ sung (nếu có):
+    5.1. Sao kê CIC do khách hàng tự cung cấp (không thay thế việc HHB tự tra cứu).
+    5.2. Chứng từ tài sản tích lũy (phục vụ chấm điểm T4): sổ tiết kiệm, sổ đỏ
+         tài sản khác, đăng ký xe.
+    5.3. Hồ sơ của bên bảo lãnh (nếu có): tương ứng Nhóm 1 và Nhóm 2.
+
+[ID: HHB-HS-02] DANH MỤC HỒ SƠ — KHÁCH HÀNG DOANH NGHIỆP
+
+Nhóm 1 — Hồ sơ pháp lý doanh nghiệp (bắt buộc):
+    1.1. Giấy đề nghị vay vốn/cấp hạn mức theo mẫu BM-00-DN.
+    1.2. Giấy chứng nhận đăng ký doanh nghiệp và các lần thay đổi.
+    1.3. Điều lệ doanh nghiệp (bản mới nhất).
+    1.4. Giấy phép con đối với ngành nghề kinh doanh có điều kiện (nếu có).
+    1.5. Quyết định bổ nhiệm người đại diện theo pháp luật, kế toán trưởng.
+    1.6. Căn cước công dân của người đại diện theo pháp luật, kế toán trưởng và
+         các chủ sở hữu nắm ≥ 20% vốn.
+    1.7. NGHỊ QUYẾT/BIÊN BẢN HỌP của Hội đồng thành viên/Hội đồng quản trị/Đại
+         hội đồng cổ đông về việc vay vốn và thế chấp tài sản, đúng thẩm quyền
+         theo điều lệ. Mục này là mục thường bị thiếu nhất và là lỗi pháp lý
+         nghiêm trọng [HHB-DM-03 C6].
+    1.8. Danh sách người có liên quan theo mẫu [HHB-TT-03].
+    1.9. Sơ đồ cơ cấu sở hữu, xác định chủ sở hữu hưởng lợi cuối cùng.
+
+Nhóm 2 — Hồ sơ tài chính (bắt buộc):
+    2.1. BCTC 02 năm gần nhất (bảng cân đối kế toán, kết quả kinh doanh, lưu
+         chuyển tiền tệ, thuyết minh). Bắt buộc BCTC kiểm toán nếu dư nợ đề nghị
+         > 20 tỷ đồng.
+    2.2. BCTC lũy kế đến quý gần nhất.
+    2.3. Tờ khai thuế GTGT 12 tháng gần nhất và tờ khai quyết toán thuế TNDN 02
+         năm.
+    2.4. Sao kê tài khoản ngân hàng tại tất cả TCTD, 12 tháng gần nhất.
+    2.5. Bảng kê chi tiết khoản phải thu, phải trả, hàng tồn kho tại thời điểm gần
+         nhất.
+    2.6. Bảng kê dư nợ vay tại các TCTD khác kèm hợp đồng tín dụng.
+    2.7. Xác nhận không nợ thuế của cơ quan thuế (không quá 30 ngày).
+
+Nhóm 3 — Hồ sơ phương án/dự án (bắt buộc):
+    3.1. Phương án sản xuất kinh doanh hoặc dự án đầu tư, có bảng tính dòng tiền.
+    3.2. Hợp đồng đầu vào, đầu ra chứng minh nhu cầu vốn.
+    3.3. Chứng minh vốn tự có tham gia.
+    3.4. Với dự án đầu tư: giấy chứng nhận đăng ký đầu tư, giấy phép xây dựng,
+         báo cáo đánh giá tác động môi trường (nếu thuộc diện phải có), dự toán
+         được thẩm tra.
+
+Nhóm 4 — Hồ sơ TSBĐ: theo [HHB-HS-03].
+
+[ID: HHB-HS-03] DANH MỤC HỒ SƠ TÀI SẢN BẢO ĐẢM
+
+Chung cho mọi loại tài sản:
+    0.1. Giấy tờ chứng minh quyền sở hữu/quyền sử dụng hợp pháp (bản gốc).
+    0.2. Giấy tờ tùy thân của bên bảo đảm và đồng sở hữu.
+    0.3. Văn bản đồng ý dùng tài sản để bảo đảm nghĩa vụ (nếu bên bảo đảm là bên
+         thứ ba).
+    0.4. Văn bản đồng ý của tất cả đồng sở hữu.
+
+Bất động sản:
+    1.1. Giấy chứng nhận quyền sử dụng đất, quyền sở hữu nhà ở và tài sản gắn liền
+         với đất (bản gốc).
+    1.2. Hợp đồng chuyển nhượng/quyết định giao đất/giấy tờ nguồn gốc.
+    1.3. Bản vẽ hiện trạng, sơ đồ thửa đất.
+    1.4. Giấy phép xây dựng và bản vẽ hoàn công (với nhà xây mới).
+    1.5. Chứng từ nộp thuế, phí liên quan (thuế sử dụng đất phi nông nghiệp).
+    1.6. Thông tin quy hoạch (do khách hàng cung cấp hoặc HHB tự tra cứu).
+    1.7. Hợp đồng thuê hiện hữu (nếu tài sản đang cho thuê).
+
+Nhà ở hình thành trong tương lai:
+    2.1. Hợp đồng mua bán với chủ đầu tư.
+    2.2. Văn bản của cơ quan có thẩm quyền xác nhận dự án đủ điều kiện bán.
+    2.3. Chứng từ đã thanh toán cho chủ đầu tư.
+    2.4. Văn bản của chủ đầu tư xác nhận căn hộ chưa được thế chấp và đồng ý cho
+         khách hàng thế chấp tại HHB.
+
+Phương tiện vận tải:
+    3.1. Giấy đăng ký xe (bản gốc).
+    3.2. Hợp đồng mua bán, hóa đơn VAT, tờ khai hải quan (với xe nhập khẩu).
+    3.3. Giấy chứng nhận kiểm định an toàn kỹ thuật còn hiệu lực.
+    3.4. Giấy chứng nhận bảo hiểm vật chất xe, người thụ hưởng là HHB.
+
+Máy móc thiết bị:
+    4.1. Hợp đồng mua bán, hóa đơn VAT, biên bản bàn giao, tờ khai hải quan.
+    4.2. Catalogue/thông số kỹ thuật, năm sản xuất.
+    4.3. Sổ theo dõi tài sản cố định và bảng tính khấu hao.
+    4.4. Bảo hiểm tài sản, người thụ hưởng là HHB.
+
+Sổ tiết kiệm/giấy tờ có giá:
+    5.1. Bản gốc sổ/thẻ tiết kiệm hoặc giấy tờ có giá.
+    5.2. Xác nhận phong tỏa của tổ chức phát hành (nếu do TCTD khác phát hành).
+
+Hàng tồn kho, khoản phải thu:
+    6.1. Bảng kê hàng tồn kho, hợp đồng thuê kho, sơ đồ kho, cam kết cho phép HHB
+         kiểm tra kho định kỳ.
+    6.2. Với khoản phải thu: hợp đồng đầu ra, biên bản đối chiếu công nợ, văn bản
+         của bên mua xác nhận đã nhận thông báo chuyển giao quyền đòi nợ cho HHB.
+
+--------------------------------------------------------------------------------
+PHẦN VII — KYC, AML/CFT VÀ CÁC HẠN CHẾ TUÂN THỦ
+--------------------------------------------------------------------------------
+
+[ID: HHB-TT-01] ĐỊNH DANH KHÁCH HÀNG (KYC)
+
+Thực hiện bởi P.QHKH tại B1, được P.PLTC rà soát lại tại B4.
+    1. Thu thập và xác minh: họ tên, ngày sinh, số giấy tờ tùy thân, quốc tịch,
+       địa chỉ thường trú và nơi ở hiện tại, nghề nghiệp, số điện thoại, email.
+    2. Đối chiếu bản gốc giấy tờ tùy thân; kiểm tra dấu hiệu giả mạo (chip, hình
+       ảnh, phông chữ, hologram).
+    3. Xác thực sinh trắc học khuôn mặt so với ảnh trên giấy tờ tùy thân.
+    4. Với KHDN: xác định chủ sở hữu hưởng lợi cuối cùng (cá nhân sở hữu trực
+       tiếp hoặc gián tiếp ≥ 25% vốn, hoặc cá nhân thực tế chi phối doanh
+       nghiệp). Phải truy đến cá nhân, không dừng ở pháp nhân trung gian.
+    5. Xác định mục đích và bản chất mối quan hệ với HHB.
+    6. Cập nhật thông tin KYC định kỳ: 12 tháng/lần với khách hàng rủi ro Cao;
+       24 tháng/lần với rủi ro Trung bình; 36 tháng/lần với rủi ro Thấp.
+    7. Không được thiết lập quan hệ với khách hàng ẩn danh hoặc dùng tên giả.
+
+[ID: HHB-TT-02] PHÒNG CHỐNG RỬA TIỀN VÀ TÀI TRỢ KHỦNG BỐ (AML/CFT)
+
+Thực hiện bởi P.PLTC tại B4.
+    1. Sàng lọc bắt buộc đối với: khách hàng vay; người đại diện theo pháp luật;
+       chủ sở hữu hưởng lợi cuối cùng; bên bảo đảm bằng tài sản của bên thứ ba;
+       bên bảo lãnh. Đối chiếu với: danh sách cấm vận quốc tế; danh sách tổ chức,
+       cá nhân liên quan khủng bố; danh sách đen nội bộ HHB; danh sách cá nhân có
+       ảnh hưởng chính trị (PEP).
+    2. Xử lý kết quả:
+       - Trùng khớp thật với danh sách cấm vận/khủng bố → KHÔNG ĐẠT tuyệt đối
+         [HHB-DM-03 C1], phong tỏa nếu có tài khoản, báo cáo cơ quan có thẩm quyền.
+       - Trùng khớp nghi ngờ (fuzzy match) → điều tra bổ sung trong 02 NLV, ghi
+         nhận kết luận vào hồ sơ.
+       - Là PEP hoặc người thân/cộng sự của PEP → không tự động từ chối; bắt buộc
+         thẩm định tăng cường (EDD), làm rõ nguồn gốc tài sản và nguồn tiền, và
+         phải có phê duyệt của cấp Ban Điều hành trở lên.
+    3. Đánh giá rủi ro rửa tiền của khách hàng theo 04 nhóm yếu tố: khách hàng,
+       sản phẩm, kênh phân phối, địa lý. Kết quả: Thấp / Trung bình / Cao.
+       Rủi ro Cao → bắt buộc EDD, nâng 01 cấp thẩm quyền, giám sát giao dịch tăng
+       cường.
+    4. Dấu hiệu đáng ngờ cần cảnh báo (danh sách không đầy đủ): nguồn tiền trả
+       nợ không rõ nguồn gốc; khách hàng đề nghị trả nợ trước hạn bằng tiền mặt
+       khối lượng lớn ngay sau giải ngân; giao dịch không phù hợp quy mô và ngành
+       nghề khai báo; khách hàng miễn cưỡng cung cấp thông tin; sử dụng nhiều
+       trung gian không có lý do kinh tế; cấu trúc sở hữu phức tạp bất thường
+       không giải thích được; tài sản bảo đảm có giá trị vượt xa năng lực tài
+       chính khai báo.
+    5. Báo cáo giao dịch đáng ngờ (STR): P.PLTC có quyền và nghĩa vụ báo cáo cơ
+       quan có thẩm quyền mà không cần sự đồng ý của đơn vị kinh doanh. NGHIÊM
+       CẤM tiết lộ việc báo cáo cho khách hàng hoặc bên thứ ba (tipping-off).
+
+[ID: HHB-TT-03] NGƯỜI CÓ LIÊN QUAN VÀ HẠN CHẾ CẤP TÍN DỤNG
+
+Định nghĩa người có liên quan (áp dụng cho mục đích của tài liệu này):
+    - Với cá nhân: vợ/chồng, cha, mẹ, con, anh, chị, em ruột (và của vợ/chồng);
+      cá nhân/tổ chức mà cá nhân đó sở hữu ≥ 5% vốn hoặc giữ chức danh quản lý.
+    - Với doanh nghiệp: công ty mẹ, công ty con, công ty cùng chịu sự kiểm soát;
+      cá nhân sở hữu ≥ 5% vốn; người quản lý và người có liên quan của họ.
+
+Nhóm KHÔNG được cấp tín dụng (kích hoạt knock-out [HHB-DM-03 C8]):
+    1. Thành viên HĐQT, Ban Kiểm soát, Tổng Giám đốc, Phó Tổng Giám đốc của HHB
+       và người có liên quan của những người này.
+    2. Kế toán trưởng của HHB, Giám đốc Chi nhánh, Phó Giám đốc Chi nhánh.
+    3. Cán bộ, nhân viên HHB tham gia trực tiếp quy trình thẩm định, phê duyệt
+       khoản vay đó.
+    4. Pháp nhân là cổ đông có người đại diện phần vốn góp là thành viên HĐQT của
+       HHB.
+    5. Doanh nghiệp mà HHB nắm quyền kiểm soát.
+    (Không áp dụng đối với cho vay cầm cố sổ tiết kiệm do chính HHB phát hành và
+    các sản phẩm phúc lợi nội bộ theo quy chế riêng.)
+
+Nhóm HẠN CHẾ cấp tín dụng (được cấp nhưng có ràng buộc bắt buộc):
+    1. Kế toán viên kiểm toán, thanh tra viên đang thanh tra tại HHB.
+    2. Cổ đông lớn và người có liên quan của cổ đông lớn.
+    3. Doanh nghiệp mà HHB nắm giữ vốn nhưng không kiểm soát.
+    4. Người thẩm định, xét duyệt cấp tín dụng của HHB (đối với khoản vay khác).
+    Ràng buộc: (a) không được cấp tín dụng không có TSBĐ; (b) không được áp dụng
+    điều kiện ưu đãi hơn khách hàng thông thường; (c) thẩm quyền phê duyệt tối
+    thiểu là HĐQT; (d) người có liên quan không được tham gia thẩm định, biểu
+    quyết; (e) tổng dư nợ nhóm này ≤ 5% vốn tự có của HHB.
+
+Nghĩa vụ khai báo: mọi cán bộ tham gia quy trình QT-TD-2026 phải chủ động khai
+báo xung đột lợi ích ngay khi nhận hồ sơ và tự loại mình khỏi hồ sơ đó. Không
+khai báo là vi phạm kỷ luật nghiêm trọng.
+
+[ID: HHB-TT-04] BẢO MẬT THÔNG TIN KHÁCH HÀNG
+
+    1. Thông tin khách hàng chỉ được truy cập bởi cán bộ có nhiệm vụ trực tiếp
+       với hồ sơ (nguyên tắc "cần biết" — need to know).
+    2. NGHIÊM CẤM cung cấp cho khách hàng hoặc bên thứ ba: nội dung báo cáo CIC;
+       điểm và hạng XHTD nội bộ; kết quả sàng lọc AML; nội dung báo cáo tái thẩm
+       định của P.QTRR; biên bản họp Hội đồng tín dụng.
+    3. Thông báo từ chối cấp tín dụng chỉ nêu lý do ở mức khái quát (ví dụ:
+       "không đáp ứng điều kiện cấp tín dụng của HHB"), không nêu chi tiết nguyên
+       nhân thuộc mục 2.
+    4. Dữ liệu cá nhân được xử lý theo nguyên tắc tối thiểu hóa; chỉ thu thập dữ
+       liệu cần thiết cho mục đích thẩm định đã thông báo cho khách hàng.
+    5. Lưu trữ: hồ sơ tín dụng lưu tối thiểu 05 năm kể từ ngày tất toán hoặc từ
+       ngày từ chối; hồ sơ có cảnh báo AML lưu 10 năm.
+    6. Mọi truy cập hồ sơ đều được ghi nhật ký (audit log) và có thể bị hậu kiểm
+       bởi Kiểm toán nội bộ.
+
+--------------------------------------------------------------------------------
+PHẦN VIII — CHUẨN ĐẦU RA BẮT BUỘC CỦA TỪNG PHÒNG
+Mục đích: bảo đảm kết quả của các phòng có thể được hợp nhất một cách cơ giới tại
+bước B5 và B6 mà không mất mát thông tin. Mọi báo cáo phải có đủ các trường dưới
+đây; trường nào không áp dụng thì ghi rõ "không áp dụng", không được bỏ trống.
+--------------------------------------------------------------------------------
+
+[ID: HHB-OUT-00] CÁC TRƯỜNG CHUNG BẮT BUỘC CHO MỌI BÁO CÁO
+    ma_ho_so            : Mã hồ sơ tín dụng, dạng HHB-<năm>-<mã CN>-<5 số>.
+    ma_bieu_mau         : BM-01 / BM-02 / BM-03 / BM-04 / BM-05 / BM-06.
+    phong_phat_hanh     : P.QHKH / P.TD / P.TĐTS / P.PLTC / P.QTRR.
+    ngay_phat_hanh      : DD/MM/YYYY.
+    nguoi_lap           : Họ tên, chức danh.
+    nguoi_kiem_soat     : Họ tên Trưởng phòng.
+    hieu_luc_den        : DD/MM/YYYY (nếu có, theo [HHB-QT-09 R9]).
+    knock_out_phat_hien : Danh sách mã KO (KO-A1, KO-C5, ...) hoặc "không".
+    can_bo_sung         : Danh sách yêu cầu bổ sung gửi P.QHKH, hoặc "không".
+
+[ID: HHB-OUT-01] CHUẨN ĐẦU RA CỦA PHÒNG TÍN DỤNG — BM-02 (TỜ TRÌNH THẨM ĐỊNH)
+
+    de_nghi_vay:
+        so_tien_de_nghi          : VNĐ.
+        thoi_han_de_nghi         : tháng.
+        muc_dich                 : mô tả cụ thể.
+        phuong_thuc_giai_ngan    : chuyển khoản bên thụ hưởng / vào TK KH / tiền mặt.
+        von_tu_co_tham_gia       : VNĐ và %.
+    ho_so_khach_hang:
+        loai_khach_hang          : KHCN / KHDN.
+        nganh_nghe               : mô tả + phân loại (bình thường / hạn chế / cấm).
+        thoi_gian_hoat_dong      : tháng (KHDN).
+    ket_qua_cic:
+        nhom_no_cao_nhat_36t     : 1/2/3/4/5.
+        so_tctd_dang_quan_he     : số.
+        tong_du_no_tctd_khac     : VNĐ.
+        so_lan_tra_cuu_3_thang   : số.
+        ngay_bao_cao_cic         : DD/MM/YYYY (phải trong 30 ngày).
+    nang_luc_tai_chinh:
+        thu_nhap_rong_thang      : VNĐ (KHCN) — kèm bảng nguồn và tỷ lệ công nhận.
+        dti                      : % — kèm tử số, mẫu số, cách tính.
+        doanh_thu_nam_gan_nhat   : VNĐ (KHDN).
+        dscr                     : số — kèm tử số, mẫu số.
+        cac_chi_so_D1            : D/E, CR, ROE, DSCR, tăng trưởng DT.
+    stress_test:
+        kich_ban_3_dti_hoac_dscr : giá trị và kết luận đạt/không đạt.
+    xhtd_so_bo:
+        diem_tung_tieu_chi       : bảng T1..T6 hoặc D1..D5 kèm điểm và trọng số.
+        diem_tong                : số (1 chữ số thập phân).
+        hang_so_bo               : AAA..D.
+    cau_truc_de_xuat:
+        so_tien_de_xuat          : VNĐ (có thể thấp hơn đề nghị).
+        thoi_han_de_xuat         : tháng.
+        lai_suat_de_xuat         : %/năm.
+        lich_tra_no              : mô tả + số tiền trả tháng cao nhất.
+    rui_ro_va_giam_thieu        : danh sách cặp (rủi ro → biện pháp giảm thiểu).
+    ket_luan_ptd                : ĐỒNG Ý / ĐỒNG Ý CÓ ĐIỀU KIỆN / TỪ CHỐI.
+    ly_do                       : văn bản.
+
+[ID: HHB-OUT-02] CHUẨN ĐẦU RA CỦA PHÒNG THẨM ĐỊNH TSBĐ — BM-03 (CHỨNG THƯ ĐỊNH GIÁ)
+
+    danh_sach_tai_san: mảng, mỗi phần tử gồm:
+        ma_tai_san               : TS-01, TS-02, ...
+        loai_tai_san             : theo phân loại tại [HHB-TC-05].
+        mo_ta                    : vị trí, diện tích, hiện trạng.
+        chu_so_huu               : họ tên/tên tổ chức; là khách hàng vay hay bên thứ ba.
+        phuong_phap_dinh_gia     : so sánh / chi phí / thu nhập / thặng dư.
+        tai_san_so_sanh          : bảng (nếu dùng phương pháp so sánh).
+        gia_tri_dinh_gia         : VNĐ — MỘT con số duy nhất, không nêu khoảng.
+        ltv_co_so                : %.
+        dieu_chinh_ltv           : danh sách cặp (lý do → số điểm % bị trừ).
+        ltv_ap_dung              : %.
+        muc_cho_vay_toi_da_ts    : VNĐ = gia_tri_dinh_gia × ltv_ap_dung.
+        thanh_khoan              : Cao / Trung bình / Thấp.
+        canh_bao_hien_trang      : danh sách hoặc "không".
+    tong_muc_cho_vay_toi_da_tsbd : VNĐ = Σ muc_cho_vay_toi_da_ts.
+    ngay_khao_sat_thuc_dia       : DD/MM/YYYY.
+    so_anh_kem_theo              : số (≥ 6).
+    thue_dinh_gia_doc_lap        : có / không; tên đơn vị nếu có.
+    gia_dinh_va_han_che          : bắt buộc gồm câu "Chứng thư này được lập trên
+                                   giả định hồ sơ pháp lý của tài sản là hợp lệ;
+                                   kết luận pháp lý thuộc P.PLTC."
+    hieu_luc_den                 : ngày phát hành + 06 tháng.
+
+[ID: HHB-OUT-03] CHUẨN ĐẦU RA CỦA PHÒNG PHÁP LÝ – TUÂN THỦ — BM-05
+
+    ket_luan_tong_the            : ĐẠT / ĐẠT CÓ ĐIỀU KIỆN / KHÔNG ĐẠT.
+    ket_luan_theo_khoi:
+        tu_cach_chu_the          : ĐẠT / KHÔNG ĐẠT + diễn giải.
+        phap_ly_tsbd             : ĐẠT / KHÔNG ĐẠT + diễn giải, theo từng mã tài sản.
+        aml_cft                  : ĐẠT / KHÔNG ĐẠT + kết quả sàng lọc.
+        nganh_nghe               : bình thường / hạn chế / cấm.
+        nguoi_co_lien_quan       : không thuộc / thuộc nhóm hạn chế / thuộc nhóm cấm.
+        muc_dich_su_dung_von     : hợp pháp / không hợp pháp.
+    danh_sach_loi: mảng, mỗi phần tử gồm:
+        ma_loi                   : PL-01, PL-02, ...
+        mo_ta_loi                : văn bản.
+        can_cu                   : điều khoản viện dẫn.
+        muc_do                   : nghiêm trọng / trung bình / nhẹ.
+        khac_phuc_duoc           : có / không.
+        cach_khac_phuc           : văn bản hoặc "không thể khắc phục".
+    tai_san_bi_loai_tru          : danh sách mã tài sản bị loại khỏi TSBĐ + lý do,
+                                   hoặc "không".
+    ket_qua_sang_loc_aml:
+        cam_van                  : không trùng / trùng nghi ngờ / TRÙNG KHỚP THẬT.
+        pep                      : có / không.
+        muc_rui_ro_rua_tien      : Thấp / Trung bình / Cao.
+        yeu_cau_edd              : có / không.
+    dieu_kien_tien_quyet_pltc    : danh sách, mỗi điều kiện gồm nội dung và
+                                   CHỨNG TỪ KIỂM CHỨNG tương ứng.
+
+[ID: HHB-OUT-04] CHUẨN ĐẦU RA CỦA PHÒNG QUẢN TRỊ RỦI RO — BM-04
+
+    kiem_tra_dau_vao:
+        co_bm02, co_bm03, co_bm05 : có / không (thiếu → trả hồ sơ, không làm B5).
+    kiem_tra_nhat_quan_cheo: bảng, mỗi dòng gồm nội dung đối chiếu và kết quả
+                             Khớp / Không khớp + diễn giải:
+        - so_tien_vay ≤ tong_muc_cho_vay_toi_da_tsbd (sau loại trừ).
+        - danh muc tài sản khớp giữa BM-02 / BM-03 / BM-05.
+        - chủ sở hữu tài sản khớp giữa BM-03 và BM-05.
+        - ngành nghề khớp giữa BM-02 và BM-05.
+        - thời hạn vay nằm trong trần quy định.
+    tinh_toan_doc_lap:
+        dti_hoac_dscr_qtrr       : giá trị do P.QTRR tự tính.
+        chenh_lech_voi_ptd       : giá trị và giải thích nếu có.
+        diem_xhtd_qtrr           : số.
+        chenh_lech_diem_voi_ptd  : số (>5 điểm phải giải thích).
+    xhtd_chinh_thuc:
+        diem_tong                : số.
+        hang_chinh_thuc          : AAA..D.
+        co_override              : có / không.
+        so_bac_ha                : 0 / 1 / 2.
+        ly_do_override           : văn bản hoặc "không áp dụng".
+    ty_le_bao_dam                : % = tong_muc_cho_vay_toi_da_tsbd / so_tien_vay.
+    phan_tin_chap                : VNĐ (nếu dương) và % số tiền vay.
+    kiem_tra_gioi_han_danh_muc: bảng, mỗi dòng gồm giới hạn, giá trị hiện tại,
+                                giá trị sau khi cấp, kết quả Đạt / Vượt:
+        - dư nợ 1 khách hàng / vốn tự có ≤ 12%.
+        - dư nợ KH và người liên quan / vốn tự có ≤ 20%.
+        - room ngành hạn chế ≤ 12% tổng dư nợ.
+        - room tín chấp ≤ 8% tổng dư nợ.
+        - dư nợ hạng ≤ B ≤ 5% tổng dư nợ.
+    ket_qua_ma_tran              : kết luận cơ sở tra từ [HHB-TC-07].
+    so_tien_toi_da_qtrr_chap_nhan: VNĐ.
+    lai_suat_san                 : %/năm, kèm công thức tách thành phần.
+    dieu_kien_tien_quyet_qtrr    : danh sách.
+    covenants                    : danh sách điều kiện duy trì trong thời hạn vay.
+    ket_luan_qtrr                : ĐỒNG Ý / ĐỒNG Ý CÓ ĐIỀU KIỆN /
+                                   ĐỒNG Ý CÓ ĐIỀU KIỆN CAO / PHẢN ĐỐI.
+    y_kien_phan_doi_nguyen_van   : văn bản (bắt buộc nếu kết luận là PHẢN ĐỐI).
+    cap_phe_duyet_xac_dinh       : Cấp 1..6 + căn cứ + có nâng cấp hay không và lý do.
+
+[ID: HHB-OUT-05] CHUẨN ĐẦU RA HỢP NHẤT TRÌNH PHÊ DUYỆT — BM-06
+
+Đây là văn bản tổng hợp cuối cùng đưa ra Hội đồng. Nội dung bắt buộc:
+    1. Thông tin nhận dạng: mã hồ sơ, khách hàng, chi nhánh, ngày trình.
+    2. Tóm tắt đề nghị: số tiền, kỳ hạn, mục đích, TSBĐ, lãi suất đề xuất.
+    3. Bảng tổng hợp kết luận 04 phòng, hiển thị nguyên trạng, KHÔNG diễn giải lại:
+           P.TD    (BM-02): <kết luận> — <lý do tóm tắt 1 dòng>
+           P.TĐTS  (BM-03): giá trị định giá <VNĐ>, mức cho vay tối đa <VNĐ>,
+                            thanh khoản <mức>, cảnh báo: <danh sách>
+           P.PLTC  (BM-05): <kết luận> — điều kiện tiên quyết: <số lượng>
+           P.QTRR  (BM-04): <kết luận> — hạng <X>, tỷ lệ bảo đảm <Y%>,
+                            lãi suất sàn <Z%/năm>
+    4. Danh sách điểm KHÁC BIỆT giữa các phòng và quy tắc [HHB-QT-09] đã áp dụng
+       để xử lý từng điểm.
+    5. Ý kiến phản đối nguyên văn của P.QTRR (nếu có) — bắt buộc hiển thị đầy đủ,
+       không được tóm tắt.
+    6. Danh sách HỢP NHẤT các điều kiện tiên quyết (union của P.PLTC và P.QTRR),
+       đánh số liên tục, mỗi điều kiện kèm chứng từ kiểm chứng và phòng chịu trách
+       nhiệm xác nhận hoàn thành.
+    7. Danh sách covenants.
+    8. Cấp phê duyệt xác định và căn cứ.
+    9. Ô quyết định: PHÊ DUYỆT / PHÊ DUYỆT CÓ ĐIỀU KIỆN / PHÊ DUYỆT ĐIỀU CHỈNH /
+       TỪ CHỐI; số tiền duyệt; kỳ hạn duyệt; lãi suất duyệt (≥ lãi suất sàn);
+       chữ ký và kết quả biểu quyết.
+   10. Hiệu lực của quyết định: 90 ngày kể từ ngày ký [HHB-QT-09 R9].
+
+--------------------------------------------------------------------------------
+PHẦN IX — PHỤ LỤC
+--------------------------------------------------------------------------------
+
+[ID: HHB-PL-01] DANH MỤC BIỂU MẪU
+
+    BM-00     Giấy đề nghị vay vốn (KHCN)                    Khách hàng lập
+    BM-00-DN  Giấy đề nghị vay vốn / cấp hạn mức (KHDN)      Khách hàng lập
+    BM-01     Biên bản khảo sát thực tế khách hàng           P.QHKH
+    BM-02     Tờ trình thẩm định tín dụng                    P.TD
+    BM-03     Chứng thư định giá tài sản bảo đảm             P.TĐTS
+    BM-04     Báo cáo tái thẩm định rủi ro                   P.QTRR
+    BM-05     Báo cáo rà soát pháp lý – tuân thủ             P.PLTC
+    BM-06     Tờ trình hợp nhất & Quyết định phê duyệt       P.TD lập, Hội đồng ký
+    BM-07     Hợp đồng tín dụng                              P.PLTC
+    BM-08     Hợp đồng bảo đảm                               P.PLTC
+    BM-09     Checklist kiểm soát trước giải ngân            P.VHNV
+    BM-10     Biên bản nhập kho tài sản bảo đảm              P.VHNV
+    BM-11     Biên bản kiểm tra mục đích sử dụng vốn         P.TD / P.QHKH
+    BM-12     Báo cáo định giá lại tài sản bảo đảm           P.TĐTS
+    BM-13     Tờ trình ngoại lệ chính sách                   Đơn vị đề xuất
+    BM-14     Thông báo kết quả cho khách hàng               P.QHKH
+
+[ID: HHB-PL-02] VÍ DỤ MINH HỌA 1 — HỒ SƠ KHCN ĐƯỢC PHÊ DUYỆT
+
+Bối cảnh: Ông Nguyễn Văn A, 38 tuổi, kỹ sư tại công ty FDI, đề nghị vay 4,0 tỷ
+đồng, kỳ hạn 20 năm, mua căn nhà tại Hà Nội giá 6,0 tỷ (vốn tự có 2,0 tỷ = 33,3%).
+TSBĐ: chính căn nhà mua (định giá 6,0 tỷ, đang có hợp đồng cho thuê 5 năm chưa
+hết hạn) và sổ tiết kiệm HHB 500 triệu. Mã hồ sơ HHB-2026-HN01-00427.
+
+    B1 — P.QHKH: KYC khớp; hồ sơ đủ; khảo sát thực địa có 6 ảnh. → chuyển P.TD.
+    B2 — P.TD:
+        CIC: nhóm 1, lịch sử 30 tháng, không quá hạn → T1 = 100. Quan hệ 2 TCTD,
+             tra cứu 2 lần/3 tháng → không trừ điểm.
+        Thu nhập: lương qua tài khoản 55 triệu/tháng, thâm niên 4 năm, HĐLĐ không
+             xác định thời hạn → công nhận 100%. Vợ không đồng trả nợ. 1 con.
+        Nghĩa vụ: khoản vay mới trả tháng cao nhất 21 triệu; không có nợ khác;
+             thẻ tín dụng hạn mức 100 triệu → 5 triệu.
+             DTI = (21 + 5) / 55 = 47,3% ≤ 60% → đạt. Điểm DTI = 60.
+             Thu nhập còn lại = 55 − 26 = 29 triệu; hộ 3 người → 9,7 triệu/người
+             ≥ 4 triệu → đạt.
+        T2 = 60×0,7 + 100×0,3 = 72.
+        T3 = (100 + 85 + 85 + 100)/4 = 92,5.
+        T4: tài sản ròng ~ 8,0 tỷ ≈ 2,0 lần số tiền vay → 55.
+        T5: khách hàng 3 năm, có tài khoản lương tại HHB, chưa từng vay → 80.
+        T6: mua nhà để ở, vốn tự có 33,3% → 85.
+        Điểm tổng = 100×0,25 + 72×0,25 + 92,5×0,15 + 55×0,15 + 80×0,10 + 85×0,10
+                  = 25,0 + 18,0 + 13,875 + 8,25 + 8,0 + 8,5 = 81,625 ≈ 81,6
+        Hạng sơ bộ: A (77,0–82,9).
+        Stress test kịch bản 3: lãi +2% → trả tháng ~24,5 triệu; DTI = 29,5/55 =
+        53,6% ≤ 70% → đạt.
+        Kết luận P.TD: ĐỒNG Ý.
+    B3 — P.TĐTS (song song):
+        Định giá căn nhà bằng phương pháp so sánh (3 tài sản so sánh trong bán
+        kính 1,2 km, giao dịch trong 4 tháng) → 6,0 tỷ.
+        Cảnh báo hiện trạng: đang cho thuê dài hạn 5 năm → LTV = 70% − 10% = 60%.
+        Mức cho vay tối đa TS-01 = 6,0 × 0,60 = 3,60 tỷ. Thanh khoản: Cao.
+        Sổ tiết kiệm HHB 500 triệu, LTV 95% → 0,475 tỷ. Thanh khoản: Cao.
+        Tổng mức cho vay tối đa trên TSBĐ = 4,075 tỷ.
+    B4 — P.PLTC (song song):
+        Tư cách chủ thể: ĐẠT. Vợ đã ký văn bản đồng ý.
+        Pháp lý TSBĐ: sổ hợp lệ, không tranh chấp, không quy hoạch, chưa thế chấp
+        nơi khác. ĐẠT.
+        AML: không trùng cấm vận, không PEP, rủi ro Thấp.
+        Ngành nghề: không áp dụng (KHCN làm công ăn lương).
+        Kết luận: ĐẠT CÓ ĐIỀU KIỆN.
+        Điều kiện tiên quyết: (1) Bên bán và bên thuê ký phụ lục chấm dứt hợp đồng
+        thuê hoặc cam kết bàn giao nhà — chứng từ kiểm chứng: phụ lục có công
+        chứng; (2) Mua bảo hiểm cháy nổ căn nhà, người thụ hưởng HHB — chứng từ:
+        giấy chứng nhận bảo hiểm.
+    B5 — P.QTRR:
+        Nhất quán chéo: số tiền vay 4,0 tỷ ≤ 4,075 tỷ → Khớp. Các dòng còn lại Khớp.
+        Tự tính lại: DTI = 47,3% (khớp); điểm XHTD = 81,6 (chênh 0 điểm).
+        Không override → hạng chính thức: A.
+        Tỷ lệ bảo đảm = 4,075 / 4,0 = 101,9%.
+        Tra ma trận [HHB-TC-07]: hạng A, tỷ lệ bảo đảm ≥ 85% → ĐỒNG Ý. Không có
+        phần tín chấp.
+        Giới hạn danh mục: dư nợ 4,0 tỷ / vốn tự có 3.500 tỷ = 0,11% → đạt tất cả.
+        Lãi suất sàn = 7,5 + 1,2 (hạng A) + 0,0 (BĐS đô thị có sổ) + 1,0 (kỳ hạn
+        > 120 tháng) = 9,7%/năm.
+        Điều kiện tiên quyết QTRR: (3) Giải ngân chuyển khoản trực tiếp cho bên
+        bán — chứng từ: ủy nhiệm chi; (4) Chứng minh đã thanh toán 2,0 tỷ vốn tự
+        có trước khi HHB giải ngân — chứng từ: biên lai/ủy nhiệm chi có xác nhận.
+        Covenant: duy trì tài khoản nhận lương tại HHB trong suốt thời hạn vay.
+        Kết luận: ĐỒNG Ý CÓ ĐIỀU KIỆN. Cấp phê duyệt: dư nợ 4,0 tỷ, KHCN → Cấp 3
+        (HĐTD Chi nhánh, trần 8 tỷ). Không có yếu tố nâng cấp.
+    B6 — HĐTD Chi nhánh: PHÊ DUYỆT CÓ ĐIỀU KIỆN. Số tiền 4,0 tỷ; kỳ hạn 240
+        tháng; lãi suất 9,9%/năm (≥ sàn 9,7%). Điều kiện: hợp nhất 04 điều kiện
+        tiên quyết (1)–(4) và 01 covenant.
+    B7 — P.VHNV: checklist 10 mục đủ "Có" → giải ngân chuyển khoản cho bên bán.
+
+[ID: HHB-PL-03] VÍ DỤ MINH HỌA 2 — HỒ SƠ KHDN, QTRR PHẢN ĐỐI, PHẢI NÂNG CẤP
+
+Bối cảnh: Công ty TNHH Sản xuất Bao bì Minh Long, hoạt động 6 năm, đề nghị vay
+bổ sung vốn lưu động 12,0 tỷ, kỳ hạn 12 tháng. TSBĐ: nhà xưởng trên đất thuê trả
+tiền một lần (định giá 15,0 tỷ) và hàng tồn kho (định giá 8,0 tỷ).
+
+    B2 — P.TD: D/E = 2,4 → 50. CR = 1,15 → 50. ROE = 8% → 50. DSCR = 1,28 → 60.
+        Tăng trưởng DT bình quân 2 năm = 3% → 50.
+        D1 = (50 + 50 + 50 + 60 + 50)/5 = 52.
+        D2 (CIC): doanh nghiệp nhóm 1; giám đốc từng nhóm 2 cách đây 18 tháng, đã
+        tất toán → lấy điểm thấp nhất = 50.
+        D3 = (80 + 50 + 80)/3 = 70. (Ngành bao bì: ổn định = 80; phụ thuộc 1 khách
+        hàng chiếm 55% doanh thu = 50; hoạt động 6 năm = 80.)
+        D4 = (80 + 70 + 70)/3 = 73,3.
+        D5 = 60.
+        Điểm tổng = 52×0,40 + 50×0,20 + 70×0,15 + 73,3×0,15 + 60×0,10
+                  = 20,8 + 10,0 + 10,5 + 11,0 + 6,0 = 58,3 → hạng B (58,0–64,9).
+        Kết luận P.TD: ĐỒNG Ý CÓ ĐIỀU KIỆN.
+    B3 — P.TĐTS: Nhà xưởng trên đất thuê trả tiền một lần: LTV 55% → 15,0 × 0,55
+        = 8,25 tỷ; thanh khoản Trung bình. Hàng tồn kho: LTV 40%, nhưng thanh
+        khoản xếp Thấp → LTV 40% − 10% = 30% → 8,0 × 0,30 = 2,4 tỷ.
+        Tổng mức cho vay tối đa trên TSBĐ = 10,65 tỷ.
+    B4 — P.PLTC: ĐẠT CÓ ĐIỀU KIỆN. Phát hiện lỗi PL-01 (mức độ nghiêm trọng,
+        khắc phục được): thiếu Nghị quyết Hội đồng thành viên chấp thuận việc vay
+        và thế chấp (điều lệ quy định giao dịch > 30% tổng tài sản phải có nghị
+        quyết). Cách khắc phục: bổ sung nghị quyết đúng thể thức trước khi ký hợp
+        đồng. Ngành bao bì: không thuộc danh mục cấm/hạn chế.
+    B5 — P.QTRR:
+        Nhất quán chéo: số tiền vay 12,0 tỷ > tổng mức cho vay tối đa trên TSBĐ
+        10,65 tỷ → KHÔNG KHỚP. Áp dụng [HHB-QT-09 R3]: số tiền bị cắt về trần.
+        Tỷ lệ bảo đảm = 10,65 / 12,0 = 88,75%.
+        Hạng chính thức: P.QTRR override hạ 01 bậc do phụ thuộc 1 khách hàng
+        chiếm 55% doanh thu và khách hàng đó đang chậm thanh toán → hạng CCC
+        (điểm điều chỉnh về 56,0).
+        Tra ma trận [HHB-TC-07]: hạng CCC yêu cầu tỷ lệ bảo đảm ≥ 120%. Thực tế
+        88,75% → TỪ CHỐI ở mức số tiền 12,0 tỷ.
+        Số tiền tối đa P.QTRR chấp nhận = 10,65 / 1,20 = 8,875 tỷ → làm tròn xuống
+        8,8 tỷ. Ở mức này: tỷ lệ bảo đảm = 10,65 / 8,8 = 121,0% ≥ 120% → ĐỒNG Ý CÓ
+        ĐIỀU KIỆN CAO.
+        Lãi suất sàn = 7,5 + 4,5 (CCC) + 0,3 (BĐS khác — nhà xưởng là TSBĐ chiếm
+        tỷ trọng lớn nhất) + 0,0 (kỳ hạn ≤ 12 tháng) = 12,3%/năm.
+        Kết luận: ĐỒNG Ý CÓ ĐIỀU KIỆN CAO ở mức 8,8 tỷ; PHẢN ĐỐI mức 12,0 tỷ.
+        Cấp phê duyệt: dư nợ 8,8 tỷ, KHDN → Cấp 3 (HĐTD CN, trần 15 tỷ). Nâng 01
+        cấp do (a) kết luận "ĐỒNG Ý CÓ ĐIỀU KIỆN CAO" và (c) hạng CCC → Cấp 4
+        (HĐTD Hội sở).
+    B6 — HĐTD Hội sở: PHÊ DUYỆT ĐIỀU CHỈNH: 8,8 tỷ, 12 tháng, lãi suất 12,5%/năm.
+        Điều kiện tiên quyết hợp nhất: (1) bổ sung Nghị quyết HĐTV [P.PLTC];
+        (2) HHB kiểm soát kho hàng tồn kho, kiểm kê hàng tháng [P.QTRR];
+        (3) yêu cầu bên mua lớn xác nhận công nợ và chuyển tiền thanh toán về tài
+        khoản tại HHB [P.QTRR].
+        Covenant: duy trì D/E ≤ 2,5; doanh thu chuyển qua HHB ≥ 60%.
+        P.QHKH thông báo khách hàng; khách hàng xác nhận đồng ý mức 8,8 tỷ.
+
+[ID: HHB-PL-04] VÍ DỤ MINH HỌA 3 — HỒ SƠ BỊ PHỦ QUYẾT PHÁP LÝ, DỪNG SỚM
+
+Bối cảnh: Bà Trần Thị B đề nghị vay 2,5 tỷ, TSBĐ là nhà đất thừa kế từ cha mẹ,
+giấy chứng nhận đứng tên bà B và 03 anh chị em (đồng sở hữu).
+
+    B1 — P.QHKH: tiếp nhận, KYC khớp.
+    B2 — P.TD: đang thẩm định (chưa xong).
+    B3 — P.TĐTS: định giá 5,0 tỷ; LTV 70% → mức cho vay tối đa 3,5 tỷ.
+    B4 — P.PLTC: phát hiện 01 trong 03 đồng sở hữu đang định cư nước ngoài, không
+        về ký và không có văn bản ủy quyền hợp lệ được hợp pháp hóa lãnh sự. Lỗi
+        PL-01: thiếu chữ ký đồng sở hữu → kích hoạt KO-C5 [HHB-DM-03].
+        Kết luận BM-05: KHÔNG ĐẠT.
+    Áp dụng [HHB-QT-09 R1] và R2: hồ sơ CHẤM DỨT NGAY tại B4. B2 đang chạy bị
+    hủy; B5 và B6 không diễn ra. Chứng thư định giá BM-03 đã phát hành vẫn được
+    lưu hồ sơ nhưng không dùng.
+    P.QHKH thông báo khách hàng theo mẫu BM-14 trong 01 NLV, chỉ nêu lý do khái
+    quát: "hồ sơ tài sản bảo đảm chưa đáp ứng điều kiện pháp lý của HHB", đồng
+    thời hướng dẫn cách khắc phục (bổ sung văn bản ủy quyền đã hợp pháp hóa lãnh
+    sự). Nếu khách hàng bổ sung được, P.PLTC phát hành BM-05 mới và quy trình
+    được khôi phục từ B4.
+    Lưu ý: đây là ví dụ điển hình cho nguyên tắc dừng sớm [HHB-QT-00] — không cần
+    chờ B2 hoàn tất mới kết luận.
+
+[ID: HHB-PL-05] BẢNG TÓM TẮT NHANH — DÙNG ĐỂ TRA CỨU NHANH TRONG QUY TRÌNH
+
+    Câu hỏi thường gặp                        Đáp án              Viện dẫn
+    ---------------------------------------   -----------------   -------------
+    Ai định giá tài sản?                      P.TĐTS, duy nhất    HHB-CN-05
+    Ai ra hạng XHTD chính thức?               P.QTRR              HHB-QT-05
+    Ai có quyền phủ quyết tuyệt đối?          P.PLTC              HHB-QT-09 R1
+    Ai có quyền dừng giải ngân?               P.VHNV              HHB-CN-06
+    P.QTRR phản đối thì hồ sơ chết chưa?      Chưa; nâng 01 cấp   HHB-QT-09 R4
+    Bước nào chạy song song?                  B2, B3, B4          HHB-QT-00
+    Bước nào là điểm hợp nhất?                B5                  HHB-QT-00
+    DTI trần?                                 60% / 50% / 40%     HHB-TC-04
+    DSCR sàn?                                 1,2 (1,0 là KO)     HHB-TC-04
+    LTV nhà đất đô thị có sổ?                 70%                 HHB-TC-05
+    LTV sổ tiết kiệm HHB?                     95%                 HHB-TC-05
+    Hạng nào bị từ chối chắc chắn?            CC, C, D            HHB-TC-03
+    Chứng thư định giá hiệu lực bao lâu?      06 tháng            HHB-QT-09 R9
+    Báo cáo CIC hiệu lực bao lâu?             30 ngày             HHB-QT-09 R9
+    Quyết định phê duyệt hiệu lực bao lâu?    90 ngày             HHB-QT-09 R9
+    Cấp nào duyệt KHCN 4 tỷ?                  Cấp 3 (HĐTD CN)     HHB-GT-05
+    Cấp nào duyệt KHDN 60 tỷ?                 Cấp 4 (HĐTD HS)     HHB-GT-05
+    Số tiền vay có được vượt mức TSBĐ?        Chỉ phần tín chấp   HHB-TC-07
+                                              cho hạng A trở lên
+    Điều kiện các phòng đặt ra xử lý sao?     Hợp (union), không  HHB-QT-09 R7
+                                              bù trừ
+
+[ID: HHB-PL-06] TỪ ĐIỂN THUẬT NGỮ
+
+    Cấp tín dụng: việc HHB thỏa thuận để khách hàng sử dụng một khoản tiền với
+        nguyên tắc có hoàn trả, gồm cho vay, bảo lãnh, mở L/C, cấp hạn mức.
+    CIC: Trung tâm Thông tin tín dụng Quốc gia — nơi tập trung dữ liệu quan hệ
+        tín dụng của khách hàng tại các TCTD.
+    Nhóm nợ: phân loại chất lượng khoản nợ từ nhóm 1 (đủ tiêu chuẩn) đến nhóm 5
+        (có khả năng mất vốn). Nhóm 3 trở lên gọi là nợ xấu (NPL).
+    XHTD nội bộ: mô hình chấm điểm của HHB, quy đổi ra hạng từ AAA đến D
+        [HHB-TC-03].
+    LTV (Loan-to-Value): tỷ lệ phần trăm giá trị tài sản mà HHB chấp nhận cho vay
+        tối đa. Ví dụ LTV 70% với tài sản 6 tỷ nghĩa là tài sản đó chỉ "đỡ" được
+        tối đa 4,2 tỷ dư nợ.
+    Tỷ lệ bảo đảm (Coverage): mức cho vay tối đa trên TSBĐ chia cho số tiền vay.
+        Trên 100% nghĩa là TSBĐ dư sức phủ khoản vay.
+    Tín chấp: phần khoản vay không được TSBĐ phủ.
+    DTI: tỷ lệ tổng nghĩa vụ trả nợ hàng tháng trên thu nhập ròng hàng tháng.
+    DSCR: hệ số khả năng trả nợ của doanh nghiệp — dòng tiền sẵn có để trả nợ chia
+        cho nghĩa vụ nợ phải trả trong kỳ.
+    Knock-out (KO): điều kiện khiến hồ sơ bị từ chối ngay, không xét tiếp
+        [HHB-DM-03].
+    Điều kiện tiên quyết (CP — condition precedent): việc phải hoàn tất TRƯỚC khi
+        giải ngân.
+    Covenant: điều kiện khách hàng phải duy trì TRONG SUỐT thời hạn vay; vi phạm
+        có thể dẫn tới thu hồi nợ trước hạn.
+    Override: việc P.QTRR điều chỉnh thủ công hạng XHTD do mô hình sinh ra, tối đa
+        hạ 02 bậc, phải có lý do bằng văn bản [HHB-QT-05].
+    EDD (Enhanced Due Diligence): thẩm định tăng cường, áp dụng với khách hàng rủi
+        ro rửa tiền cao hoặc PEP.
+    PEP: cá nhân có ảnh hưởng chính trị.
+    STR: báo cáo giao dịch đáng ngờ gửi cơ quan có thẩm quyền.
+    GDBĐ: giao dịch bảo đảm; việc đăng ký GDBĐ tạo hiệu lực đối kháng với bên thứ ba.
+    Ngoại lệ chính sách: khoản vay được duyệt lệch khỏi quy định nội bộ, phải theo
+        [HHB-QT-09 R8].
+    NLV: ngày làm việc (không tính thứ Bảy, Chủ nhật, ngày lễ).
+    Ba tuyến bảo vệ: mô hình phân tách trách nhiệm giữa đơn vị tạo rủi ro, đơn vị
+        kiểm soát và đơn vị kiểm toán độc lập [HHB-GT-04].
+
+================================================================================
+KẾT THÚC TÀI LIỆU QĐ-HHB-2026/01
+Tổng số mục có mã định danh: 54.
+Mọi ý kiến góp ý gửi về Phòng Pháp lý – Tuân thủ, Hội sở chính.
+================================================================================

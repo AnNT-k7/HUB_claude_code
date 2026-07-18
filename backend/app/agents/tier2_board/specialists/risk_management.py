@@ -41,13 +41,13 @@ def assess_risk_management(
     concentration_limit_check: ConcentrationLimitCheck | None,
     industry_risk_summary: str,
     *,
-    concentration_policy_evidence: PolicyNumericEvidence | None = None,
+    concentration_policy_evidence: Sequence[PolicyNumericEvidence] = (),
     policy_citations: Sequence[AgentCitation] = (),
     document_evidence: Sequence[CaseDocumentEvidence] = (),
 ) -> RiskManagementAssessment:
     """Build a risk assessment while failing closed on missing inputs or policy."""
 
-    if concentration_policy_evidence is None:
+    if not concentration_policy_evidence:
         concentration_limit_check = None
 
     missing_fields: list[str] = []
@@ -64,7 +64,7 @@ def assess_risk_management(
             status=AssessmentStatus.REQUIRES_MORE_DATA,
             risk_tier=risk_tier or RiskTier.UNASSIGNED,
             concentration_limit_check=concentration_limit_check,
-            concentration_policy_evidence=concentration_policy_evidence,
+            concentration_policy_evidence=list(concentration_policy_evidence),
             industry_risk_summary=industry_risk_summary,
             missing_data=[
                 MissingDataRequest(
@@ -88,7 +88,7 @@ def assess_risk_management(
     risk_flags: list[RiskFlag] = []
     assert risk_tier is not None
     assert concentration_limit_check is not None
-    assert concentration_policy_evidence is not None
+    assert concentration_policy_evidence
     if not citations:
         risk_flags.append(
             RiskFlag(
@@ -129,7 +129,7 @@ def assess_risk_management(
         ),
         risk_tier=risk_tier,
         concentration_limit_check=concentration_limit_check,
-        concentration_policy_evidence=concentration_policy_evidence,
+        concentration_policy_evidence=list(concentration_policy_evidence),
         industry_risk_summary=industry_risk_summary,
         risk_flags=risk_flags,
         policy_citations=citations,

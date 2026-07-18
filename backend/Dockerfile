@@ -16,9 +16,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY alembic.ini ./alembic.ini
 COPY alembic ./alembic
 COPY app ./app
+COPY resources ./resources
 COPY entrypoint.sh ./entrypoint.sh
 
 EXPOSE 8000
 
 CMD ["sh", "/app/entrypoint.sh"]
-

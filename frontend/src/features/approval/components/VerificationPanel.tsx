@@ -231,10 +231,10 @@ export function VerificationPanel({
               <Button
                 variant="success"
                 isLoading={workflow.isExecuting}
-                disabled={workflow.execution?.status === "COMPLETED"}
+                disabled={workflow.execution?.status === "SUCCEEDED"}
                 onClick={handleExecute}
               >
-                {workflow.execution?.status === "COMPLETED"
+                {workflow.execution?.status === "SUCCEEDED"
                   ? "Đã thực thi"
                   : "Thực thi vận hành"}
               </Button>
@@ -242,15 +242,15 @@ export function VerificationPanel({
 
             {workflow.execution ? (
               <Alert
-                tone={workflow.execution.status === "COMPLETED" ? "success" : "info"}
+                tone={workflow.execution.status === "SUCCEEDED" ? "success" : workflow.execution.status === "FAILED" ? "danger" : "info"}
                 className="mt-4"
                 title={`Operations: ${workflow.execution.status}`}
               >
-                <p>Audit trace: {workflow.execution.audit_trace_id || "Đang tạo"}</p>
-                {workflow.execution.generated_agreement_url ? (
+                <p>Audit trace: {workflow.execution.id}</p>
+                {workflow.execution.artifacts?.agreement_url ? (
                   <a
                     className="mt-2 inline-block font-bold underline"
-                    href={workflow.execution.generated_agreement_url}
+                    href={workflow.execution.artifacts.agreement_url}
                     target="_blank"
                     rel="noreferrer"
                   >

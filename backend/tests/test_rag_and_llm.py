@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import json
 import math
+from pathlib import Path
 
+from langchain_core.messages import AIMessage
 from pydantic import BaseModel, Field
 import pytest
 
+from app.schemas import AgentID
 from app.services.llm import OpenAICompatibleStructuredLLM, StaticStructuredLLM
+from app.services.policy_catalog import parse_hhb_policy
 from app.services.rag import DeterministicEmbeddingProvider, split_text
 
 
@@ -53,6 +57,18 @@ def test_deterministic_embedding_provider_returns_stable_1024d_unit_vectors() ->
     assert math.sqrt(sum(value * value for value in first)) == pytest.approx(1.0)
 
 
+def test_supplied_hhb_policy_parses_into_scoped_self_contained_sections() -> None:
+    policy_path = Path(__file__).parents[1] / "resources/policies/QD-HHB-2026-01.txt"
+    sections = parse_hhb_policy(policy_path.read_text(encoding="utf-8"))
+
+    assert len(sections) == 54
+    assert sections[0].section_id == "HHB-META-01"
+    assert sections[-1].section_id == "HHB-PL-06"
+    ltv = next(item for item in sections if item.section_id == "HHB-TC-05")
+    assert AgentID.COLLATERAL_APPRAISAL in ltv.agent_ids
+    assert "QĐ-HHB-2026/01" in ltv.content
+
+
 @pytest.mark.parametrize(
     ("content", "expected"),
     [
@@ -97,3 +113,27 @@ def test_static_structured_llm_validates_and_returns_isolated_copies() -> None:
     assert first is not source
     assert second is not first
 
+
+def test_real_llm_contract_repair_retries_with_validation_feedback() -> None:
+    class FakeModel:
+        def __init__(self) -> None:
+            self.calls: list[object] = []
+
+        def invoke(self, messages: object) -> AIMessage:
+            self.calls.append(messages)
+            if len(self.calls) == 1:
+                return AIMessage(content='{"decision": "review", "score": 120}')
+            return AIMessage(content='{"decision": "review", "score": 80}')
+
+    llm = OpenAICompatibleStructuredLLM.__new__(OpenAICompatibleStructuredLLM)
+    fake_model = FakeModel()
+    llm._model = fake_model  # type: ignore[attr-defined]
+
+    result = llm.invoke_structured(
+        schema=ExampleStructuredResponse,
+        system_prompt="Return a structured result.",
+        user_prompt="Assess this test case.",
+    )
+
+    assert result.score == 80
+    assert len(fake_model.calls) == 2

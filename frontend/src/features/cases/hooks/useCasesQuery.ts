@@ -21,12 +21,12 @@ export function useCasesQuery() {
   });
 
   const refresh = useCallback(() => {
+    setState((current) => ({ ...current, isLoading: true, error: null }));
     setRefreshIndex((value) => value + 1);
   }, []);
 
   useEffect(() => {
     const controller = new AbortController();
-    setState((current) => ({ ...current, isLoading: true, error: null }));
 
     void listCases({ signal: controller.signal })
       .then((cases) => {

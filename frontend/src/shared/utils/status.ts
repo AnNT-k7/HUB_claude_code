@@ -12,7 +12,6 @@ export function caseStatusTone(status: CaseStatus): BadgeTone {
     case "COMPLETED":
       return "success";
     case "REJECTED":
-    case "FAILED":
       return "danger";
     case "AWAITING_DOCS":
     case "REVISION_REQUESTED":
@@ -42,6 +41,29 @@ export function workStatusTone(
       return "warning";
     case "RUNNING":
     case "REFINING":
+      return "purple";
+    default:
+      return "neutral";
+  }
+}
+
+export function runtimeStatusTone(status: string): BadgeTone {
+  switch (status) {
+    case "SUCCESS":
+    case "COMPLETED":
+      return "success";
+    case "ERROR":
+    case "FAILED":
+      return "danger";
+    case "REQUIRES_MORE_DATA":
+    case "MANUAL_REVIEW":
+    case "BLOCKED":
+    case "PAUSED":
+    case "STOP_REQUESTED":
+      return "warning";
+    case "RUNNING":
+    case "REFINING":
+    case "CHALLENGE":
       return "purple";
     default:
       return "neutral";

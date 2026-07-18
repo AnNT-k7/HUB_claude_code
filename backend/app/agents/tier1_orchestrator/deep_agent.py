@@ -16,10 +16,12 @@ from app.agents.tier2_board.runtime import SpecialistAgentRuntime
 from app.agents.tier1_orchestrator.replanner import replan_for_missing_data
 from app.config import get_settings
 from app.db.models import AuditOutcome, Case, CaseStatus, Document, DocumentStatus
+from app.mock_apis.shb_client import HttpMockShbClient, MockShbGateway
 from app.schemas import (
     AgentCitation,
     AgentID,
     AssessmentStatus,
+    BoardStatus,
     DebateIssue,
     DebateRecord,
     MissingDataRequest,
@@ -27,6 +29,7 @@ from app.schemas import (
     SharedBoardState,
     SpecialistAssessment,
     TaskState,
+    TaskStatus,
 )
 from app.schemas.base import ContractModel
 from app.services.audit import write_audit_log
@@ -47,6 +50,17 @@ class DeepAgentError(RuntimeError):
 
 class CaseNotAssessableError(DeepAgentError):
     pass
+
+
+class AssessmentPaused(DeepAgentError):
+    """Raised only at a durable safe point after a stop request."""
+
+
+EventCallback = Callable[
+    [str, str | None, str, str, str, dict[str, object]], None
+]
+CheckpointCallback = Callable[[str], None]
+StopChecker = Callable[[], bool]
 
 
 class OrchestratorState(TypedDict, total=False):
@@ -75,23 +89,34 @@ class AssessmentDraft(ContractModel):
 
 
 LLMFactory = Callable[[], StructuredLLM]
+GatewayFactory = Callable[[], MockShbGateway]
 
 
-POLICY_QUERIES: dict[AgentID, str] = {
+POLICY_QUERIES: dict[AgentID, tuple[str, ...]] = {
     AgentID.CUSTOMER_RELATIONSHIP: (
-        "corporate loan intake required documents borrower profile requested terms"
+        "HHB-QT-01 tiếp nhận hồ sơ định danh khách hàng KHDN",
+        "HHB-HS-02 danh mục hồ sơ khách hàng doanh nghiệp",
     ),
     AgentID.CREDIT: (
-        "corporate credit DSCR current ratio debt to equity minimum maximum thresholds"
+        "HHB-TC-04 công thức và ngưỡng DSCR khách hàng doanh nghiệp",
+        "HHB-QT-02 thẩm định tín dụng báo cáo tài chính stress test",
+        "HHB-TC-02 xếp hạng tín dụng nội bộ KHDN D/E CR ROE DSCR",
     ),
     AgentID.RISK_MANAGEMENT: (
-        "industry risk concentration exposure limit legal contingency risk tier"
+        "HHB-GT-02 giới hạn dư nợ một khách hàng khẩu vị rủi ro",
+        "HHB-GT-01 vốn tự có vốn điều lệ 3.500 tỷ đồng",
+        "HHB-QT-05 tái thẩm định rủi ro độc lập giới hạn danh mục",
+        "HHB-TC-07 ma trận quyết định tín dụng tỷ lệ bảo đảm",
     ),
     AgentID.LEGAL_COMPLIANCE: (
-        "KYC AML sanctions governance title ownership litigation compliance"
+        "HHB-QT-04 rà soát pháp lý tuân thủ kết luận không đạt",
+        "HHB-TT-01 HHB-TT-02 KYC AML cấm vận PEP",
+        "HHB-DM-03 điều kiện từ chối tuyệt đối knock-out",
     ),
     AgentID.COLLATERAL_APPRAISAL: (
-        "collateral eligible value commercial real estate maximum LTV"
+        "HHB-TC-05 tỷ lệ LTV tối đa theo loại tài sản bảo đảm",
+        "HHB-QT-03 thẩm định tài sản giá trị định giá thanh khoản",
+        "HHB-HS-03 hồ sơ tài sản bảo đảm",
     ),
 }
 
@@ -105,11 +130,22 @@ class DeepAgentOrchestrator:
         *,
         llm_factory: LLMFactory | None = None,
         embedding_provider: EmbeddingProvider | None = None,
+        bank_gateway_factory: GatewayFactory | None = None,
+        event_callback: EventCallback | None = None,
+        checkpoint_callback: CheckpointCallback | None = None,
+        stop_checker: StopChecker | None = None,
     ) -> None:
         self._db = db
         self._llm_factory = llm_factory or OpenAICompatibleStructuredLLM
         self._embedding_provider = embedding_provider
+        self._bank_gateway_factory = bank_gateway_factory or (
+            lambda: HttpMockShbClient(
+                get_settings().mock_shb_base_url,
+                get_settings().mock_shb_timeout_seconds,
+            )
+        )
         self._case: Case | None = None
+        self._initial_case_status: str | None = None
         self._case_payload: dict[str, object] | None = None
         self._workflow: WorkflowDefinition | None = None
         self._repository: SqlSharedBoardRepository | None = None
@@ -117,9 +153,19 @@ class DeepAgentOrchestrator:
         self._policy_citations: dict[AgentID, list[AgentCitation]] = {}
         self._reviewer = Reviewer()
         self._specialist_runtime = SpecialistAgentRuntime(self._llm_factory)
+        self._event_callback = event_callback
+        self._checkpoint_callback = checkpoint_callback
+        self._stop_checker = stop_checker
 
-    def run(self, case_id: UUID) -> SharedBoardState:
-        case = self._db.get(Case, case_id)
+    def run(
+        self,
+        case_id: UUID,
+        *,
+        resume_from: str | None = None,
+    ) -> SharedBoardState:
+        case = self._db.scalar(
+            select(Case).where(Case.id == case_id).with_for_update()
+        )
         if case is None:
             raise LookupError(f"Case {case_id} was not found")
         if case.status in {
@@ -131,6 +177,7 @@ class DeepAgentOrchestrator:
                 f"Case in {case.status} status cannot start another assessment"
             )
         self._case = case
+        self._initial_case_status = case.status
         self._case_payload = self._build_case_payload(case)
         settings = get_settings()
         self._workflow = get_workflow(
@@ -157,16 +204,45 @@ class DeepAgentOrchestrator:
         ):
             return existing
 
-        graph = self._build_graph()
-        try:
-            graph.invoke(
-                {"case_id": str(case_id)},
-                {"recursion_limit": self._workflow.max_debate_rounds * 3 + 12},
+        synthesis_resume = (
+            existing is not None
+            and existing.final_summary is None
+            and existing.status
+            in {BoardStatus.CONSENSUS_REACHED, BoardStatus.MAX_ROUNDS_REACHED}
+        )
+        if case.status in {
+            CaseStatus.TIER1_PLANNING.value,
+            CaseStatus.TIER2_DEBATING.value,
+        } and not synthesis_resume and resume_from is None:
+            self._db.rollback()
+            raise CaseNotAssessableError("An assessment is already in progress")
+        if not synthesis_resume and resume_from is None:
+            case.status = CaseStatus.TIER1_PLANNING.value
+            write_audit_log(
+                self._db,
+                case_id=case.id,
+                actor_type="AGENT",
+                actor_id=AgentID.BANKING_ORCHESTRATOR.value,
+                action="ASSESSMENT_STARTED",
+                entity_type="case",
+                entity_id=str(case.id),
             )
+            self._db.commit()
+
+        try:
+            self._run_stages(
+                case_id,
+                resume_from=("synthesize" if synthesis_resume else resume_from),
+            )
+        except AssessmentPaused:
+            self._db.rollback()
+            raise
         except Exception as exc:
             self._db.rollback()
             failed_case = self._db.get(Case, case_id)
             if failed_case is not None:
+                if self._initial_case_status is not None and not synthesis_resume:
+                    failed_case.status = self._initial_case_status
                 write_audit_log(
                     self._db,
                     case_id=case_id,
@@ -181,6 +257,118 @@ class DeepAgentOrchestrator:
                 self._db.commit()
             raise
         return self._manager_required().get(case_id)
+
+    def _run_stages(self, case_id: UUID, *, resume_from: str | None) -> None:
+        """Explicit safe-point state machine; LangGraph nodes remain reusable units."""
+
+        state: OrchestratorState = {"case_id": str(case_id)}
+        stage = resume_from or "plan"
+        if stage not in {"plan", "specialists", "review", "revise", "synthesize"}:
+            stage = "plan"
+
+        if stage == "plan":
+            self._stage_started("plan", "Orchestrator đang đọc hồ sơ và lập kế hoạch")
+            self._plan_node(state)
+            self._stage_completed("plan", "Đã lập kế hoạch và tạo Shared Board")
+            self._checkpoint("specialists")
+            self._pause_if_requested()
+            stage = "specialists"
+
+        if stage == "specialists":
+            self._stage_started("rag", "Đang truy xuất quy định cho từng chuyên gia")
+            self._specialists_node(state)
+            self._stage_completed("specialists", "Các chuyên gia đã đăng kết quả lên Shared Board")
+            self._checkpoint("review")
+            self._pause_if_requested()
+            if self._route_after_specialists(state) == "missing_data":
+                self._stage_started("missing_data", "Đang tổng hợp tài liệu còn thiếu")
+                self._missing_data_node(state)
+                self._stage_completed("missing_data", "Đã gửi yêu cầu bổ sung tài liệu")
+                return
+            stage = "review"
+        elif stage in {"review", "revise", "synthesize"}:
+            # Policy citations are process-local; rebuild them when a persisted run resumes.
+            self._policy_citations = self._retrieve_all_policies()
+
+        while stage in {"review", "revise"}:
+            if stage == "review":
+                self._stage_started("review", "Reviewer đang kiểm tra chéo bằng chứng")
+                state = self._review_node(state)
+                board = self._manager_required().get(case_id)
+                self._stage_completed(
+                    "review",
+                    "Reviewer đã hoàn tất một vòng kiểm tra",
+                    evidence={
+                        "round": board.current_debate_round,
+                        "open_issues": sum(
+                            item.status.value == "OPEN" for item in board.debate_log
+                        ),
+                    },
+                )
+                stage = state["review_route"]
+                self._checkpoint(stage)
+                self._pause_if_requested()
+            else:
+                self._stage_started("revise", "Các chuyên gia đang trả lời phản biện")
+                state = self._revise_node(state)
+                self._stage_completed("revise", "Đã đăng phản hồi của chuyên gia")
+                stage = "review"
+                self._checkpoint("review")
+                self._pause_if_requested()
+
+        self._stage_started("synthesize", "Orchestrator đang tổng hợp kết luận sơ bộ")
+        self._synthesize_node(state)
+        self._stage_completed("synthesize", "Hồ sơ đã sẵn sàng cho chuyên viên xác minh")
+        self._checkpoint("completed")
+
+    def _emit(
+        self,
+        stage: str,
+        *,
+        agent_id: AgentID | None,
+        status: str,
+        title: str,
+        message: str,
+        evidence: dict[str, object] | None = None,
+    ) -> None:
+        if self._event_callback is not None:
+            self._event_callback(
+                stage,
+                agent_id.value if agent_id is not None else None,
+                status,
+                title,
+                message,
+                evidence or {},
+            )
+
+    def _stage_started(self, stage: str, message: str) -> None:
+        self._emit(
+            stage,
+            agent_id=AgentID.BANKING_ORCHESTRATOR,
+            status="RUNNING",
+            title=stage.replace("_", " ").title(),
+            message=message,
+        )
+
+    def _stage_completed(
+        self, stage: str, message: str, *, evidence: dict[str, object] | None = None
+    ) -> None:
+        self._emit(
+            stage,
+            agent_id=AgentID.BANKING_ORCHESTRATOR,
+            status="COMPLETED",
+            title=stage.replace("_", " ").title(),
+            message=message,
+            evidence=evidence,
+        )
+
+    def _checkpoint(self, next_stage: str) -> None:
+        if self._checkpoint_callback is not None:
+            self._checkpoint_callback(next_stage)
+
+    def _pause_if_requested(self) -> None:
+        if self._stop_checker is not None and self._stop_checker():
+            raise AssessmentPaused("Assessment paused at a durable safe point")
 
     def _build_graph(self):
         builder = StateGraph(OrchestratorState)
@@ -241,7 +429,7 @@ class DeepAgentOrchestrator:
                 tasks,
                 max_debate_rounds=workflow.max_debate_rounds,
             )
-        elif case.status in {
+        elif self._initial_case_status in {
             CaseStatus.AWAITING_DOCS.value,
             CaseStatus.REVISION_REQUESTED.value,
         }:
@@ -284,49 +472,153 @@ class DeepAgentOrchestrator:
         )
         self._db.commit()
 
-        agents = list(POLICY_QUERIES)
         assessments: dict[AgentID, SpecialistAssessment] = {}
-        with ThreadPoolExecutor(max_workers=len(agents)) as executor:
-            future_to_agent = {
-                executor.submit(
-                    self._specialist_runtime.run,
+        existing_board = self._manager_required().get(case.id)
+        for agent_id, output in existing_board.specialist_outputs.items():
+            if output.status in {
+                AssessmentStatus.SUCCESS,
+                AssessmentStatus.MANUAL_REVIEW,
+                AssessmentStatus.REQUIRES_MORE_DATA,
+            }:
+                assessments[agent_id] = output
+
+        def run_agent(
+            agent_id: AgentID,
+            *,
+            payload: dict[str, object] | None = None,
+            external_risks: Sequence[str] = (),
+        ) -> SpecialistAssessment:
+            try:
+                return self._specialist_runtime.run(
                     agent_id=agent_id,
-                    case_payload=self._case_payload_required(),
+                    case_payload=payload or self._case_payload_required(),
                     policy_citations=self._policy_citations[agent_id],
-                ): agent_id
-                for agent_id in agents
+                    external_risk_codes=external_risks,
+                )
+            except Exception as exc:
+                return _error_assessment(
+                    agent_id,
+                    f"Agent execution failed: {type(exc).__name__}",
+                )
+
+        # HHB-QT-01 intake is completed before the three parallel B2/B3/B4 reviews.
+        if AgentID.CUSTOMER_RELATIONSHIP not in assessments:
+            self._mark_agent_running(AgentID.CUSTOMER_RELATIONSHIP)
+            assessment = run_agent(AgentID.CUSTOMER_RELATIONSHIP)
+            assessments[AgentID.CUSTOMER_RELATIONSHIP] = assessment
+            self._post_agent_assessment(assessment)
+            self._pause_if_requested()
+        parallel_agents = [
+            AgentID.CREDIT,
+            AgentID.COLLATERAL_APPRAISAL,
+            AgentID.LEGAL_COMPLIANCE,
+        ]
+        pending_parallel = [
+            agent_id for agent_id in parallel_agents if agent_id not in assessments
+        ]
+        for agent_id in pending_parallel:
+            self._mark_agent_running(agent_id)
+        with ThreadPoolExecutor(max_workers=max(1, len(pending_parallel))) as executor:
+            future_to_agent = {
+                executor.submit(run_agent, agent_id): agent_id
+                for agent_id in pending_parallel
             }
             for future in as_completed(future_to_agent):
                 agent_id = future_to_agent[future]
-                try:
-                    assessments[agent_id] = future.result()
-                except Exception as exc:
-                    assessments[agent_id] = _error_assessment(
-                        agent_id,
-                        f"Agent execution failed: {type(exc).__name__}",
-                    )
+                assessment = future.result()
+                assessments[agent_id] = assessment
+                self._post_agent_assessment(assessment)
+                self._pause_if_requested()
 
-        manager = self._manager_required()
-        for agent_id in agents:
-            board = manager.get(case.id)
-            assessment = assessments[agent_id]
-            manager.post_assessment(
-                case.id,
-                assessment,
-                expected_version=board.version,
+        # HHB-QT-05 is an independent second-line review over B2/B3/B4 outputs.
+        risk_payload = dict(self._case_payload_required())
+        risk_payload["cross_domain_assessments"] = {
+            agent_id.value: assessment.model_dump(mode="json")
+            for agent_id, assessment in assessments.items()
+        }
+        cross_domain_risks = sorted(
+            {
+                risk.code
+                for assessment in assessments.values()
+                for risk in assessment.risk_flags
+            }
+        )
+        if AgentID.RISK_MANAGEMENT not in assessments:
+            self._mark_agent_running(AgentID.RISK_MANAGEMENT)
+            assessment = run_agent(
+                AgentID.RISK_MANAGEMENT,
+                payload=risk_payload,
+                external_risks=cross_domain_risks,
             )
-            write_audit_log(
-                self._db,
-                case_id=case.id,
-                actor_type="AGENT",
-                actor_id=agent_id.value,
-                action="AGENT_OUTPUT_POSTED",
-                entity_type="shared_board",
-                entity_id=str(board.board_id),
-                response=assessment,
+            assessments[AgentID.RISK_MANAGEMENT] = assessment
+            self._post_agent_assessment(assessment)
+            self._pause_if_requested()
+        return state
+
+    def _mark_agent_running(self, agent_id: AgentID) -> None:
+        case = self._case_required()
+        manager = self._manager_required()
+        board = manager.get(case.id)
+        task = next(
+            (item for item in board.tasks.values() if item.assigned_to == agent_id),
+            None,
+        )
+        if task is not None:
+            manager.set_task_status(
+                case.id,
+                task.task_id,
+                TaskStatus.RUNNING,
+                expected_version=board.version,
+                detail=f"{agent_id.value} đang phân tích hồ sơ và bằng chứng RAG",
             )
             self._db.commit()
-        return state
+        self._emit(
+            "specialists",
+            agent_id=agent_id,
+            status="RUNNING",
+            title=f"{agent_id.value} bắt đầu",
+            message="Đang đối chiếu dữ liệu hồ sơ với quy định được truy xuất.",
+            evidence={
+                "policy_chunks": len(self._policy_citations.get(agent_id, [])),
+            },
+        )
+
+    def _post_agent_assessment(self, assessment: SpecialistAssessment) -> None:
+        case = self._case_required()
+        manager = self._manager_required()
+        board = manager.get(case.id)
+        manager.post_assessment(
+            case.id,
+            assessment,
+            expected_version=board.version,
+        )
+        write_audit_log(
+            self._db,
+            case_id=case.id,
+            actor_type="AGENT",
+            actor_id=assessment.agent_id.value,
+            action="AGENT_OUTPUT_POSTED",
+            entity_type="shared_board",
+            entity_id=str(board.board_id),
+            response=assessment,
+        )
+        self._db.commit()
+        self._emit(
+            "specialists",
+            agent_id=assessment.agent_id,
+            status=assessment.status.value,
+            title=f"{assessment.agent_id.value} đã cập nhật",
+            message=(
+                assessment.error_message
+                or assessment.rationale_summary
+                or "Đã đăng kết quả có cấu trúc lên Shared Board."
+            )[:1_000],
+            evidence={
+                "policy_citations": len(assessment.policy_citations),
+                "document_evidence": len(assessment.document_evidence),
+                "risk_flags": len(assessment.risk_flags),
+            },
+        )
 
     def _route_after_specialists(
         self, state: OrchestratorState
@@ -404,6 +696,39 @@ class DeepAgentOrchestrator:
             ),
         )
         issues = _deduplicate_issues([*deterministic.issues, *semantic.issues])
+        for issue in issues:
+            self._emit(
+                "review",
+                agent_id=AgentID.REVIEWER,
+                status="CHALLENGE",
+                title=f"Reviewer → {issue.target_agent.value}",
+                message=issue.description,
+                evidence={
+                    "issue_code": issue.code,
+                    "severity": issue.severity.value,
+                    "target_agent": issue.target_agent.value,
+                    "required_action": issue.required_action,
+                },
+            )
+        current_issue_keys = {
+            (issue.code, issue.target_agent) for issue in issues
+        }
+        for record in [item for item in board.debate_log if item.status.value == "OPEN"]:
+            key = (record.issue.code, record.issue.target_agent)
+            if key in current_issue_keys:
+                continue
+            board = manager.resolve_debate_issue(
+                case.id,
+                round_number=record.round_number,
+                issue_code=record.issue.code,
+                target_agent=record.issue.target_agent,
+                specialist_response=(
+                    record.specialist_response
+                    or "The specialist posted a corrected structured assessment."
+                ),
+                resolution="The Reviewer independently verified this issue as corrected.",
+                expected_version=board.version,
+            )
         if not issues:
             manager.mark_consensus(case.id, expected_version=board.version)
             write_audit_log(
@@ -420,8 +745,16 @@ class DeepAgentOrchestrator:
             return {**state, "review_route": "synthesize", "revision_targets": []}
 
         if board.current_debate_round >= board.max_debate_rounds:
-            manager.mark_max_rounds_reached(
+            records = [
+                DebateRecord(
+                    round_number=board.current_debate_round,
+                    issue=issue,
+                )
+                for issue in issues
+            ]
+            manager.accept_for_manual_review(
                 case.id,
+                records,
                 expected_version=board.version,
             )
             write_audit_log(
@@ -474,6 +807,14 @@ class DeepAgentOrchestrator:
             ]
             feedback = [record.issue.required_action for record in open_records]
             external_risks = _external_risk_codes(board, exclude=agent_id)
+            self._emit(
+                "revise",
+                agent_id=agent_id,
+                status="REFINING",
+                title=f"{agent_id.value} đang trả lời Reviewer",
+                message="; ".join(feedback)[:1_000] or "Đang kiểm tra lại kết quả.",
+                evidence={"issues": len(open_records)},
+            )
             try:
                 assessment = self._specialist_runtime.run(
                     agent_id=agent_id,
@@ -493,16 +834,12 @@ class DeepAgentOrchestrator:
                 expected_version=board.version,
             )
             for record in open_records:
-                board = manager.resolve_debate_issue(
+                board = manager.record_debate_response(
                     case.id,
                     round_number=record.round_number,
                     issue_code=record.issue.code,
                     target_agent=agent_id,
                     specialist_response=assessment.rationale_summary,
-                    resolution=(
-                        "The target specialist reran with Reviewer feedback; the next "
-                        "Reviewer pass will independently verify resolution."
-                    ),
                     expected_version=board.version,
                 )
             write_audit_log(
@@ -516,6 +853,19 @@ class DeepAgentOrchestrator:
                 response=assessment,
             )
             self._db.commit()
+            self._emit(
+                "revise",
+                agent_id=agent_id,
+                status=assessment.status.value,
+                title=f"{agent_id.value} đã phản hồi",
+                message=assessment.rationale_summary[:1_000],
+                evidence={
+                    "round": board.current_debate_round,
+                    "policy_citations": len(assessment.policy_citations),
+                    "document_evidence": len(assessment.document_evidence),
+                },
+            )
+            self._pause_if_requested()
         return state
 
     def _synthesize_node(self, state: OrchestratorState) -> OrchestratorState:
@@ -547,6 +897,11 @@ class DeepAgentOrchestrator:
             "consensus_reached": board.consensus_reached,
             "review_cycle": board.review_cycle,
             "policy_citations": list(citation_map.values()),
+            "manual_review_issues": [
+                record.model_dump(mode="json")
+                for record in board.debate_log
+                if record.status.value in {"OPEN", "ACCEPTED_FOR_MANUAL_REVIEW"}
+            ],
             "human_verification_required": True,
         }
         updated = board.model_copy(
@@ -570,14 +925,27 @@ class DeepAgentOrchestrator:
 
     def _retrieve_all_policies(self) -> dict[AgentID, list[AgentCitation]]:
         embedding_provider = self._embedding_provider or create_embedding_provider()
-        return {
-            agent_id: AgentPolicyRetriever(
+        results: dict[AgentID, list[AgentCitation]] = {}
+        for agent_id, queries in POLICY_QUERIES.items():
+            retriever = AgentPolicyRetriever(
                 self._db,
                 agent_id,
                 embedding_provider,
-            ).retrieve(query, limit=3)
-            for agent_id, query in POLICY_QUERIES.items()
-        }
+            )
+            unique: dict[UUID, AgentCitation] = {}
+            for query in queries:
+                for citation in retriever.retrieve(
+                    query,
+                    limit=3,
+                    min_similarity=0.10,
+                ):
+                    unique[citation.policy_chunk_id] = citation
+            results[agent_id] = sorted(
+                unique.values(),
+                key=lambda item: item.similarity_score or 0,
+                reverse=True,
+            )[:8]
+        return results
 
     @staticmethod
     def _workflow_tasks(workflow: WorkflowDefinition) -> list[TaskState]:
@@ -651,9 +1019,45 @@ class DeepAgentOrchestrator:
         borrower_profile = _mapping_copy(payload.get("borrower_profile"))
         borrower_profile["company_name"] = case.company_name
         payload["borrower_profile"] = borrower_profile
+        payload["trusted_bank_context"] = self._load_trusted_bank_context(payload)
         if document_context:
             payload["case_documents"] = document_context
         return payload
+
+    def _load_trusted_bank_context(
+        self,
+        payload: dict[str, object],
+    ) -> dict[str, object]:
+        borrower_profile = _mapping_copy(payload.get("borrower_profile"))
+        customer_id = str(
+            payload.get("customer_id")
+            or borrower_profile.get("registration_number")
+            or ""
+        ).strip()
+        if not customer_id:
+            return {"lookup_status": "MISSING_CUSTOMER_ID"}
+
+        gateway = self._bank_gateway_factory()
+        try:
+            customer = gateway.get_customer(customer_id)
+            credit_ledger = gateway.get_credit_ledger(customer_id)
+            compliance = gateway.get_compliance(customer_id)
+            return {
+                "lookup_status": "VERIFIED",
+                "source": "MOCK_SHB_API",
+                "customer_master": customer.model_dump(mode="json"),
+                "credit_ledger": credit_ledger.model_dump(mode="json"),
+                "compliance": compliance.model_dump(mode="json"),
+            }
+        except Exception:
+            return {
+                "lookup_status": "UNAVAILABLE",
+                "source": "MOCK_SHB_API",
+            }
+        finally:
+            close = getattr(gateway, "close", None)
+            if callable(close):
+                close()
 
     def _workflow_required(self) -> WorkflowDefinition:
         if self._workflow is None:

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 
 import { DocumentUploadZone } from "@/features/cases/components/DocumentUploadZone";
 import { useCaseMutation } from "@/features/cases/hooks/useCaseMutation";
@@ -37,14 +37,17 @@ export function CaseCreationModal({
   const [validationError, setValidationError] = useState<string | null>(null);
   const mutation = useCaseMutation();
 
-  useEffect(() => {
-    if (!open) {
-      setForm(INITIAL_FORM);
-      setFiles([]);
-      setValidationError(null);
-      mutation.reset();
-    }
-  }, [mutation, open]);
+  const resetForm = () => {
+    setForm(INITIAL_FORM);
+    setFiles([]);
+    setValidationError(null);
+    mutation.reset();
+  };
+
+  const close = () => {
+    resetForm();
+    onClose();
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -67,6 +70,7 @@ export function CaseCreationModal({
     };
     try {
       const createdCase = await mutation.createCaseWithDocuments(payload, files);
+      resetForm();
       onCreated(createdCase);
     } catch {
       // The mutation exposes its user-safe error below.
@@ -83,7 +87,7 @@ export function CaseCreationModal({
   return (
     <Dialog
       open={open}
-      onClose={mutation.isPending ? () => undefined : onClose}
+      onClose={mutation.isPending ? () => undefined : close}
       title="Khởi tạo hồ sơ tín dụng"
       description="Nhập thông tin đề nghị và đính kèm hồ sơ doanh nghiệp. Bạn có thể bổ sung tài liệu sau."
       className="sm:max-w-2xl"

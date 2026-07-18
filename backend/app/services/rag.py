@@ -4,7 +4,7 @@ import hashlib
 import math
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Protocol
 from uuid import UUID, uuid4
@@ -28,7 +28,7 @@ class EmbeddingProvider(Protocol):
 
 
 class DeterministicEmbeddingProvider:
-    """Token-hashing embeddings for reproducible local demos and tests."""
+    """Token-hashing test double; runtime settings forbid it outside tests."""
 
     def __init__(self, dimension: int = 1024) -> None:
         if dimension < 1:
@@ -70,9 +70,15 @@ class OpenAICompatibleEmbeddingProvider:
     def embed(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
-        response = self._client.embeddings.create(model=self._model, input=texts)
-        ordered = sorted(response.data, key=lambda item: item.index)
-        embeddings = [item.embedding for item in ordered]
+        embeddings: list[list[float]] = []
+        for start in range(0, len(texts), 32):
+            batch = texts[start : start + 32]
+            response = self._client.embeddings.create(
+                model=self._model,
+                input=batch,
+            )
+            ordered = sorted(response.data, key=lambda item: item.index)
+            embeddings.extend(item.embedding for item in ordered)
         if any(len(embedding) != self.dimension for embedding in embeddings):
             raise ValueError(
                 f"embedding provider must return {self.dimension} dimensions"
@@ -179,11 +185,19 @@ class AgentPolicyRetriever:
     def agent_id(self) -> AgentID:
         return self._agent_id
 
-    def retrieve(self, query: str, limit: int = 3) -> list[AgentCitation]:
+    def retrieve(
+        self,
+        query: str,
+        limit: int = 3,
+        *,
+        min_similarity: float = 0.0,
+    ) -> list[AgentCitation]:
         if not query.strip():
             raise ValueError("RAG query cannot be empty")
         if limit < 1 or limit > 20:
             raise ValueError("RAG result limit must be between 1 and 20")
+        if not 0 <= min_similarity <= 1:
+            raise ValueError("RAG minimum similarity must be between zero and one")
 
         query_embedding = self._embedding_provider.embed([query])[0]
         distance = PolicyEmbedding.embedding.cosine_distance(query_embedding)
@@ -205,9 +219,13 @@ class AgentPolicyRetriever:
                 AgentKnowledgeBase.agent_key == self._agent_key,
                 AgentKnowledgeBase.active.is_(True),
                 PolicyDocument.active.is_(True),
+                (
+                    PolicyDocument.effective_at.is_(None)
+                    | (PolicyDocument.effective_at <= datetime.now(timezone.utc))
+                ),
             )
             .order_by(distance)
-            .limit(limit)
+            .limit(min(80, limit * 4))
         )
         rows = self._db.execute(statement).all()
 
@@ -215,6 +233,8 @@ class AgentPolicyRetriever:
         for embedding, policy_document, raw_distance in rows:
             metadata = embedding.metadata_
             similarity = max(0.0, min(1.0, 1.0 - float(raw_distance)))
+            if similarity < min_similarity:
+                continue
             citations.append(
                 AgentCitation(
                     policy_chunk_id=embedding.id,
@@ -230,6 +250,8 @@ class AgentPolicyRetriever:
                     similarity_score=Decimal(str(round(similarity, 6))),
                 )
             )
+            if len(citations) >= limit:
+                break
         return citations
 
 

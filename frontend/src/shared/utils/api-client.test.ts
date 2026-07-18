@@ -4,11 +4,13 @@ import { apiClient } from "@/shared/utils/api-client";
 
 describe("apiClient", () => {
   const fetchMock = vi.fn(
-    async (_input: RequestInfo | URL, _init?: RequestInit): Promise<Response> =>
-      new Response(JSON.stringify({ ok: true }), {
+    async (...args: [RequestInfo | URL, RequestInit?]): Promise<Response> => {
+      void args;
+      return new Response(JSON.stringify({ ok: true }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
-      }),
+      });
+    },
   );
 
   beforeEach(() => {

@@ -13,7 +13,6 @@ from app.schemas.enums import (
     DocumentStatus,
     OperationStatus,
 )
-from app.schemas.tier2 import SharedBoardState
 
 
 class CaseCreateRequest(ContractModel):
@@ -52,10 +51,44 @@ class CaseDetailResponse(CaseSummaryResponse):
     documents: list[DocumentResponse] = Field(default_factory=list)
 
 
+class AssessmentRunResponse(ContractModel):
+    id: UUID
+    case_id: UUID
+    status: str
+    current_stage: str
+    checkpoint_stage: str
+    stop_requested: bool
+    started_by: str
+    error_message: str | None = None
+    created_at: datetime
+    started_at: datetime | None = None
+    updated_at: datetime
+    completed_at: datetime | None = None
+
+
 class AssessmentStartResponse(ContractModel):
     case_id: UUID
-    status: CaseStatus
-    board: SharedBoardState
+    status: str
+    run: AssessmentRunResponse
+
+
+class AssessmentEventResponse(ContractModel):
+    id: int
+    run_id: UUID
+    case_id: UUID
+    event_type: str
+    stage: str
+    agent_id: str | None = None
+    status: str
+    title: str
+    message: str
+    evidence: dict[str, object] = Field(default_factory=dict)
+    created_at: datetime
+
+
+class AssessmentRuntimeResponse(ContractModel):
+    run: AssessmentRunResponse | None = None
+    events: list[AssessmentEventResponse] = Field(default_factory=list)
 
 
 class HumanDecisionRequest(ContractModel):

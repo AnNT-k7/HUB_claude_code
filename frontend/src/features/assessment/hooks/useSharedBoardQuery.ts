@@ -36,7 +36,6 @@ export function useSharedBoardQuery(
 
   useEffect(() => {
     if (!enabled) {
-      setState((current) => ({ ...current, isLoading: false, isRefreshing: false }));
       return undefined;
     }
 
@@ -59,7 +58,7 @@ export function useSharedBoardQuery(
         if (disposed) return;
         const normalizedBoard: SharedBoard = {
           ...board,
-          task_breakdown: board.task_breakdown ?? {},
+          tasks: board.tasks ?? {},
           specialist_outputs: board.specialist_outputs ?? {},
         };
         setState({
@@ -73,8 +72,7 @@ export function useSharedBoardQuery(
 
         const shouldContinue =
           !normalizedBoard.consensus_reached &&
-          normalizedBoard.status !== "MAX_ROUNDS_REACHED" &&
-          normalizedBoard.status !== "REQUIRES_MORE_DATA";
+          normalizedBoard.status !== "MAX_ROUNDS_REACHED";
         if (shouldContinue) {
           timer = setTimeout(() => {
             controller = new AbortController();

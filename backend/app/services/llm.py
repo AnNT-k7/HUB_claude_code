@@ -3,10 +3,9 @@ from __future__ import annotations
 import json
 from typing import Generic, Protocol, TypeVar
 
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ValidationError
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from app.config import Settings, get_settings
 
@@ -47,12 +46,6 @@ class OpenAICompatibleStructuredLLM:
             timeout=90,
         )
 
-    @retry(
-        retry=retry_if_exception_type(LLMGenerationError),
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
-        reraise=True,
-    )
     def invoke_structured(
         self,
         *,
@@ -69,26 +62,59 @@ class OpenAICompatibleStructuredLLM:
             "document IDs, policy citations, or calculations.\n\n"
             f"JSON Schema:\n{schema_json}"
         )
-        try:
-            response = self._model.invoke(
-                [
-                    SystemMessage(content=contract_prompt),
-                    HumanMessage(content=user_prompt),
-                ]
-            )
-        except Exception as exc:
-            raise LLMGenerationError("LLM provider request failed") from exc
+        messages = [
+            SystemMessage(content=contract_prompt),
+            HumanMessage(content=user_prompt),
+        ]
+        last_error: Exception | None = None
+        for attempt in range(3):
+            try:
+                response = self._model.invoke(messages)
+            except Exception as exc:
+                raise LLMGenerationError("LLM provider request failed") from exc
 
-        content = response.content
-        if not isinstance(content, str):
-            raise LLMGenerationError("LLM returned a non-text response")
-        try:
-            payload = self._extract_json_object(content)
-            return schema.model_validate(payload)
-        except (json.JSONDecodeError, ValidationError, ValueError) as exc:
-            raise LLMGenerationError(
-                "LLM response did not satisfy the structured output contract"
-            ) from exc
+            content = response.content
+            if not isinstance(content, str):
+                last_error = ValueError("LLM returned a non-text response")
+                content = ""
+            else:
+                try:
+                    payload = self._extract_json_object(content)
+                    return schema.model_validate(payload)
+                except (json.JSONDecodeError, ValidationError, ValueError) as exc:
+                    last_error = exc
+
+            if attempt < 2:
+                feedback = self._validation_feedback(last_error)
+                messages.extend(
+                    [
+                        AIMessage(content=content[:8_000]),
+                        HumanMessage(
+                            content=(
+                                "Your JSON failed contract validation. Correct only the "
+                                "reported structural/value errors and return the complete "
+                                "JSON object again. Do not invent evidence.\n\n"
+                                f"Validation feedback:\n{feedback}"
+                            )
+                        ),
+                    ]
+                )
+        raise LLMGenerationError(
+            "LLM response did not satisfy the structured output contract"
+        ) from last_error
+
+    @staticmethod
+    def _validation_feedback(error: Exception | None) -> str:
+        if isinstance(error, ValidationError):
+            compact = [
+                {
+                    "path": ".".join(str(item) for item in issue["loc"]),
+                    "message": issue["msg"],
+                }
+                for issue in error.errors(include_url=False, include_input=False)[:12]
+            ]
+            return json.dumps(compact, ensure_ascii=False)
+        return str(error or "Response was not valid JSON")[:2_000]
 
     @staticmethod
     def _extract_json_object(content: str) -> object:

@@ -1,5 +1,7 @@
 import type {
   AssessmentStartResponse,
+  AssessmentRun,
+  AssessmentRuntime,
   DebateLog,
   PaginatedResponse,
   SharedBoard,
@@ -15,6 +17,38 @@ export function startAssessment(
   return apiClient.post<AssessmentStartResponse>(
     `/orchestrator/cases/${encodeURIComponent(caseId)}/assessment`,
     undefined,
+    options,
+  );
+}
+
+export function stopAssessment(
+  caseId: string,
+  options: ApiRequestOptions = {},
+): Promise<AssessmentRun> {
+  return apiClient.post<AssessmentRun>(
+    `/orchestrator/cases/${encodeURIComponent(caseId)}/assessment/stop`,
+    undefined,
+    options,
+  );
+}
+
+export function resumeAssessment(
+  caseId: string,
+  options: ApiRequestOptions = {},
+): Promise<AssessmentStartResponse> {
+  return apiClient.post<AssessmentStartResponse>(
+    `/orchestrator/cases/${encodeURIComponent(caseId)}/assessment/resume`,
+    undefined,
+    options,
+  );
+}
+
+export function getAssessmentRuntime(
+  caseId: string,
+  options: ApiRequestOptions = {},
+): Promise<AssessmentRuntime> {
+  return apiClient.get<AssessmentRuntime>(
+    `/orchestrator/cases/${encodeURIComponent(caseId)}/assessment/runtime`,
     options,
   );
 }

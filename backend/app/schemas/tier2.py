@@ -95,6 +95,9 @@ class CustomerRelationshipAssessment(SpecialistAssessmentBase):
 
 class CreditFinancialInputs(ContractModel):
     cash_available_for_debt_service: Decimal | None = None
+    net_profit_after_tax: Decimal | None = None
+    depreciation: Decimal | None = Field(default=None, ge=0)
+    interest_expense: Decimal | None = Field(default=None, ge=0)
     principal_due: Decimal | None = Field(default=None, ge=0)
     interest_due: Decimal | None = Field(default=None, ge=0)
     current_assets: Decimal | None = Field(default=None, ge=0)
@@ -172,22 +175,27 @@ class RiskManagementAssessment(SpecialistAssessmentBase):
     agent_id: Literal[AgentID.RISK_MANAGEMENT] = AgentID.RISK_MANAGEMENT
     risk_tier: RiskTier = RiskTier.UNASSIGNED
     concentration_limit_check: ConcentrationLimitCheck | None = None
-    concentration_policy_evidence: PolicyNumericEvidence | None = None
+    concentration_policy_evidence: list[PolicyNumericEvidence] = Field(
+        default_factory=list
+    )
     industry_risk_summary: str = Field(default="", max_length=4_000)
 
     @model_validator(mode="after")
     def validate_concentration_evidence(self) -> "RiskManagementAssessment":
         if self.concentration_limit_check is None:
-            if self.concentration_policy_evidence is not None:
+            if self.concentration_policy_evidence:
                 raise ValueError("Concentration evidence requires a calculated check")
             return self
-        evidence = self.concentration_policy_evidence
-        if (
-            evidence is None
-            or evidence.field_name != "concentration_policy_limit"
-            or evidence.value != self.concentration_limit_check.policy_limit
-        ):
-            raise ValueError("Concentration limit requires matching policy evidence")
+        evidence = {
+            item.field_name: item for item in self.concentration_policy_evidence
+        }
+        capital = evidence.get("bank_own_capital_vnd_billion")
+        ratio = evidence.get("single_customer_capital_ratio")
+        if capital is None or ratio is None:
+            raise ValueError("Concentration limit requires capital and ratio evidence")
+        derived_limit = capital.value * Decimal("1000000000") * ratio.value
+        if derived_limit != self.concentration_limit_check.policy_limit:
+            raise ValueError("Concentration limit does not match its cited derivation")
         return self
 
 

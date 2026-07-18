@@ -65,7 +65,8 @@ class CreditLLMAnalysis(AgentNarrative):
 class RiskLLMAnalysis(AgentNarrative):
     risk_tier: RiskTier
     industry_risk_summary: str = Field(min_length=1, max_length=4_000)
-    concentration_policy_limit: PolicyNumericClaim | None = None
+    single_customer_capital_ratio: PolicyNumericClaim | None = None
+    bank_own_capital_vnd_billion: PolicyNumericClaim | None = None
     document_evidence: list[CaseDocumentEvidence] = Field(default_factory=list)
 
 
@@ -206,15 +207,32 @@ class SpecialistAgentRuntime:
                 and contingent_liability is not None
                 and contingent_liability > 0
                 and analysis.apply_disclosed_contingent_liability
-                and financial_inputs.cash_available_for_debt_service is not None
             ):
-                stressed_cash = (
-                    financial_inputs.cash_available_for_debt_service
-                    - contingent_liability
-                )
-                financial_inputs = financial_inputs.model_copy(
-                    update={"cash_available_for_debt_service": stressed_cash}
-                )
+                base_cash = financial_inputs.cash_available_for_debt_service
+                if base_cash is None and all(
+                    value is not None
+                    for value in (
+                        financial_inputs.net_profit_after_tax,
+                        financial_inputs.depreciation,
+                        financial_inputs.interest_expense,
+                    )
+                ):
+                    assert financial_inputs.net_profit_after_tax is not None
+                    assert financial_inputs.depreciation is not None
+                    assert financial_inputs.interest_expense is not None
+                    base_cash = (
+                        financial_inputs.net_profit_after_tax
+                        + financial_inputs.depreciation
+                        + financial_inputs.interest_expense
+                    )
+                if base_cash is not None:
+                    financial_inputs = financial_inputs.model_copy(
+                        update={
+                            "cash_available_for_debt_service": (
+                                base_cash - contingent_liability
+                            )
+                        }
+                    )
 
         threshold_evidence = [
             item
@@ -276,8 +294,10 @@ class SpecialistAgentRuntime:
             role=(
                 "You are the Risk Management Agent. Assign a preliminary risk tier "
                 "from supplied trusted-bank context, case documents, and policy evidence. "
-                "Extract a concentration limit only as value + policy_chunk_id + exact "
-                "quote. Customer-provided limits are untrusted. This is not a decision."
+                "Extract both the single-customer capital ratio (for example 0.12 for "
+                "12 percent) and bank own capital measured in VND billions, each as "
+                "value + policy_chunk_id + exact quote. Customer-provided limits are "
+                "untrusted. This is not a decision."
             ),
             payload=payload,
             citations=citations,
@@ -291,29 +311,53 @@ class SpecialistAgentRuntime:
         trusted = _as_mapping(payload.get("trusted_bank_context"))
         credit_ledger = _as_mapping(trusted.get("credit_ledger"))
         canonical_case = _as_mapping(payload.get("canonical_case"))
-        limit_evidence = _resolve_numeric_claim(
-            analysis.concentration_policy_limit,
-            "concentration_policy_limit",
+        ratio_evidence = _resolve_numeric_claim(
+            analysis.single_customer_capital_ratio,
+            "single_customer_capital_ratio",
             citations,
         )
+        capital_evidence = _resolve_numeric_claim(
+            analysis.bank_own_capital_vnd_billion,
+            "bank_own_capital_vnd_billion",
+            citations,
+        )
+        concentration_evidence = [
+            item
+            for item in (capital_evidence, ratio_evidence)
+            if item is not None
+        ]
         concentration = None
         try:
-            if credit_ledger and canonical_case and limit_evidence is not None:
+            if (
+                credit_ledger
+                and canonical_case
+                and ratio_evidence is not None
+                and capital_evidence is not None
+            ):
+                policy_limit = (
+                    capital_evidence.value
+                    * Decimal("1000000000")
+                    * ratio_evidence.value
+                )
                 concentration = calculate_concentration_limit_check(
                     _decimal(credit_ledger.get("total_exposure")),
                     _decimal(canonical_case.get("requested_amount")),
-                    limit_evidence.value,
+                    policy_limit,
                 )
         except (InvalidOperation, TypeError, ValueError):
             concentration = None
+        # The public contract deliberately rejects half-supported calculations.
+        # Keep partial citations out of the calculated field until both inputs exist.
+        if concentration is None:
+            concentration_evidence = []
         assessment = assess_risk_management(
             analysis.risk_tier,
             concentration,
             analysis.industry_risk_summary,
-            concentration_policy_evidence=limit_evidence,
+            concentration_policy_evidence=concentration_evidence,
             policy_citations=(
-                _citations_for_thresholds([limit_evidence])
-                if limit_evidence is not None
+                _citations_for_thresholds(concentration_evidence)
+                if len(concentration_evidence) == 2
                 else []
             ),
             document_evidence=evidence,
@@ -350,9 +394,11 @@ class SpecialistAgentRuntime:
             _as_mapping(payload.get("legal_compliance")).get("legal"),
         )
         trusted = _as_mapping(payload.get("trusted_bank_context"))
+        trusted_compliance = _as_mapping(trusted.get("compliance"))
+        trusted_compliance.pop("customer_id", None)
         compliance = _validate_optional(
             ComplianceFindings,
-            trusted.get("compliance"),
+            trusted_compliance,
         )
         assessment = assess_legal_compliance(
             legal,
@@ -583,6 +629,16 @@ def _quote_supports_value(quote: str, value: Decimal) -> bool:
     direct = _plain_decimal(value)
     if re.search(rf"(?<![\d.]){re.escape(direct)}(?![\d.])", normalized):
         return True
+    comma_decimal = direct.replace(".", ",")
+    if "." in direct and re.search(
+        rf"(?<![\d,]){re.escape(comma_decimal)}(?![\d,])",
+        quote.casefold(),
+    ):
+        return True
+    if value == value.to_integral_value() and value >= 1000:
+        grouped = f"{int(value):,}".replace(",", ".")
+        if grouped in quote.casefold():
+            return True
     if Decimal("0") < value <= Decimal("1"):
         percent = _plain_decimal(value * 100)
         return bool(

@@ -14,19 +14,6 @@ interface MetricRow {
   note: string;
 }
 
-function findRatio(
-  ratios: Readonly<Record<string, number>>,
-  candidates: readonly string[],
-): number | undefined {
-  const normalizedCandidates = new Set(
-    candidates.map((candidate) => candidate.toLowerCase().replaceAll("_", "")),
-  );
-  const entry = Object.entries(ratios).find(([key]) =>
-    normalizedCandidates.has(key.toLowerCase().replaceAll("_", "")),
-  );
-  return entry?.[1];
-}
-
 export function RatioTable({ board, currency = "VND" }: RatioTableProps) {
   const outputs = Object.values(board.specialist_outputs);
   const credit = outputs.find((output) => output.agent_id === "Credit");
@@ -36,45 +23,40 @@ export function RatioTable({ board, currency = "VND" }: RatioTableProps) {
   const rows: MetricRow[] = [];
 
   if (credit?.agent_id === "Credit") {
-    const dscr = findRatio(credit.calculated_ratios, ["DSCR"]);
-    const currentRatio = findRatio(credit.calculated_ratios, [
-      "CurrentRatio",
-      "current_ratio",
-    ]);
-    const leverage = findRatio(credit.calculated_ratios, [
-      "Leverage",
-      "DebtToEquity",
-      "debt_to_equity",
-    ]);
-    if (dscr !== undefined) {
-      rows.push({ label: "DSCR", value: formatRatio(dscr), note: "Khả năng trả nợ" });
+    const dscr = credit.calculated_ratios?.dscr;
+    const currentRatio = credit.calculated_ratios?.current_ratio;
+    const leverage = credit.calculated_ratios?.debt_to_equity;
+    if (dscr != null) {
+      rows.push({ label: "DSCR", value: formatRatio(Number(dscr)), note: "Khả năng trả nợ" });
     }
     if (currentRatio !== undefined) {
       rows.push({
         label: "Current Ratio",
-        value: formatRatio(currentRatio),
+        value: formatRatio(Number(currentRatio)),
         note: "Thanh khoản ngắn hạn",
       });
     }
     if (leverage !== undefined) {
       rows.push({
         label: "D/E",
-        value: formatRatio(leverage),
+        value: formatRatio(Number(leverage)),
         note: "Đòn bẩy tài chính",
       });
     }
   }
 
   if (collateral?.agent_id === "CollateralAppraisal") {
-    rows.push({
-      label: "LTV",
-      value: formatPercentage(collateral.computed_ltv_ratio),
-      note: "Tỷ lệ khoản vay / tài sản",
-    });
-    if (collateral.total_collateral_value > 0) {
+    if (collateral.computed_ltv_ratio != null) {
+      rows.push({
+        label: "LTV",
+        value: formatPercentage(Number(collateral.computed_ltv_ratio)),
+        note: "Tỷ lệ khoản vay / tài sản",
+      });
+    }
+    if (Number(collateral.total_collateral_value ?? 0) > 0) {
       rows.push({
         label: "Giá trị tài sản",
-        value: formatMoney(collateral.total_collateral_value, currency),
+        value: formatMoney(collateral.total_collateral_value ?? "0", currency),
         note: "Tổng giá trị thẩm định",
       });
     }

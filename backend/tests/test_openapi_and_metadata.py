@@ -8,6 +8,8 @@ from app.db.models import (
     EMBEDDING_DIMENSIONS,
     AgentKnowledgeBase,
     Approval,
+    AssessmentEvent,
+    AssessmentRun,
     AuditLog,
     Base,
     Case,
@@ -38,6 +40,10 @@ def test_fastapi_openapi_contains_foundational_routes_without_serving_requests()
         "/api/v1/cases",
         "/api/v1/cases/{case_id}",
         "/api/v1/orchestrator/cases/{case_id}/assessment",
+        "/api/v1/orchestrator/cases/{case_id}/assessment/stop",
+        "/api/v1/orchestrator/cases/{case_id}/assessment/resume",
+        "/api/v1/orchestrator/cases/{case_id}/assessment/runtime",
+        "/api/v1/orchestrator/cases/{case_id}/events/stream",
         "/api/v1/orchestrator/cases/{case_id}/shared-board",
         "/api/v1/orchestrator/cases/{case_id}/debates",
         "/api/v1/operations/cases/{case_id}/decision",
@@ -59,12 +65,16 @@ def test_model_metadata_contains_full_domain_schema_and_expected_columns() -> No
         "agent_knowledge_bases",
         "policy_documents",
         "policy_embeddings",
+        "assessment_runs",
+        "assessment_events",
     }
 
     assert expected_tables <= set(Base.metadata.tables)
     assert "extracted_text" in Document.__table__.c
     assert "review_cycle" in SharedBoard.__table__.c
     assert PolicyEmbedding.__table__.c.embedding.type.dim == EMBEDDING_DIMENSIONS == 1024
+    assert AssessmentEvent.__table__.c.id.autoincrement is True
+    assert "checkpoint_stage" in AssessmentRun.__table__.c
 
 
 def test_model_metadata_encodes_critical_uniqueness_scope_and_check_constraints() -> None:
