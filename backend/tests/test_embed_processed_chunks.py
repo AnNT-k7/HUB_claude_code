@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import math
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import Mock, patch
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -20,7 +23,16 @@ from ingest_income_policy_dataset import (  # noqa: E402
     deterministic_embedding,
     read_source,
 )
+from ingest_three_rag_namespaces import (  # noqa: E402
+    build_corpus as build_three_rag_corpus,
+    embed_corpus as embed_three_rag_corpus,
+)
 from app.services.rag import PolicyQuery, validate_policy_metadata  # noqa: E402
+from app.services.namespace_rag import (  # noqa: E402
+    NamespaceQuery,
+    RagNamespace,
+    search_namespace,
+)
 from app.services.embeddings import (  # noqa: E402
     FPTEmbeddings,
     GLMEmbeddings,
@@ -50,6 +62,69 @@ class ProcessedChunkEmbeddingTests(unittest.TestCase):
         self.assertEqual(policy_notes.metadata["approval_status"], "PENDING_REVIEW")
         self.assertEqual(income_notes.metadata["target_agent"], "INCOME_ANALYSIS_AGENT")
         self.assertEqual(income_notes.metadata["production_use"], "prohibited")
+
+    def test_three_rag_namespaces_are_isolated_and_case_sources_quarantined(self) -> None:
+        corpus = build_three_rag_corpus()
+        expected_counts = {
+            "DOCUMENT_EXTRACTION": 21,
+            "INCOME_ANALYSIS": 43,
+            "POLICY": 41,
+        }
+        all_ids: list[str] = []
+        for namespace, expected_count in expected_counts.items():
+            item = corpus["namespaces"][namespace]
+            self.assertEqual(len(item["chunks"]), expected_count)
+            for chunk in item["chunks"]:
+                self.assertEqual(chunk["metadata"]["rag_namespace"], namespace)
+                self.assertNotIn("case_id", chunk["metadata"])
+                all_ids.append(chunk["chunk_id"])
+        self.assertEqual(len(all_ids), len(set(all_ids)))
+        self.assertEqual(
+            sum(
+                len(item["quarantine"])
+                for item in corpus["namespaces"].values()
+            ),
+            2,
+        )
+
+    def test_three_rag_mock_embedding_uses_shared_512_contract(self) -> None:
+        corpus = build_three_rag_corpus()
+        embed_three_rag_corpus(corpus, "mock")
+
+        for namespace, item in corpus["namespaces"].items():
+            for chunk in item["chunks"]:
+                self.assertEqual(len(chunk["embedding"]), 512)
+                self.assertEqual(chunk["metadata"]["rag_namespace"], namespace)
+                self.assertEqual(chunk["metadata"]["embedding_provider"], "mock")
+
+    def test_namespace_retriever_never_crosses_agent_boundary(self) -> None:
+        corpus = build_three_rag_corpus()
+        embed_three_rag_corpus(corpus, "mock")
+        first_income_vector = corpus["namespaces"]["INCOME_ANALYSIS"]["chunks"][0][
+            "embedding"
+        ]
+        fake_embedder = Mock()
+        fake_embedder.embed_query.return_value = first_income_vector
+        with tempfile.TemporaryDirectory() as directory:
+            corpus_path = Path(directory) / "corpus.json"
+            corpus_path.write_text(json.dumps(corpus), encoding="utf-8")
+            with patch(
+                "app.services.namespace_rag.get_configured_embeddings",
+                return_value=fake_embedder,
+            ):
+                hits = search_namespace(
+                    NamespaceQuery(
+                        query_text="phân tích thu nhập",
+                        namespace=RagNamespace.INCOME_ANALYSIS,
+                        top_k=5,
+                    ),
+                    corpus_path=corpus_path,
+                )
+
+        self.assertEqual(len(hits), 5)
+        self.assertTrue(
+            all(hit.namespace is RagNamespace.INCOME_ANALYSIS for hit in hits)
+        )
 
     def test_demo_policy_chunks_have_complete_scoped_metadata(self) -> None:
         corpus = build_corpus(include_demo=True)

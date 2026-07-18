@@ -1,6 +1,8 @@
 """Public contracts for the Income Verification Expert workflow."""
 
 from .consistency_agent import ConsistencyInputError, run_consistency_agent
+from .document_agent import DocumentAgentConfig, MarkdownDocumentAgent
+from .income_agent import IncomeAgentConfig, IncomeAnalysisAgent
 from .orchestrator import (
     CheckpointStore,
     ConcurrentStateError,
@@ -10,6 +12,12 @@ from .orchestrator import (
     WorkflowDependencies,
 )
 from .recommendation_builder import RecommendationInputError, build_recommendation
+from .policy_agent import (
+    NamespacePolicyRetriever,
+    PolicyAgent,
+    PolicyAgentConfig,
+    PolicyRetriever,
+)
 from .state import (
     ActionPermission,
     ActionType,
@@ -41,6 +49,7 @@ __all__ = [
     "ConcurrentStateError",
     "ConsistencyInputError",
     "DocumentExtractionResult",
+    "DocumentAgentConfig",
     "DocumentRecord",
     "DocumentStatus",
     "EvidenceCitation",
@@ -48,9 +57,14 @@ __all__ = [
     "Finding",
     "FindingSeverity",
     "IncomeAnalysisResult",
+    "IncomeAnalysisAgent",
+    "IncomeAgentConfig",
     "IncomeVerificationOrchestrator",
     "InMemoryCheckpointStore",
     "PolicyCitation",
+    "PolicyAgent",
+    "PolicyAgentConfig",
+    "PolicyRetriever",
     "PolicyResult",
     "ProposedAction",
     "Recommendation",
@@ -60,6 +74,8 @@ __all__ = [
     "WorkflowConfig",
     "WorkflowDependencies",
     "WorkflowState",
+    "MarkdownDocumentAgent",
+    "NamespacePolicyRetriever",
     "build_recommendation",
     "run_consistency_agent",
 ]

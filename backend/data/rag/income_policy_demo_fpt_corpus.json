@@ -1,6 +1,6 @@
 {
   "schema_version": "income-policy-rag-v1",
-  "generated_at": "2026-07-18T14:15:08.093134+00:00",
+  "generated_at": "2026-07-18T14:18:45.498615+00:00",
   "embedding_dimensions": 512,
   "allowed_chunk_types": [
     "POLICY_RULE",
