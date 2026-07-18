@@ -5,7 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal, ROUND_HALF_UP
 
-from app.agents.income_verification.state import IncomeAnomaly, SalaryTransaction
+from app.agents.income_verification.state import (
+    IncomeAnomaly,
+    SalaryTransaction,
+    VariableIncomeRecord,
+)
 
 
 CALCULATION_VERSION = "income-calculator-v1"
@@ -136,3 +140,35 @@ def calculate_eligible_income(
         variable_income_cap,
     )
     return round_to_unit(min(average_income, contract_limit), rounding_unit)
+
+
+def calculate_average_variable_income(
+    records: list[VariableIncomeRecord],
+    *,
+    required_periods: int,
+    minimum_positive_periods: int,
+    rounding_unit: Decimal = DEFAULT_ROUNDING_UNIT,
+) -> tuple[Decimal, tuple[str, ...]]:
+    """Average documented variable income across the complete required period."""
+
+    if required_periods < 1 or minimum_positive_periods < 0:
+        raise CalculationInputError("Variable-income period requirements are invalid.")
+    if len(records) != required_periods:
+        raise CalculationInputError("Variable-income records must cover every required period.")
+    months = [record.month for record in records]
+    if len(months) != len(set(months)):
+        raise CalculationInputError("Variable-income periods must be unique.")
+    evidence_ids = [record.evidence_id for record in records]
+    if len(evidence_ids) != len(set(evidence_ids)):
+        raise CalculationInputError("Variable-income evidence identifiers must be unique.")
+    if len({record.currency for record in records}) != 1:
+        raise CalculationInputError("Variable-income records must use one currency.")
+    if sum(record.amount > 0 for record in records) < minimum_positive_periods:
+        raise CalculationInputError("Variable income does not meet the documented-period rule.")
+    average = sum((record.amount for record in records), Decimal("0")) / Decimal(
+        required_periods
+    )
+    ordered = sorted(records, key=lambda record: (record.month, record.evidence_id))
+    return round_to_unit(average, rounding_unit), tuple(
+        record.evidence_id for record in ordered
+    )

@@ -76,6 +76,19 @@ class ActionType(StrEnum):
     ATTACH_EVIDENCE = "ATTACH_EVIDENCE"
 
 
+class HumanReviewOutcome(StrEnum):
+    ACCEPT_ACTIONS = "ACCEPT_ACTIONS"
+    EDIT_AND_RERUN = "EDIT_AND_RERUN"
+    MANUAL_HANDLING = "MANUAL_HANDLING"
+
+
+class ExecutionStatus(StrEnum):
+    SUCCESS = "SUCCESS"
+    DUPLICATE = "DUPLICATE"
+    SKIPPED = "SKIPPED"
+    FAILED = "FAILED"
+
+
 class DocumentStatus(StrEnum):
     AVAILABLE = "AVAILABLE"
     UNREADABLE = "UNREADABLE"
@@ -129,6 +142,18 @@ class SalaryTransaction(IncomeVerificationModel):
         return value.upper()
 
 
+class VariableIncomeRecord(IncomeVerificationModel):
+    month: str = Field(pattern=r"^\d{4}-(0[1-9]|1[0-2])$")
+    amount: Decimal = Field(ge=0)
+    currency: str = Field(min_length=3, max_length=3)
+    evidence_id: str = Field(min_length=1)
+
+    @field_validator("currency")
+    @classmethod
+    def normalize_currency(cls, value: str) -> str:
+        return value.upper()
+
+
 class ExtractedFields(IncomeVerificationModel):
     customer_name: str | None = None
     declared_income: Decimal | None = Field(default=None, ge=0)
@@ -137,6 +162,7 @@ class ExtractedFields(IncomeVerificationModel):
     employer: str | None = None
     contract_expiry: date | None = None
     salary_transactions: list[SalaryTransaction] = Field(default_factory=list)
+    variable_income_records: list[VariableIncomeRecord] = Field(default_factory=list)
     missing_documents: list[str] = Field(default_factory=list)
     extraction_confidence: float = Field(ge=0, le=1)
 
@@ -189,6 +215,10 @@ class PolicyResult(IncomeVerificationModel):
     applied_rule_ids: list[str] = Field(default_factory=list)
     citations: list[PolicyCitation] = Field(default_factory=list)
     conflicts: list[str] = Field(default_factory=list)
+    average_documented_variable_income: Decimal | None = Field(default=None, ge=0)
+    variable_income_cap: Decimal | None = Field(default=None, ge=0)
+    calculation_version: str | None = None
+    input_fact_ids: list[str] = Field(default_factory=list)
     reason_code: str | None = None
 
     @field_validator("currency")
@@ -234,15 +264,20 @@ class Recommendation(IncomeVerificationModel):
 
 class HumanReviewRecord(IncomeVerificationModel):
     reviewer_id: str = Field(min_length=1)
-    outcome: str = Field(min_length=1)
+    outcome: HumanReviewOutcome
     reason: str = Field(min_length=1)
+    approved_action_ids: list[str] = Field(default_factory=list)
+    edited_values: dict[str, FlatValue] = Field(default_factory=dict)
     reviewed_at: datetime = Field(default_factory=utc_now)
 
 
 class ExecutionResult(IncomeVerificationModel):
     action_id: str = Field(min_length=1)
-    status: str = Field(min_length=1)
+    status: ExecutionStatus
+    idempotency_key: str = Field(min_length=1)
     result_reference: str | None = None
+    verified: bool = False
+    reason_code: str | None = None
     executed_at: datetime = Field(default_factory=utc_now)
 
 

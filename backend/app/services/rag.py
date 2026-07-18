@@ -118,36 +118,17 @@ def index_policy_document(
     department_tag: str,
     chunk_type: str = "POLICY_RULE",
 ) -> None:
-    """Split a raw document, embed it in one API batch, and store it."""
-    chunks = [
-        chunk.strip()
-        for chunk in split_text_into_chunks(document_text, chunk_type)
-        if chunk.strip()
-    ]
-    if not chunks:
-        return
+    """Reject the legacy unscoped seeder in favor of validated ingestion.
 
-    vectors = get_embeddings().embed_documents(chunks)
-    for vector in vectors:
-        _validate_vector(vector)
+    The previous helper could write chunks without domain/product/effective-date
+    metadata, making exact citation and policy isolation impossible. The target
+    pipeline is ``ingest_income_policy_dataset.py --index-db``.
+    """
 
-    for index, (chunk, vector) in enumerate(zip(chunks, vectors, strict=True)):
-        db.add(
-            PolicyEmbedding(
-                content_chunk=chunk,
-                embedding=vector,
-                metadata_={
-                    "department": department_tag.upper(),
-                    "chunk_type": chunk_type,
-                    "document_name": document_name,
-                    "chunk_index": index,
-                    "embedding_provider": settings.embedding_provider,
-                    "embedding_model": settings.embedding_model,
-                    "embedding_dimensions": settings.embedding_dimensions,
-                },
-            )
-        )
-    db.commit()
+    del db, document_text, document_name, department_tag, chunk_type
+    raise RuntimeError(
+        "Unscoped policy indexing is disabled; use the validated corpus ingestion pipeline."
+    )
 
 
 def index_policy_chunks(

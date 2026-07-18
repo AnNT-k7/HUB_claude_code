@@ -33,11 +33,17 @@ class NamespaceQuery(BaseModel):
 
     query_text: str = Field(min_length=3)
     namespace: RagNamespace
+    domain: str = "INCOME_VERIFICATION"
+    product: str = "UNSECURED_PERSONAL_LOAN"
     top_k: int = Field(default=3, ge=1, le=10)
     chunk_types: list[str] = Field(default_factory=list)
     allowed_scopes: list[str] = Field(
         default_factory=lambda: ["REVIEW_ONLY", "DEMO_ONLY", "GLOBAL_POLICY"]
     )
+    approval_statuses: list[str] = Field(
+        default_factory=lambda: ["APPROVED", "APPROVED_FOR_DEMO"]
+    )
+    as_of_date: date = Field(default_factory=date.today)
 
 
 class NamespaceHit(BaseModel):
@@ -53,7 +59,10 @@ class NamespaceHit(BaseModel):
     source_path: str
     chunk_type: str
     indexing_scope: str
+    domain: str = "INCOME_VERIFICATION"
+    product: str = "UNSECURED_PERSONAL_LOAN"
     effective_date: date | None = None
+    expiry_date: date | None = None
     approval_status: str | None = None
 
 
@@ -88,7 +97,22 @@ def search_namespace(
         metadata = chunk["metadata"]
         if metadata.get("rag_namespace") != query.namespace.value:
             continue
+        if metadata.get("domain") != query.domain:
+            continue
+        if metadata.get("product") != query.product:
+            continue
         if metadata.get("indexing_scope") not in query.allowed_scopes:
+            continue
+        if (
+            query.namespace is RagNamespace.POLICY
+            and metadata.get("approval_status") not in query.approval_statuses
+        ):
+            continue
+        effective_date = metadata.get("effective_date")
+        if effective_date and effective_date > query.as_of_date.isoformat():
+            continue
+        expiry_date = metadata.get("expiry_date") or metadata.get("effective_to")
+        if expiry_date and expiry_date < query.as_of_date.isoformat():
             continue
         if query.chunk_types and metadata.get("chunk_type") not in query.chunk_types:
             continue
@@ -121,7 +145,11 @@ def search_namespace(
             source_path=str(chunk["metadata"]["source_path"]),
             chunk_type=str(chunk["metadata"]["chunk_type"]),
             indexing_scope=str(chunk["metadata"]["indexing_scope"]),
+            domain=str(chunk["metadata"].get("domain", "")),
+            product=str(chunk["metadata"].get("product", "")),
             effective_date=chunk["metadata"].get("effective_date"),
+            expiry_date=chunk["metadata"].get("expiry_date")
+            or chunk["metadata"].get("effective_to"),
             approval_status=chunk["metadata"].get("approval_status"),
         )
         for score, chunk in ranked

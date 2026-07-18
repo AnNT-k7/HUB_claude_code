@@ -1,68 +1,148 @@
-import logging
-from typing import List, Set
-from .audit import log_event
-from .integrations import los, notification, workflow
-from .document_generator import document_generator
+"""Rule-based execution of typed, human-gated income-verification actions."""
 
-# To avoid circular imports, we will import MOCK_DB locally inside the function 
-# since it's a global in the api module for this mock phase.
+from __future__ import annotations
 
-logger = logging.getLogger("ActionExecutor")
+from dataclasses import dataclass
 
-# In a real app, this would be a DB table for idempotency keys
-EXECUTED_ACTIONS: Set[str] = set()
+from app.agents.income_verification.state import (
+    ActionPermission,
+    ActionType,
+    CaseContext,
+    ExecutionResult,
+    ExecutionStatus,
+    HumanReviewOutcome,
+    WorkflowState,
+)
+from app.services.integrations.mvp import ActionGateway, InMemoryActionGateway
 
-def execute_approved_actions(case_id: str, approved_action_ids: List[str]):
-    """
-    Executes a list of approved actions for a given case.
-    Applies idempotency checks and routes to appropriate integrations.
-    """
-    from app.api.v1.income_verifications import MOCK_DB
-    
-    case = MOCK_DB.get(case_id)
-    if not case:
-        logger.error(f"Cannot execute actions. Case {case_id} not found.")
-        return
-        
-    for action in case.proposed_actions:
-        if action.action_id in approved_action_ids:
-            
-            # Idempotency Key (Case ID + Action ID)
-            idempotency_key = f"{case_id}:{action.action_id}"
-            
-            if idempotency_key in EXECUTED_ACTIONS:
-                logger.info(f"Action {action.action_id} already executed. Skipping.")
+
+class ActionExecutionError(ValueError):
+    """Raised when actions cannot be executed safely."""
+
+
+@dataclass(frozen=True, slots=True)
+class ActionExecutorConfig:
+    permission_matrix: tuple[tuple[ActionType, ActionPermission], ...] = (
+        (ActionType.UPDATE_INCOME_DRAFT, ActionPermission.AUTO_REVERSIBLE),
+        (ActionType.ATTACH_EVIDENCE, ActionPermission.AUTO_REVERSIBLE),
+        (ActionType.CREATE_EXCEPTION_TASK, ActionPermission.AUTO_REVERSIBLE),
+        (ActionType.REQUEST_DOCUMENTS, ActionPermission.HUMAN_REQUIRED),
+    )
+
+
+class ActionExecutor:
+    """Validate, execute, verify and audit every selected action."""
+
+    def __init__(
+        self,
+        gateway: ActionGateway | None = None,
+        *,
+        config: ActionExecutorConfig | None = None,
+    ) -> None:
+        self.gateway = gateway or InMemoryActionGateway()
+        self.config = config or ActionExecutorConfig()
+        self._permissions = dict(self.config.permission_matrix)
+
+    async def execute(self, context: CaseContext) -> CaseContext:
+        if context.workflow_state not in {
+            WorkflowState.EXECUTING_APPROVED_ACTIONS,
+            WorkflowState.TECHNICAL_ERROR,
+        }:
+            raise ActionExecutionError("Case is not in an executable workflow state.")
+        review = context.human_review
+        if review is None or review.outcome is not HumanReviewOutcome.ACCEPT_ACTIONS:
+            raise ActionExecutionError("Accepted human review is required before execution.")
+
+        updated = context.model_copy(deep=True)
+        if updated.workflow_state is WorkflowState.TECHNICAL_ERROR:
+            updated.transition_to(
+                WorkflowState.EXECUTING_APPROVED_ACTIONS,
+                event_type="ACTION_RETRY_STARTED",
+            )
+        approved_ids = set(review.approved_action_ids)
+        results: list[ExecutionResult] = []
+        failed = False
+        for action in updated.proposed_actions:
+            expected_permission = self._permissions.get(action.action_type)
+            if expected_permission is None or action.permission is not expected_permission:
+                raise ActionExecutionError("Action permission does not match the permission matrix.")
+            idempotency_key = f"{updated.case_id}:{action.action_id}"
+            if action.permission is ActionPermission.HUMAN_REQUIRED and (
+                action.action_id not in approved_ids
+            ):
+                results.append(
+                    ExecutionResult(
+                        action_id=action.action_id,
+                        status=ExecutionStatus.SKIPPED,
+                        idempotency_key=idempotency_key,
+                        verified=True,
+                        reason_code="NOT_SELECTED_BY_REVIEWER",
+                    )
+                )
                 continue
-                
             try:
-                # Route action based on type
-                if action.action_type == "UPDATE_LOS":
-                    qualified_income = case.calculated_income.qualified_income
-                    if qualified_income is not None:
-                        los.update_qualified_income(case.application_id, qualified_income)
-                        
-                elif action.action_type == "REQUEST_DOCUMENTS":
-                    missing_docs = action.parameters.get("missing_documents", [])
-                    notification.send_missing_document_request(case.application_id, missing_docs)
-                    
-                elif action.action_type == "CREATE_EXCEPTION_TASK":
-                    reason = action.parameters.get("reason", "Manual review required")
-                    workflow.create_exception_task(case.application_id, reason)
-                    
-                elif action.action_type == "GENERATE_DOCUMENT":
-                    template_name = action.parameters.get("template_name", "income_verification_report.md")
-                    output_path = document_generator.generate(case, template_name)
-                    logger.info(f"Generated document saved at {output_path}")
-                    
-                else:
-                    logger.warning(f"Unknown action type: {action.action_type}")
-                    continue
-                
-                # Mark as executed and log
-                EXECUTED_ACTIONS.add(idempotency_key)
-                action.is_approved = True
-                log_event(case_id, "ACTION_EXECUTED", "ActionExecutor", f"Executed {action.action_type} successfully")
-                
-            except Exception as e:
-                logger.error(f"Failed to execute {action.action_type}: {str(e)}")
-                log_event(case_id, "ACTION_FAILED", "ActionExecutor", f"Failed {action.action_type}: {str(e)}")
+                gateway_result = await self.gateway.execute(
+                    action_type=action.action_type,
+                    application_id=updated.application_id,
+                    parameters=action.parameters,
+                    idempotency_key=idempotency_key,
+                )
+                verified = await self.gateway.verify(gateway_result.result_reference)
+            except Exception:
+                verified = False
+                gateway_result = None
+            if gateway_result is None or not verified:
+                failed = True
+                result = ExecutionResult(
+                    action_id=action.action_id,
+                    status=ExecutionStatus.FAILED,
+                    idempotency_key=idempotency_key,
+                    verified=False,
+                    reason_code="MOCK_GATEWAY_EXECUTION_NOT_VERIFIED",
+                )
+            else:
+                result = ExecutionResult(
+                    action_id=action.action_id,
+                    status=(
+                        ExecutionStatus.DUPLICATE
+                        if gateway_result.duplicate
+                        else ExecutionStatus.SUCCESS
+                    ),
+                    idempotency_key=idempotency_key,
+                    result_reference=gateway_result.result_reference,
+                    verified=True,
+                )
+            results.append(result)
+            updated.add_event(
+                "ACTION_EXECUTION_RECORDED",
+                actor_type="ACTION_EXECUTOR",
+                details={
+                    "action_id": action.action_id,
+                    "action_type": action.action_type.value,
+                    "status": result.status.value,
+                    "verified": result.verified,
+                },
+            )
+
+        updated.execution_results.extend(results)
+        if failed:
+            updated.transition_to(
+                WorkflowState.TECHNICAL_ERROR,
+                event_type="ACTION_EXECUTION_FAILED",
+            )
+            return updated
+        updated.transition_to(
+            WorkflowState.VERIFYING_EXECUTION,
+            event_type="ACTIONS_EXECUTED",
+        )
+        if not all(result.verified for result in results):
+            raise ActionExecutionError("Execution verification is incomplete.")
+        updated.transition_to(
+            WorkflowState.COMPLETED,
+            event_type="EXECUTION_VERIFIED",
+        )
+        if updated.recommendation is not None:
+            from app.agents.income_verification.state import VerificationResultStatus
+
+            updated.recommendation.status = VerificationResultStatus.COMPLETED
+        return updated

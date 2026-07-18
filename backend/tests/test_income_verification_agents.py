@@ -57,7 +57,11 @@ class FilePolicyRetriever:
                     source_path=metadata["source_path"],
                     chunk_type=metadata["chunk_type"],
                     indexing_scope=metadata["indexing_scope"],
+                    domain=metadata.get("domain", ""),
+                    product=metadata.get("product", ""),
                     effective_date=metadata.get("effective_date"),
+                    expiry_date=metadata.get("expiry_date")
+                    or metadata.get("effective_to"),
                     approval_status=metadata.get("approval_status"),
                 )
             )
@@ -86,7 +90,7 @@ class ConcreteAgentTests(unittest.IsolatedAsyncioTestCase):
         context, _ = await self._extracted_context()
 
         self.assertEqual(len(context.documents), 4)
-        self.assertEqual(len(context.evidence), 13)
+        self.assertEqual(len(context.evidence), 19)
         self.assertEqual(len(context.extracted_fields.salary_transactions), 8)
         self.assertEqual(context.extracted_fields.contract_salary, Decimal("22000000"))
         self.assertIn(
@@ -113,7 +117,7 @@ class ConcreteAgentTests(unittest.IsolatedAsyncioTestCase):
         result = await PolicyAgent(FilePolicyRetriever())(context)
 
         self.assertEqual(result.status, ComponentStatus.SUCCESS)
-        self.assertEqual(result.eligible_income, Decimal("22000000"))
+        self.assertEqual(result.eligible_income, Decimal("23000000"))
         self.assertEqual(result.required_statement_months, 6)
         self.assertEqual(len(result.citations), 6)
         self.assertEqual(
@@ -135,7 +139,7 @@ class ConcreteAgentTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result.workflow_state, WorkflowState.HUMAN_REVIEW)
         self.assertEqual(result.income_analysis.average_income, Decimal("23833000"))
-        self.assertEqual(result.policy_result.eligible_income, Decimal("22000000"))
+        self.assertEqual(result.policy_result.eligible_income, Decimal("23000000"))
         self.assertEqual(len(result.recommendation.policy_citations), 6)
         self.assertEqual(result.execution_results, [])
 
