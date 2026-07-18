@@ -1,0 +1,4 @@
+interface:
+  display_name: "Income Document Extraction"
+  short_description: "Extract typed income facts with evidence"
+  default_prompt: "Use $income-document-extraction to implement or review document parsing and evidence extraction for an income-verification case."

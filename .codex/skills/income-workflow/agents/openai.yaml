@@ -1,0 +1,4 @@
+interface:
+  display_name: "Income Verification Workflow"
+  short_description: "Orchestrate typed income-verification state"
+  default_prompt: "Use $income-workflow to implement or review the orchestrator, Case Context, consistency checks, and recommendation flow."

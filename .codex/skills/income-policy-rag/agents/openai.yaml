@@ -1,0 +1,4 @@
+interface:
+  display_name: "Income Policy RAG"
+  short_description: "Retrieve scoped income policies safely"
+  default_prompt: "Use $income-policy-rag to implement or review income-verification policy ingestion, retrieval, and citations."

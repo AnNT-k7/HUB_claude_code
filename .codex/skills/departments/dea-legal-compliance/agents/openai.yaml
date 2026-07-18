@@ -1,4 +1,0 @@
-interface:
-  display_name: "Legal Compliance Agent"
-  short_description: "Check legal, KYC, AML, and sanctions evidence."
-  default_prompt: "Use -legal-compliance to implement or review this department's agent workflow."

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Banking Operations Agent"
-  short_description: "Run approved operational prechecks and outputs."
-  default_prompt: "Use -banking-operations to implement or review this department's agent workflow."

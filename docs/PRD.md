@@ -1,153 +1,226 @@
-# Product Requirements Document (PRD) - Income Verification Expert
+# Product Requirements Document — Income Verification Expert
 
-**Version:** 2.0.0  
-**Status:** Approved  
-**Author:** Senior Software Architect  
+**Tên dự án:** Income Verification Expert — Trợ lý xác minh thu nhập tín chấp
 
----
+**Phiên bản:** 2.1.0
 
-## 1. Tóm tắt dự án (Project Summary)
+**Trạng thái:** Approved
 
-> **Xây dựng hệ thống AI đa tác tử hỗ trợ chuyên viên thẩm định tín chấp xác minh thu nhập khách hàng bằng cách đọc và đối chiếu đơn vay, hợp đồng lao động, bảng lương và sao kê; áp dụng chính sách nội bộ; phát hiện sai lệch; và tự động tạo báo cáo có dẫn chứng để chuyên viên xem xét.**
+**Actor duy nhất:** Chuyên viên thẩm định tín chấp
 
-Dự án tập trung vào một phạm vi duy nhất, rõ ràng, có đầu vào/đầu ra đo lường được nhằm đảm bảo tính khả thi, hiệu quả và kiểm soát rủi ro, thay vì làm "AI thẩm định tín chấp từ đầu đến cuối". Tên dự án nội bộ: **Income Verification Expert – Trợ lý xác minh thu nhập tín chấp**.
+**Task duy nhất:** Kiểm tra và xác minh thu nhập của khách hàng từ bộ hồ sơ vay
 
 ---
 
-## 2. Bài toán & Mục tiêu (Problem & Goal)
+## 1. Tóm tắt sản phẩm
 
-### 2.1. Đối tượng sử dụng (Actor)
-**Chuyên viên thẩm định tín chấp**
+Income Verification Expert là hệ thống AI đa tác tử hỗ trợ chuyên viên thẩm định đọc bộ hồ sơ vay tín chấp cá nhân, trích xuất dữ liệu thu nhập, phân tích dòng tiền, đối chiếu chính sách nội bộ, phát hiện thiếu hoặc bất thường và tạo kết quả xác minh có bằng chứng.
 
-### 2.2. Nhiệm vụ (Task)
-**Kiểm tra và xác minh thu nhập của khách hàng từ bộ hồ sơ vay.**
+Sản phẩm chỉ hỗ trợ bước xác minh thu nhập. Hệ thống không chấm điểm tín dụng, không đánh giá toàn bộ khả năng trả nợ và không phê duyệt hoặc từ chối khoản vay.
 
-### 2.3. Vấn đề hiện tại
-Hiện chuyên viên phải tự đọc và đối chiếu thủ công các tài liệu:
-* Đơn đề nghị vay.
-* Hợp đồng lao động.
-* Bảng lương.
-* Sao kê tài khoản 3–6 tháng.
-* Thông tin đơn vị công tác.
+## 2. Bài toán
 
-Họ phải tự trả lời các câu hỏi:
-1. Thu nhập khách hàng khai báo có đúng không?
-2. Tiền lương có vào đều không?
-3. Đơn vị trả lương có khớp với nơi làm việc không?
-4. Thu nhập nào được tính, thu nhập nào không được tính?
-5. Hồ sơ có điểm bất thường hoặc thiếu tài liệu không?
+Chuyên viên hiện phải đọc và đối chiếu thủ công nhiều nguồn:
 
----
+- đơn đề nghị vay hoặc phiếu khai thông tin;
+- hợp đồng lao động và phụ lục;
+- bảng lương hoặc xác nhận lương;
+- sao kê tài khoản ngân hàng;
+- chính sách xác minh thu nhập nội bộ.
 
-## 3. Đầu vào & Đầu ra (Inputs & Outputs)
+Quy trình thủ công tốn thời gian và dễ bỏ sót chênh lệch về tên khách hàng, đơn vị công tác, mức lương, nguồn chuyển lương, kỳ sao kê hoặc tài liệu bắt buộc.
 
-### 3.1. Đầu vào (Inputs)
-Một bộ hồ sơ vay gồm:
-* Đơn vay (ví dụ: khách hàng khai thu nhập 25 triệu đồng/tháng).
-* Hợp đồng lao động.
-* Bảng lương.
-* Sao kê ngân hàng 6 tháng.
-* Chính sách xác minh thu nhập nội bộ.
+## 3. Mục tiêu sản phẩm
 
-### 3.2. Đầu ra (Outputs)
-Hệ thống tạo ra các đầu ra cụ thể để hỗ trợ chuyên viên:
+Hệ thống phải giúp chuyên viên trả lời nhanh, có căn cứ:
 
-**1. Báo cáo ngắn tổng hợp kết quả** (ví dụ minh họa):
+1. Thu nhập khai báo có khớp với chứng từ không?
+2. Các khoản nhận nào có đủ căn cứ được nhận diện là thu nhập?
+3. Thu nhập bình quân và thu nhập đủ điều kiện theo chính sách là bao nhiêu?
+4. Dòng tiền có ổn định và có kỳ bất thường không?
+5. Đơn vị trả lương có khớp với hợp đồng lao động không?
+6. Hồ sơ còn thiếu tài liệu hoặc có điểm nào cần chuyên viên phán đoán?
 
-```text
-KẾT QUẢ XÁC MINH THU NHẬP
+## 4. Đầu vào MVP
 
-Thu nhập khách hàng khai báo: 25.000.000 đồng/tháng
+### 4.1. Hồ sơ khách hàng
 
-Thu nhập lương ghi nhận trên sao kê:
-- Tháng 1: 24.800.000
-- Tháng 2: 25.100.000
-- Tháng 3: 24.900.000
-- Tháng 4: 25.200.000
-- Tháng 5: 18.000.000
-- Tháng 6: 25.000.000
+- đơn vay/phiếu khai thông tin;
+- hợp đồng lao động và phụ lục;
+- bảng lương hoặc xác nhận lương;
+- sao kê tài khoản theo số kỳ do chính sách áp dụng quy định.
 
-Thu nhập bình quân: 23.833.000 đồng/tháng
-Thu nhập đủ điều kiện theo chính sách: 23.000.000 đồng/tháng
+### 4.2. Tri thức nghiệp vụ
 
-Kết quả đối chiếu:
-✓ Tên khách hàng khớp
-✓ Công ty trả lương khớp hợp đồng lao động
-✓ Ngày trả lương tương đối ổn định
-⚠ Tháng 5 thấp hơn bình quân 28%
-⚠ Thu nhập khai báo cao hơn thu nhập đủ điều kiện 2 triệu đồng
+- chính sách xác minh thu nhập đã được phê duyệt;
+- metadata về phiên bản, ngày hiệu lực, sản phẩm và phạm vi áp dụng;
+- quy trình xử lý thiếu hồ sơ hoặc ngoại lệ.
 
-Tài liệu còn thiếu:
-- Phụ lục hợp đồng lao động mới nhất
+MVP không tự truy xuất dữ liệu CIC, cơ quan thuế, bảo hiểm hoặc nguồn bên ngoài thời gian thực.
 
-Đề xuất:
-Chuyển chuyên viên kiểm tra nguyên nhân thu nhập tháng 5 giảm.
-```
+## 5. Phạm vi chức năng
 
-**2. Điền phiếu xác minh thu nhập:** Ghi thu nhập khai báo, thu nhập bình quân, thu nhập đủ điều kiện và các tháng bất thường vào checklist trên hệ thống LOS (Loan Origination System).
+### 5.1. Orchestrator
 
-**3. Tạo yêu cầu bổ sung hồ sơ:** Tự động tạo yêu cầu theo format chuẩn để có thể gửi thẳng cho khách hàng (ví dụ: "Bổ sung sao kê tháng 5" hoặc "Bổ sung phụ lục điều chỉnh lương").
+- khởi tạo và quản lý workflow theo `application_id`;
+- điều phối các bước, checkpoint state, retry lỗi kỹ thuật và routing;
+- kiểm tra output đúng schema;
+- không tự tính thu nhập, diễn giải chính sách hoặc gọi API mutation.
 
-**4. Tạo exception task:** Tạo một tác vụ cho chuyên viên, gắn mức độ ưu tiên và cung cấp liên kết dẫn đến đúng giao dịch hoặc điểm dữ liệu bất thường.
+### 5.2. Document Agent
 
-*Lưu ý: AI không phê duyệt hay từ chối khoản vay. Nó chỉ chuẩn bị kết quả xác minh để chuyên viên quyết định.*
+- nhận diện loại tài liệu;
+- trích xuất tên khách hàng, đơn vị công tác, lương hợp đồng, thời hạn hợp đồng và giao dịch liên quan;
+- gắn mỗi fact với `evidence_id`, tài liệu, trang và vùng dữ liệu;
+- trả missing/unreadable status thay vì suy đoán.
 
----
+### 5.3. Income Analysis Agent
 
-## 4. Thiết kế hệ thống Đa tác tử (Multi-Agent Architecture)
+- phân loại giao dịch có khả năng là lương;
+- loại trừ giao dịch nội bộ hoặc khoản thu không đủ căn cứ;
+- gọi deterministic tools để tính trung bình, độ biến động và chênh lệch;
+- lưu input, kỳ dữ liệu, currency, công thức, quy tắc làm tròn và calculation version.
 
-Hệ thống được thiết kế tối giản phục vụ 1 actor và 1 task nhưng vẫn thể hiện đầy đủ năng lực phối hợp đa tác tử (multi-agent collaboration). Không cần xây dựng agent CIC, pháp lý, AML trong phiên bản đầu.
+### 5.4. Policy Agent
 
-### 4.1. Document Extraction Agent
-* **Nhiệm vụ:** Nhận diện loại tài liệu; trích xuất tên, công ty, mức lương, thời hạn hợp đồng, giao dịch lương từ sao kê.
-* **Đầu ra:** Dữ liệu có cấu trúc và vị trí bằng chứng.
+- truy vấn chính sách xác minh thu nhập bằng RAG;
+- áp dụng đúng phiên bản/ngày hiệu lực;
+- trả citation gồm tài liệu, trang, mục, đoạn trích và ngày hiệu lực;
+- chuyển human review nếu không tìm thấy hoặc có policy conflict.
 
-### 4.2. Income Analysis Agent
-* **Nhiệm vụ:** Nhận diện các khoản có khả năng là lương, tính thu nhập bình quân, đánh giá mức độ ổn định. Phát hiện tháng thiếu lương/thu nhập giảm bất thường. Loại bỏ chuyển khoản nội bộ hoặc khoản thu không được tính.
+### 5.5. Consistency Agent
 
-### 4.3. Policy Checking Agent
-* **Nhiệm vụ:** Tra cứu chính sách nội bộ bằng RAG. Xác định số tháng sao kê cần kiểm tra, áp dụng quy tắc tính thu nhập đủ điều kiện, kiểm tra điều kiện về thời gian làm việc và HĐLĐ. Trích dẫn đúng điều khoản chính sách.
+- đối chiếu thu nhập khai báo, hợp đồng, bảng lương và sao kê;
+- kiểm tra đơn vị công tác với nguồn chuyển lương;
+- kiểm tra kỳ dữ liệu, currency và bộ chứng từ bắt buộc;
+- tạo findings có severity, evidence và rule version.
 
-### 4.4. Report Agent
-* **Nhiệm vụ:** Tổng hợp kết quả, hiển thị các điểm đạt/không đạt/cần kiểm tra. Tạo báo cáo theo mẫu của chuyên viên, đính kèm bằng chứng cho từng kết luận.
+### 5.6. Recommendation Builder
 
----
+- tổng hợp kết quả xác minh sơ bộ;
+- trình bày thu nhập khai báo, bình quân và đủ điều kiện;
+- liệt kê bất thường, tài liệu thiếu, policy citations và action đề xuất;
+- không đưa ra quyết định tín dụng.
 
-## 5. Phạm vi KHÔNG làm (Out of Scope)
+### 5.7. Human Review Gate
 
-Cần ghi rõ những nội dung ngoài phạm vi nhằm giữ ranh giới rõ ràng cho dự án:
-* Không chấm điểm tín dụng.
-* Không truy vấn CIC.
-* Không quyết định hạn mức vay.
-* Không phê duyệt hoặc từ chối khách hàng.
-* Không thực hiện AML/KYC.
-* Không đánh giá toàn bộ khả năng trả nợ.
-* Không tự động giải ngân.
+Chuyên viên được phép:
 
----
+- chấp thuận kết quả/action của bước xác minh;
+- chỉnh sửa dữ liệu hoặc action và ghi lý do;
+- từ chối kết quả AI và chuyển xử lý thủ công;
+- yêu cầu chạy lại sau khi bổ sung hồ sơ.
 
-## 6. Tiêu chí đánh giá (Evaluation Criteria)
+Các lựa chọn này không phải phê duyệt hoặc từ chối khoản vay.
 
-| Tiêu chí | Cách đo lường |
-| :--- | :--- |
-| **Thời gian xử lý** | Từ 15–20 phút xuống dưới 3 phút/hồ sơ |
-| **Độ chính xác trích xuất** | Trên 95% đối với trường dữ liệu bắt buộc |
-| **Độ chính xác nhận diện lương** | So sánh với kết quả của chuyên viên |
-| **Tỷ lệ phát hiện hồ sơ thiếu** | Trên 90% |
-| **Khả năng giải thích** | Mỗi kết luận có tài liệu và dòng dữ liệu làm bằng chứng |
-| **Mức độ chấp nhận** | Chuyên viên đồng ý với kết quả hoặc chỉ chỉnh sửa nhỏ |
-| **Giảm thao tác** | Số trường chuyên viên không còn phải nhập thủ công |
+### 5.8. Action Executor
 
----
+Action Executor là service rule-based, không phải LLM agent. Service kiểm tra schema, quyền, trạng thái, idempotency và audit trước khi gọi Mock LOS/DMS/Workflow/Notification.
 
-## 7. Kịch bản Demo tốt (Demo Scenario)
+## 6. Đầu ra MVP
 
-* **Đầu vào:** Khách hàng khai thu nhập 25 triệu đồng/tháng.
-* **Xử lý AI:** Đọc 6 tháng sao kê và phát hiện:
-  * 5 tháng nhận khoảng 25 triệu đồng.
-  * 1 tháng chỉ nhận 18 triệu đồng.
-  * Hợp đồng lao động ghi mức lương 22 triệu đồng.
-  * Có thêm khoản “hỗ trợ hiệu suất” nhưng chính sách không cho tính toàn bộ.
-  * Thu nhập đủ điều kiện chỉ là 23 triệu đồng.
-  * Hồ sơ thiếu phụ lục điều chỉnh lương.
-* **Đầu ra:** Chuyên viên nhận ngay báo cáo, mở đúng giao dịch bất thường và quyết định yêu cầu khách hàng bổ sung tài liệu.
+### 6.1. Báo cáo xác minh
+
+Báo cáo hiển thị:
+
+- thu nhập khách hàng khai báo;
+- thu nhập nhận diện theo từng kỳ;
+- thu nhập bình quân;
+- thu nhập đủ điều kiện theo policy;
+- độ ổn định và kỳ bất thường;
+- tài liệu thiếu hoặc không đọc được;
+- findings và evidence có thể mở lại;
+- policy citations;
+- action đề xuất.
+
+### 6.2. Draft phiếu xác minh
+
+Hệ thống được tự động điền artifact trạng thái `DRAFT` và đính kèm evidence. Việc ghi nhận thu nhập chính thức vào LOS chỉ diễn ra sau khi chuyên viên xác nhận.
+
+### 6.3. Yêu cầu bổ sung hồ sơ
+
+Hệ thống tạo nội dung nháp theo mẫu. Gửi yêu cầu cho khách hàng hoặc kênh bên ngoài bắt buộc có human approval và được thực thi qua Action Executor.
+
+### 6.4. Exception task
+
+Hệ thống có thể tạo task nội bộ có thể đảo ngược, gắn reason code, mức độ ưu tiên và liên kết tới evidence. Action phải có idempotency key và audit event.
+
+## 7. Luồng người dùng chính
+
+1. Chuyên viên mở hồ sơ và chọn “Xác minh thu nhập”.
+2. Hệ thống lấy bộ tài liệu theo quyền.
+3. Document Agent trích xuất structured facts và evidence.
+4. Income Agent và Policy Agent chạy song song khi đủ input.
+5. Consistency Agent đối chiếu dữ liệu và chính sách.
+6. Recommendation Builder tạo báo cáo và action đề xuất.
+7. Chuyên viên review, chỉnh sửa hoặc chuyển xử lý thủ công.
+8. Action Executor thực hiện action thuộc quyền/đã được duyệt.
+9. Hệ thống xác minh kết quả, ghi audit và hoàn tất tác vụ.
+
+## 8. Trạng thái kết quả
+
+Các trạng thái nghiệp vụ hợp lệ:
+
+- `READY_FOR_REVIEW`;
+- `NEEDS_CLARIFICATION`;
+- `MISSING_DOCUMENTS`;
+- `POLICY_NOT_FOUND`;
+- `MANUAL_REVIEW_REQUIRED`;
+- `TECHNICAL_ERROR`;
+- `COMPLETED`.
+
+Không dùng `APPROVED` hoặc `REJECTED` làm trạng thái khoản vay trong sản phẩm này.
+
+## 9. Ngoài phạm vi
+
+- chấm điểm tín dụng hoặc tính xác suất vỡ nợ;
+- truy vấn CIC;
+- KYC/AML và sanctions screening;
+- phân tích pháp lý hoặc rủi ro ngành;
+- định giá tài sản bảo đảm;
+- DSCR, D/E, LTV hoặc phân tích tài chính doanh nghiệp;
+- quyết định hạn mức;
+- phê duyệt hoặc từ chối khoản vay;
+- tạo hợp đồng tín dụng hoặc giải ngân;
+- bỏ qua/ghi đè policy;
+- sửa hoặc xóa tài liệu nguồn;
+- ghi trực tiếp vào production LOS/DMS trong MVP;
+- tự động huấn luyện model từ phản hồi chuyên viên.
+
+## 10. Tiêu chí nghiệm thu MVP
+
+### 10.1. Functional acceptance
+
+- hỗ trợ đủ các loại tài liệu đầu vào đã định nghĩa;
+- mọi fact và finding quan trọng mở được evidence nguồn;
+- mọi policy conclusion có citation đầy đủ;
+- mọi phép tính có input và calculation version;
+- missing/unreadable evidence không tạo giá trị suy đoán;
+- outbound và official write bị chặn nếu thiếu human approval;
+- action lặp lại không tạo tác dụng phụ trùng;
+- mọi state transition và action có audit event.
+
+### 10.2. Evaluation targets
+
+Các mục tiêu dưới đây chỉ được đo trên benchmark đã được domain owner phê duyệt:
+
+| Tiêu chí | Mục tiêu ban đầu |
+| --- | --- |
+| Thời gian xử lý | Dưới 3 phút/hồ sơ demo |
+| Độ chính xác trường bắt buộc | Từ 95% trở lên |
+| Phát hiện hồ sơ thiếu | Từ 90% trở lên |
+| Explainability | 100% kết luận trọng yếu có evidence/citation |
+| Human correction rate | Theo dõi và giảm qua từng phiên bản, không tự huấn luyện |
+
+## 11. Kịch bản demo
+
+Khách hàng khai thu nhập 25 triệu đồng/tháng. Sáu tháng sao kê có năm tháng khoảng 25 triệu đồng và một tháng 18 triệu đồng. Hợp đồng ghi lương 22 triệu đồng, có thêm khoản hỗ trợ hiệu suất và thiếu phụ lục điều chỉnh lương.
+
+Hệ thống phải:
+
+- trích xuất đúng các giá trị và nguồn;
+- tính thu nhập bằng deterministic tool;
+- áp dụng policy có citation để xác định mức đủ điều kiện;
+- đánh dấu tháng bất thường và phụ lục còn thiếu;
+- tạo báo cáo/draft/action đề xuất;
+- yêu cầu chuyên viên xác nhận trước mọi outbound hoặc official write.

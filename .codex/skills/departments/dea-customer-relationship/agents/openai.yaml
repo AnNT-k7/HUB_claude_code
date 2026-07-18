@@ -1,4 +1,0 @@
-interface:
-  display_name: "Customer Relationship Agent"
-  short_description: "Extract borrower profile and requested loan terms."
-  default_prompt: "Use -customer-relationship to implement or review this department's agent workflow."

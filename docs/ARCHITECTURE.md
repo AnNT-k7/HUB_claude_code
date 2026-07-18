@@ -4,7 +4,7 @@
 
 **Phiên bản kiến trúc:** 2.0
 
-**Trạng thái:** Đề xuất làm baseline cho MVP thu hẹp
+**Trạng thái:** Approved baseline cho MVP thu hẹp
 
 **Actor duy nhất:** Chuyên viên thẩm định tín chấp
 
@@ -64,8 +64,8 @@ flowchart TD
     CC --> RB
     RB -->|Recommendation| CC
     O --> HG
-    HG -->|Approve hoặc Edit action| AE
-    HG -->|Reject AI result / yêu cầu làm lại| O
+    HG -->|Accept action| AE
+    HG -->|Edit / Manual handling| O
     AE --> SYS
     AE -->|Execution result| CC
     CC --> API
@@ -86,10 +86,10 @@ Frontend Next.js cung cấp một màn hình làm việc tập trung cho chuyên
 - xem thu nhập khai báo, thu nhập bình quân, thu nhập đủ điều kiện và kỳ dữ liệu;
 - xem điểm thiếu, bất thường, policy citation và bằng chứng gốc;
 - xem/sửa action do hệ thống đề xuất;
-- `Approve`, `Edit` hoặc `Reject` kết quả AI;
+- `Accept`, `Edit` hoặc chuyển `Manual handling` đối với kết quả AI;
 - nhập lý do khi sửa hoặc từ chối.
 
-`Approve` tại màn hình này chỉ có nghĩa là chấp thuận kết quả/action của bước xác minh thu nhập. UI không cung cấp thao tác phê duyệt hoặc từ chối khoản vay.
+`Accept` tại màn hình này chỉ có nghĩa là chấp thuận kết quả/action của bước xác minh thu nhập. UI không cung cấp thao tác phê duyệt hoặc từ chối khoản vay.
 
 ### 3.2. API Gateway
 
@@ -309,15 +309,18 @@ stateDiagram-v2
     CROSS_CHECKING --> BUILDING_RECOMMENDATION
     BUILDING_RECOMMENDATION --> HUMAN_REVIEW
     HUMAN_REVIEW --> BUILDING_RECOMMENDATION: Edit / Re-run
-    HUMAN_REVIEW --> EXECUTING_APPROVED_ACTIONS: Approve actions
+    HUMAN_REVIEW --> EXECUTING_APPROVED_ACTIONS: Accept actions
     HUMAN_REVIEW --> MANUAL_REVIEW_REQUIRED: Reject AI result
     EXECUTING_APPROVED_ACTIONS --> VERIFYING_EXECUTION
     VERIFYING_EXECUTION --> COMPLETED
 
     FETCHING_DOCUMENTS --> AWAITING_DOCUMENTS: Missing documents
+    AWAITING_DOCUMENTS --> FETCHING_DOCUMENTS: Documents supplied
     EXTRACTING_DOCUMENT_DATA --> MANUAL_REVIEW_REQUIRED: Unreadable / low confidence
     ANALYZING_INCOME_AND_POLICY --> MANUAL_REVIEW_REQUIRED: Invalid data / policy not found
     CROSS_CHECKING --> MANUAL_REVIEW_REQUIRED: Material mismatch
+    MANUAL_REVIEW_REQUIRED --> FETCHING_DOCUMENTS: Corrected / supplemented input
+    MANUAL_REVIEW_REQUIRED --> BUILDING_RECOMMENDATION: Human correction
     EXECUTING_APPROVED_ACTIONS --> TECHNICAL_ERROR: Tool/API failure
     TECHNICAL_ERROR --> EXECUTING_APPROVED_ACTIONS: Bounded retry
 ```
@@ -401,7 +404,7 @@ Policy query bắt buộc lọc theo:
 
 - `domain = INCOME_VERIFICATION`;
 - `product = UNSECURED_PERSONAL_LOAN`;
-- `chunk_type = POLICY_RULE`;
+- `chunk_type IN (POLICY_RULE, VERIFICATION_PROCEDURE)`;
 - phiên bản/ngày hiệu lực phù hợp;
 - trạng thái tài liệu đã được phê duyệt.
 
