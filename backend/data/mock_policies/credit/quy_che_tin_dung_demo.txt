@@ -1,0 +1,10 @@
+Quy chế tín dụng nội bộ năm 2026
+
+Điều 1: Quy định về DSCR (Tỷ lệ khả năng trả nợ)
+Đối với khoản vay trung dài hạn, hệ số DSCR tối thiểu phải >= 1.25. 
+Ngoại lệ: Nếu khách hàng có tài sản bảo đảm là bất động sản trung tâm hoặc trái phiếu chính phủ, DSCR tối thiểu có thể là 1.15 nhưng phải có phê duyệt cấp cao hơn. 
+Hậu quả: Nếu không đáp ứng ngưỡng này, hồ sơ sẽ bị từ chối hoặc yêu cầu khách hàng bổ sung nguồn trả nợ.
+
+Điều 2: Quy định về Đòn bẩy tài chính (D/E)
+Tỷ lệ nợ trên vốn chủ sở hữu (D/E) của doanh nghiệp sản xuất không được vượt quá 3.0. Doanh nghiệp thương mại không vượt quá 4.0.
+Hậu quả: Vượt ngưỡng sẽ bị xếp vào nhóm rủi ro cao và cần giải trình chi tiết.
