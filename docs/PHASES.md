@@ -77,7 +77,7 @@ Hệ thống của chúng ta xử lý 2 luồng dữ liệu riêng biệt. Tươ
    * Tạo file `quy_che_tin_dung_doanh_nghiep.txt` và soạn thử vài đoạn luật (VD: Điều kiện DSCR, điều kiện AML).
 
 4. **Viết `backend/app/services/rag.py` (Xử lý Luồng 1 & AI):**
-   * Khởi tạo `OpenAIEmbeddings`.
+   * Khởi tạo FPT AI Marketplace embeddings bằng model `Vietnamese_Embedding`, cấu hình đầu ra 1024 chiều.
    * Viết hàm `index_policy_document()`: Cắt text thành các loại Chunk (VD: `POLICY_RULE` 250 tokens), chuyển hóa vector, ghi vào Postgres.
    * Viết hàm `search_policies()`: Dùng câu lệnh SQL `ORDER BY embedding <=> :q_vec` kết hợp `WHERE metadata_->>'department' = :dept` để tìm kiếm.
 
