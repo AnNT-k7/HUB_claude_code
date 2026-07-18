@@ -16,7 +16,7 @@ Tài liệu này liệt kê các giai đoạn (Phases) còn lại để hoàn th
   - Viết dịch vụ upload/download file gốc lên MinIO (`services/storage.py`).
   - Xây dựng luồng cắt (chunking) theo 5 loại taxonomy chuẩn và nhúng (embedding) 2.486 chunks chính sách ngân hàng vào pgvector (`policy_embeddings`).
 
-- [ ] **Phase 3: LangGraph & Tier 2 Specialist Agents (Khối óc phân tích)**
+- [x ] **Phase 3: LangGraph & Tier 2 Specialist Agents (Khối óc phân tích)**
   - Lập trình 5 Specialist Agents (Customer Relationship, Credit, Risk Management, Legal & Compliance, Collateral Appraisal).
   - Lập trình Reviewer Agent (Debate & Cross-checking Engine).
 

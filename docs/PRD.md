@@ -1,150 +1,153 @@
-# Product Requirements Document (PRD) - Digital Expert Agents
+# Product Requirements Document (PRD) - Income Verification Expert
 
-**Version:** 1.1.0  
+**Version:** 2.0.0  
 **Status:** Approved  
 **Author:** Senior Software Architect  
 
 ---
 
-## 1. Problem Statement
-The current process for corporate loan application assessments is manually intensive, involving multiple departments (Credit, Risk, Legal, Operations, etc.), causing delays and inconsistencies. 
+## 1. Tóm tắt dự án (Project Summary)
 
-**Digital Expert Agents** is a multi-agent AI system that automates the preliminary assessment of corporate loan applications. The system uses a central orchestrator to coordinate specialized agents representing the Customer Relationship Department, Credit Department, Risk Management Department, Legal & Compliance Department, Collateral Appraisal Department, and Banking Operations Department. The agents retrieve internal knowledge through RAG, use approved tools, collaborate through structured JSON outputs on a **Shared Board**, and produce a consolidated assessment for human verification. 
+> **Xây dựng hệ thống AI đa tác tử hỗ trợ chuyên viên thẩm định tín chấp xác minh thu nhập khách hàng bằng cách đọc và đối chiếu đơn vay, hợp đồng lao động, bảng lương và sao kê; áp dụng chính sách nội bộ; phát hiện sai lệch; và tự động tạo báo cáo có dẫn chứng để chuyên viên xem xét.**
 
-> [!IMPORTANT]
-> The system **does not** automatically approve or reject loans. It assists human banking employees by providing structured insights and executing operational tasks *only* after human verification.
+Dự án tập trung vào một phạm vi duy nhất, rõ ràng, có đầu vào/đầu ra đo lường được nhằm đảm bảo tính khả thi, hiệu quả và kiểm soát rủi ro, thay vì làm "AI thẩm định tín chấp từ đầu đến cuối". Tên dự án nội bộ: **Income Verification Expert – Trợ lý xác minh thu nhập tín chấp**.
 
 ---
 
-## 2. Core Features (MVP Scope & 3-Tier Architecture)
+## 2. Bài toán & Mục tiêu (Problem & Goal)
 
-The MVP is structured around a strict **3-Tier Multi-Agent Pipeline**: `Tier 1: Banking Orchestrator (Deep Agent)` $\rightarrow$ `Tier 2: Specialist & Reviewer/Debate Collaboration via Shared Board` $\rightarrow$ `Tier 3: Human Verification & Operations Agent`.
+### 2.1. Đối tượng sử dụng (Actor)
+**Chuyên viên thẩm định tín chấp**
 
-### 2.1. Tier 1: Banking Orchestrator (Deep Agent)
-The `Banking Orchestrator` is a LangChain/LangGraph **Deep Agent** responsible for end-to-end cognitive control:
-*   **Understand Requirements (`Hiểu yêu cầu`):** Parses initial loan application goals, requested term sheets, and uploaded file types.
-*   **Determine Workflow (`Xác định workflow`):** Maps out the execution path based on company tier and loan complexity.
-*   **Task Decomposition (`Chia nhỏ nhiệm vụ`):** Breaks the assessment into granular analytical sub-tasks (e.g., DSCR calculation, KYC check, collateral evaluation).
-*   **Expert Agent Selection (`Chọn expert agent`):** Dispatches specific sub-tasks to the appropriate specialist agents (`Customer Relationship`, `Credit`, `Risk Management`, `Legal & Compliance`, `Collateral Appraisal`).
-*   **Task Tracking (`Theo dõi task`):** Monitors execution status across parallel sub-agent workers.
-*   **Dynamic Re-planning (`Re-plan khi thiếu dữ liệu`):** If a specialist agent reports missing or unreadable documents, the Orchestrator pauses, re-plans, or requests specific supplementary documents.
-*   **Result Synthesis (`Tổng hợp kết quả`):** Consolidates the final state from the Shared Board into a unified assessment draft for Tier 3 verification.
+### 2.2. Nhiệm vụ (Task)
+**Kiểm tra và xác minh thu nhập của khách hàng từ bộ hồ sơ vay.**
 
-### 2.2. Tier 2: Specialist Agents & Reviewer/Debate Agent (Shared Board Pattern)
-In Tier 2, specialist agents run concurrently and collaborate via a **Shared Board** (a centralized state memory / blackboard):
-*   **Shared Board:** All specialist agents post their interim outputs, calculated financial metrics, identified risks, and RAG policy citations onto the Shared Board.
-*   **Specialist Agents (Parallel Execution):**
-    *   **Customer Relationship Agent:** Extracts borrower profile, requested loan parameters (amount, interest rate, maturity), and business model background.
-    *   **Credit Agent:** Analyzes financial statements, calculates Debt Service Coverage Ratio (DSCR), Current Ratio, and Leverage (D/E).
-    *   **Risk Management Agent:** Evaluates industry risk factors, checks against credit policies (e.g., maximum concentration limit), and assigns a preliminary risk tier (Low, Medium, High).
-    *   **Legal & Compliance Agent:** Performs KYC verification, corporate governance checks, anti-money laundering (AML) screening, and sanctions list checks.
-    *   **Collateral Appraisal Agent:** Assesses collateral assets (real estate, equipment, inventory) and computes the Loan-to-Value (LTV) ratio.
-*   **Reviewer Agent (Debate Agent):**
-    *   Acts as the quality controller and adversarial challenger within Tier 2.
-    *   **Error Detection & Debate (`Tìm lỗi sai & Debate`):** Inspects the Shared Board, identifies discrepancies, logical flaws, or unsupported claims across specialist outputs (e.g., Credit Agent claiming low risk while Compliance Agent flags pending regulatory litigation).
-    *   **Iterative Improvement (`Improve output`):** Critiques flawed sub-agent findings and triggers re-evaluation rounds on the Shared Board until consensus or maximum debate rounds are reached.
+### 2.3. Vấn đề hiện tại
+Hiện chuyên viên phải tự đọc và đối chiếu thủ công các tài liệu:
+* Đơn đề nghị vay.
+* Hợp đồng lao động.
+* Bảng lương.
+* Sao kê tài khoản 3–6 tháng.
+* Thông tin đơn vị công tác.
 
-### 2.3. Tier 3: Human Verification & Operations Agent
-*   **Human Verification Console (Next.js UI):**
-    *   Displays the final synthesized assessment from Tier 1/Tier 2.
-    *   Shows exact agent reasoning, debate history from the Reviewer Agent, and clickable RAG policy citations.
-    *   Banking Officer reviews and selects: `Approve`, `Reject`, or `Request Revision with Feedback`.
-*   **Operations Agent (Post-Approval Execution):**
-    *   Triggered **only after explicit human approval** in Tier 3.
-    *   Executes read-only/pre-onboarding actions and generates draft onboarding packages via **Mock SHB Core Banking APIs**.
+Họ phải tự trả lời các câu hỏi:
+1. Thu nhập khách hàng khai báo có đúng không?
+2. Tiền lương có vào đều không?
+3. Đơn vị trả lương có khớp với nơi làm việc không?
+4. Thu nhập nào được tính, thu nhập nào không được tính?
+5. Hồ sơ có điểm bất thường hoặc thiếu tài liệu không?
 
 ---
 
-## 3. Out of Scope (strictly excluded from v1)
+## 3. Đầu vào & Đầu ra (Inputs & Outputs)
 
-*   **Automated Decisioning:** The system will not automatically approve, reject, or disburse loans without manual human intervention.
-*   **Direct Core Banking Write-Back:** System will not execute API mutations to change records in production core banking systems. It only communicates with Mock SHB APIs or exports structured payloads/draft PDFs.
-*   **Direct Customer Communication:** The system will not send emails, SMS, or notifications directly to corporate loan applicants.
-*   **Fine-Tuning of Models:** Custom LLM fine-tuning is out of scope; all agents utilize pre-trained models via API with deep agent scaffolding.
-*   **Real-time External APIs:** External live scraping of corporate registries is out of scope; inputs come from uploaded docs or static mock databases.
+### 3.1. Đầu vào (Inputs)
+Một bộ hồ sơ vay gồm:
+* Đơn vay (ví dụ: khách hàng khai thu nhập 25 triệu đồng/tháng).
+* Hợp đồng lao động.
+* Bảng lương.
+* Sao kê ngân hàng 6 tháng.
+* Chính sách xác minh thu nhập nội bộ.
 
----
+### 3.2. Đầu ra (Outputs)
+Hệ thống tạo ra các đầu ra cụ thể để hỗ trợ chuyên viên:
 
-## 4. Main User Flow (3-Tier Pipeline)
+**1. Báo cáo ngắn tổng hợp kết quả** (ví dụ minh họa):
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Officer as Banking Officer
-    participant FE as Next.js Frontend
-    participant Tier1 as Tier 1: Orchestrator (Deep Agent)
-    participant Board as Shared Board (State/DB)
-    participant Tier2 as Tier 2: Specialists & Reviewer (Debate)
-    participant Tier3 as Tier 3: Operations Agent
+```text
+KẾT QUẢ XÁC MINH THU NHẬP
 
-    Officer->>FE: Upload loan docs & trigger evaluation
-    FE->>Tier1: Initialize assessment (Session ID)
-    Tier1->>Tier1: Understand, Plan workflow & Decompose tasks
-    Tier1->>Board: Initialize Shared Board with task breakdown
-    
-    rect rgb(20, 30, 45)
-        Note over Tier1, Tier2: Tier 2: Parallel Specialists & Reviewer Debate Loop
-        Tier1->>Tier2: Dispatch parallel tasks (Credit, Compliance, Legal)
-        Tier2->>Board: Post initial findings, metrics & RAG citations
-        Tier2 (Reviewer)->>Board: Debate & find errors/contradictions in outputs
-        Tier2 (Reviewer)->>Tier2: Prompt Specialists to refine output
-        Tier2->>Board: Post improved consensus assessment
-    end
-    
-    Tier1->>Board: Read final verified state & synthesize report
-    Tier1->>FE: Present consolidated assessment & debate log
-    
-    rect rgb(30, 40, 20)
-        Note over Officer, Tier3: Tier 3: Human Verification & Operational Execution
-        Officer->>FE: Verify citations, audit debate log & Approve
-        FE->>Tier3: Trigger approved operational tasks
-        Tier3->>FE: Return generated draft agreements & onboarding JSON
-    end
+Thu nhập khách hàng khai báo: 25.000.000 đồng/tháng
+
+Thu nhập lương ghi nhận trên sao kê:
+- Tháng 1: 24.800.000
+- Tháng 2: 25.100.000
+- Tháng 3: 24.900.000
+- Tháng 4: 25.200.000
+- Tháng 5: 18.000.000
+- Tháng 6: 25.000.000
+
+Thu nhập bình quân: 23.833.000 đồng/tháng
+Thu nhập đủ điều kiện theo chính sách: 23.000.000 đồng/tháng
+
+Kết quả đối chiếu:
+✓ Tên khách hàng khớp
+✓ Công ty trả lương khớp hợp đồng lao động
+✓ Ngày trả lương tương đối ổn định
+⚠ Tháng 5 thấp hơn bình quân 28%
+⚠ Thu nhập khai báo cao hơn thu nhập đủ điều kiện 2 triệu đồng
+
+Tài liệu còn thiếu:
+- Phụ lục hợp đồng lao động mới nhất
+
+Đề xuất:
+Chuyển chuyên viên kiểm tra nguyên nhân thu nhập tháng 5 giảm.
 ```
 
+**2. Điền phiếu xác minh thu nhập:** Ghi thu nhập khai báo, thu nhập bình quân, thu nhập đủ điều kiện và các tháng bất thường vào checklist trên hệ thống LOS (Loan Origination System).
+
+**3. Tạo yêu cầu bổ sung hồ sơ:** Tự động tạo yêu cầu theo format chuẩn để có thể gửi thẳng cho khách hàng (ví dụ: "Bổ sung sao kê tháng 5" hoặc "Bổ sung phụ lục điều chỉnh lương").
+
+**4. Tạo exception task:** Tạo một tác vụ cho chuyên viên, gắn mức độ ưu tiên và cung cấp liên kết dẫn đến đúng giao dịch hoặc điểm dữ liệu bất thường.
+
+*Lưu ý: AI không phê duyệt hay từ chối khoản vay. Nó chỉ chuẩn bị kết quả xác minh để chuyên viên quyết định.*
+
 ---
 
-## 5. Concrete Structured Data Example (Shared Board Schema)
+## 4. Thiết kế hệ thống Đa tác tử (Multi-Agent Architecture)
 
-To enable Tier 2 collaboration, all specialist and reviewer interactions read and write to a standardized `Shared Board` JSON schema:
+Hệ thống được thiết kế tối giản phục vụ 1 actor và 1 task nhưng vẫn thể hiện đầy đủ năng lực phối hợp đa tác tử (multi-agent collaboration). Không cần xây dựng agent CIC, pháp lý, AML trong phiên bản đầu.
 
-```json
-{
-  "boardId": "board_case_2026_881",
-  "caseId": "loan_corp_99823",
-  "status": "DEBATE_IN_PROGRESS",
-  "iterationRound": 2,
-  "tasks": {
-    "credit_analysis": { "status": "COMPLETED", "assignedTo": "CreditAgent" },
-    "compliance_check": { "status": "REFINING", "assignedTo": "ComplianceAgent" },
-    "legal_review": { "status": "COMPLETED", "assignedTo": "LegalAgent" }
-  },
-  "specialistOutputs": {
-    "CreditAgent": {
-      "DSCR": 1.42,
-      "Leverage": 2.1,
-      "conclusion": "Financial strength acceptable. Meets DSCR policy > 1.25x."
-    },
-    "ComplianceAgent": {
-      "kycStatus": "VERIFIED",
-      "amlRisk": "MEDIUM",
-      "flag": "Subsidiary entity has pending inquiry in local registry."
-    }
-  },
-  "reviewerDebateLog": [
-    {
-      "round": 1,
-      "critic": "ReviewerAgent",
-      "target": "CreditAgent",
-      "issueFound": "Credit assessment did not factor in potential contingent liabilities from ComplianceAgent's flagged subsidiary inquiry.",
-      "requiredAction": "Recalculate stressed DSCR assuming a $250k legal contingency."
-    },
-    {
-      "round": 2,
-      "respondent": "CreditAgent",
-      "resolution": "Stressed DSCR recalculated to 1.28x. Still satisfies minimum threshold."
-    }
-  ],
-  "finalConsensusReached": true
-}
-```
+### 4.1. Document Extraction Agent
+* **Nhiệm vụ:** Nhận diện loại tài liệu; trích xuất tên, công ty, mức lương, thời hạn hợp đồng, giao dịch lương từ sao kê.
+* **Đầu ra:** Dữ liệu có cấu trúc và vị trí bằng chứng.
+
+### 4.2. Income Analysis Agent
+* **Nhiệm vụ:** Nhận diện các khoản có khả năng là lương, tính thu nhập bình quân, đánh giá mức độ ổn định. Phát hiện tháng thiếu lương/thu nhập giảm bất thường. Loại bỏ chuyển khoản nội bộ hoặc khoản thu không được tính.
+
+### 4.3. Policy Checking Agent
+* **Nhiệm vụ:** Tra cứu chính sách nội bộ bằng RAG. Xác định số tháng sao kê cần kiểm tra, áp dụng quy tắc tính thu nhập đủ điều kiện, kiểm tra điều kiện về thời gian làm việc và HĐLĐ. Trích dẫn đúng điều khoản chính sách.
+
+### 4.4. Report Agent
+* **Nhiệm vụ:** Tổng hợp kết quả, hiển thị các điểm đạt/không đạt/cần kiểm tra. Tạo báo cáo theo mẫu của chuyên viên, đính kèm bằng chứng cho từng kết luận.
+
+---
+
+## 5. Phạm vi KHÔNG làm (Out of Scope)
+
+Cần ghi rõ những nội dung ngoài phạm vi nhằm giữ ranh giới rõ ràng cho dự án:
+* Không chấm điểm tín dụng.
+* Không truy vấn CIC.
+* Không quyết định hạn mức vay.
+* Không phê duyệt hoặc từ chối khách hàng.
+* Không thực hiện AML/KYC.
+* Không đánh giá toàn bộ khả năng trả nợ.
+* Không tự động giải ngân.
+
+---
+
+## 6. Tiêu chí đánh giá (Evaluation Criteria)
+
+| Tiêu chí | Cách đo lường |
+| :--- | :--- |
+| **Thời gian xử lý** | Từ 15–20 phút xuống dưới 3 phút/hồ sơ |
+| **Độ chính xác trích xuất** | Trên 95% đối với trường dữ liệu bắt buộc |
+| **Độ chính xác nhận diện lương** | So sánh với kết quả của chuyên viên |
+| **Tỷ lệ phát hiện hồ sơ thiếu** | Trên 90% |
+| **Khả năng giải thích** | Mỗi kết luận có tài liệu và dòng dữ liệu làm bằng chứng |
+| **Mức độ chấp nhận** | Chuyên viên đồng ý với kết quả hoặc chỉ chỉnh sửa nhỏ |
+| **Giảm thao tác** | Số trường chuyên viên không còn phải nhập thủ công |
+
+---
+
+## 7. Kịch bản Demo tốt (Demo Scenario)
+
+* **Đầu vào:** Khách hàng khai thu nhập 25 triệu đồng/tháng.
+* **Xử lý AI:** Đọc 6 tháng sao kê và phát hiện:
+  * 5 tháng nhận khoảng 25 triệu đồng.
+  * 1 tháng chỉ nhận 18 triệu đồng.
+  * Hợp đồng lao động ghi mức lương 22 triệu đồng.
+  * Có thêm khoản “hỗ trợ hiệu suất” nhưng chính sách không cho tính toàn bộ.
+  * Thu nhập đủ điều kiện chỉ là 23 triệu đồng.
+  * Hồ sơ thiếu phụ lục điều chỉnh lương.
+* **Đầu ra:** Chuyên viên nhận ngay báo cáo, mở đúng giao dịch bất thường và quyết định yêu cầu khách hàng bổ sung tài liệu.
