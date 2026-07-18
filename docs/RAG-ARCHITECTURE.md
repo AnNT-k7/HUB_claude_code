@@ -39,21 +39,97 @@ Toàn bộ quy trình RAG được chia làm 3 giai đoạn chính:
 
 ---
 
-## 2. Bản đồ File & Folder chịu trách nhiệm (Code Mapping)
+## 2. Chuẩn hóa Phân loại 5 Loại Chunk (Chunking Taxonomy & Specifications)
+
+Để đảm bảo tính chính xác tuyệt đối, không bị trôi ngữ cảnh hoặc chia cắt điều khoản, dữ liệu trong hệ thống RAG bắt buộc phải được phân loại thành **5 loại chunk chuẩn** (`chunk_type`). Mỗi loại có chiến lược cắt (chunking strategy), kích thước (token size) và cấu trúc dữ liệu riêng biệt:
+
+### A. `POLICY_RULE` (Chính sách & Quy định tín dụng)
+*   **Mục đích:** Dùng cho quy định, chính sách hạn mức, khẩu vị rủi ro, pháp luật ngân hàng.
+*   **Quy chuẩn cấu trúc:** Một chunk phải chứa trọn bộ 4 thành phần: `Điều kiện + Ngưỡng + Ngoại lệ + Hành động xử lý`.
+*   **Kích thước chuẩn:** `150–350 tokens`, **tuyệt đối không cắt giữa chừng Điều/Khoản**.
+*   **Ví dụ JSON Metadata / Payload:**
+    ```json
+    {
+      "chunk_type": "POLICY_RULE",
+      "rule": "DSCR tối thiểu",
+      "condition": "Khoản vay trung dài hạn",
+      "threshold": "DSCR >= 1.2",
+      "exception": "Có phê duyệt cấp cao hơn",
+      "consequence": "Không đáp ứng thì từ chối hoặc bổ sung nguồn trả nợ"
+    }
+    ```
+
+### B. `CASE_EVIDENCE` (Hồ sơ chứng cứ khách hàng)
+*   **Mục đích:** Dùng cho hồ sơ vay, phương án kinh doanh, biên bản làm việc, báo cáo thẩm định thực tế.
+*   **Quy chuẩn cấu trúc:** Mỗi chunk tập trung trọn vẹn vào **một chủ đề duy nhất**:
+    *   Thông tin doanh nghiệp (`Borrower Profile`)
+    *   Mục đích vay (`Loan Purpose`)
+    *   Nhu cầu vốn (`Capital Requirement`)
+    *   Nguồn trả nợ (`Repayment Source`)
+    *   Khách hàng/nhà cung cấp chính (`Key Suppliers / Buyers`)
+    *   Rủi ro kinh doanh (`Business Risks`)
+*   **Kích thước chuẩn:** `300–600 tokens`.
+
+### C. `STRUCTURED_FACT` (Số liệu tài chính định lượng)
+*   **Mục đích:** Dùng cho số liệu tài chính, bảng cân đối kế toán, kết quả kinh doanh.
+*   **Quy tắc vàng:** **Không nên chỉ embedding toàn bộ bảng tài chính thành text thô.**
+*   **Quy chuẩn cấu trúc:** Mỗi record phải được định danh rõ ràng dưới dạng JSON/SQL:
+    ```json
+    {
+      "chunk_type": "STRUCTURED_FACT",
+      "metric": "Revenue",
+      "period": "2025",
+      "value": 250000000000,
+      "currency": "VND",
+      "source_page": 12
+    }
+    ```
+*   **Chiến lược Hybrid Storage:** Nên lưu định dạng có cấu trúc (SQL/JSONB) để query chính xác, **đồng thời tạo thêm câu text mô tả tự nhiên** để phục vụ vector similarity search:
+    👉 *Ví dụ câu text tìm kiếm:* `"Doanh thu năm 2025 là 250 tỷ VND, tăng 18% so với 2024."*
+*   **⚠️ NGUYÊN TẮC ZERO-HALLUCINATION:** Các chỉ số tài chính phái sinh phức tạp như **DSCR, EBITDA, Leverage (D/E)** phải được **công cụ (Python Tool/Engine) tính toán trực tiếp từ số liệu thô `STRUCTURED_FACT`**. **Tuyệt đối không để LLM tự tính nhẩm từ nhiều chunk rời rạc!**
+
+### D. `LEGAL_CLAUSE` (Điều khoản pháp lý & Hợp đồng)
+*   **Mục đích:** Dùng cho hợp đồng tín dụng, điều lệ công ty, hồ sơ pháp lý, đăng ký giao dịch bảo đảm.
+*   **Quy chuẩn cấu trúc:** Một chunk tương ứng trọn vẹn với:
+    *   Một điều khoản (`Single Clause`)
+    *   Một quyền hoặc nghĩa vụ (`Right or Obligation`)
+    *   Một điều kiện chấm dứt (`Termination Condition`)
+    *   Một nội dung về bảo lãnh (`Guarantee Term`)
+    *   Một giới hạn chuyển nhượng (`Transfer Restriction`)
+*   **Yêu cầu bắt buộc:** Phải giữ nguyên số điều, tên các bên liên quan, ngày hiệu lực và các tham chiếu chéo (`Cross-references`).
+
+### E. `PROCESS_STEP` (Quy trình vận hành & Giải ngân)
+*   **Mục đích:** Dùng cho quy trình vận hành (SOP), hướng dẫn kiểm tra trước giải ngân của `Banking Operations Department`.
+*   **Quy chuẩn cấu trúc:** Một chunk phải có dạng cấu trúc hành động rõ ràng:
+    ```json
+    {
+      "chunk_type": "PROCESS_STEP",
+      "step": "Kiểm tra điều kiện giải ngân",
+      "input": "Hồ sơ đã phê duyệt",
+      "checks": ["Hợp đồng đã ký", "Tài sản đã đăng ký bảo đảm"],
+      "output": "Cho phép giải ngân",
+      "owner": "Banking Operations",
+      "exception": "Thiếu chứng từ thì dừng giải ngân"
+    }
+    ```
+
+---
+
+## 3. Bản đồ File & Folder chịu trách nhiệm (Code Mapping)
 
 | Giai đoạn | File / Folder chịu trách nhiệm | Mô tả Logic & Chức năng |
 | :--- | :--- | :--- |
-| **1. INDEX** | `backend/app/services/rag.py` <br> `backend/app/db/models.py` | • Đọc tài liệu quy chế tín dụng, KYC, LTV từ file tĩnh/S3.<br>• Cắt đoạn (**Chunking**) từ 500-1000 từ.<br>• Chuyển đổi thành vector 1536 chiều qua OpenAI Embeddings.<br>• Ghi vào bảng `policy_embeddings` trên PostgreSQL (`pgvector`) kèm nhãn `metadata_={"department": "CREDIT"}`. |
-| **2. QUERY** | `backend/app/services/rag.py` <br> *(Được gọi bởi các Specialist Agents)* | • Nhận `query` và `department` từ Specialist Agent.<br>• Chuyển `query` thành vector và chạy tìm kiếm **Cosine Similarity (`<=>`)**.<br>• **Luôn khóa cứng bộ lọc:** `WHERE metadata_->>'department' = :department` để tránh sai lệch thông tin phòng ban.<br>• Trả về Top $K$ đoạn chính sách chính xác nhất kèm trang & điều khoản. |
+| **1. INDEX** | `backend/app/services/rag.py` <br> `backend/app/db/models.py` | • Phân loại văn bản vào đúng 1 trong 5 `chunk_type` chuẩn (`POLICY_RULE`, `CASE_EVIDENCE`, `STRUCTURED_FACT`, `LEGAL_CLAUSE`, `PROCESS_STEP`).<br>• Cắt đoạn theo token size chuẩn của từng loại.<br>• Chuyển đổi thành vector 1536 chiều và lưu vào `policy_embeddings` kèm JSONB `metadata_`. |
+| **2. QUERY** | `backend/app/services/rag.py` <br> *(Được gọi bởi các Specialist Agents)* | • Nhận `query`, `department` và tùy chọn `chunk_type` từ Specialist Agent.<br>• Chuyển `query` thành vector và chạy tìm kiếm **Cosine Similarity (`<=>`)**.<br>• **Khóa cứng bộ lọc:** `WHERE metadata_->>'department' = :dept AND metadata_->>'chunk_type' = :c_type`.<br>• Trả về Top $K$ đoạn chính xác nhất. |
 | **3. RENEW PROMPT** | `backend/app/agents/tier2_board/specialists/*.py` <br> `docs/AI-PROMPT-GUIDE.md` | • Trước khi Agent gửi request cho LLM suy luận, tiêm (inject) các đoạn chính sách vừa tìm được vào `System Prompt`.<br>• Buộc LLM phải đối chiếu số liệu của khách hàng với đoạn chính sách này và trích dẫn `exact citation`. |
 
 ---
 
-## 3. Chi tiết từng giai đoạn & Code mẫu cho Lập trình viên
+## 4. Chi tiết từng giai đoạn & Code mẫu cho Lập trình viên
 
-### 3.1. Giai đoạn 1: INDEXING (services/rag.py)
+### 4.1. Giai đoạn 1: INDEXING với phân loại Chunk Type (services/rag.py)
 
-Khi nạp tài liệu chính sách mới (ví dụ `Quy_che_tin_dung_2026.pdf`), lập trình viên cần đảm bảo mỗi chunk được lưu kèm đúng `department`:
+Khi nạp tài liệu chính sách mới, lập trình viên bắt buộc phải gán nhãn `chunk_type` và `department`:
 
 ```python
 # Mẫu logic triển khai trong backend/app/services/rag.py
@@ -67,10 +143,12 @@ def index_policy_document(
     db: Session, 
     document_text: str, 
     document_name: str, 
-    department_tag: str  # Ví dụ: "CREDIT", "LEGAL", "COMPLIANCE", "COLLATERAL"
+    department_tag: str,  # "CREDIT", "LEGAL", "COMPLIANCE", "COLLATERAL", "OPERATIONS"
+    chunk_type: str       # "POLICY_RULE", "CASE_EVIDENCE", "STRUCTURED_FACT", "LEGAL_CLAUSE", "PROCESS_STEP"
 ):
-    # 1. Chunking (Cắt nhỏ văn bản)
-    chunks = split_text_into_chunks(document_text, chunk_size=800, chunk_overlap=100)
+    # 1. Chunking tùy theo loại chunk_type (ví dụ POLICY_RULE dùng 200 tokens, CASE_EVIDENCE dùng 500 tokens)
+    chunk_size = 250 if chunk_type == "POLICY_RULE" else 500
+    chunks = split_text_into_chunks(document_text, chunk_size=chunk_size, chunk_overlap=50)
     
     # 2. Embedding & Save to DB
     for i, chunk in enumerate(chunks):
@@ -81,6 +159,7 @@ def index_policy_document(
             embedding=vector,
             metadata_={
                 "department": department_tag,
+                "chunk_type": chunk_type,
                 "document_name": document_name,
                 "chunk_index": i
             }
