@@ -1,0 +1,8 @@
+Họ và tên: Lê Quốc Cường
+Công ty: Công ty Minh Long
+2026-01 | base: 30000000 | bonus: 0
+2026-02 | base: 30000000 | bonus: 0
+2026-03 | base: 30000000 | bonus: 0
+2026-04 | base: 30000000 | bonus: 0
+2026-05 | base: 30000000 | bonus: 0
+2026-06 | base: 30000000 | bonus: 0

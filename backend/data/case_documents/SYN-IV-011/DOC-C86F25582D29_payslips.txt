@@ -1,0 +1,8 @@
+Họ và tên: Dương Hoài Nam
+Công ty: Global Tech Ltd
+2026-01 | base: 1500 | bonus: 0
+2026-02 | base: 1500 | bonus: 0
+2026-03 | base: 1500 | bonus: 0
+2026-04 | base: 1500 | bonus: 0
+2026-05 | base: 1500 | bonus: 0
+2026-06 | base: 1500 | bonus: 0

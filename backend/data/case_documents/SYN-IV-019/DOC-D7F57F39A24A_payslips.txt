@@ -1,0 +1,8 @@
+Họ và tên: Trần Gia Vinh
+Công ty: Công ty Nam Việt
+2026-01 | base: 16000000 | bonus: 0
+2026-02 | base: 16000000 | bonus: 0
+2026-03 | base: 16000000 | bonus: 0
+2026-04 | base: 16000000 | bonus: 0
+2026-05 | base: 16000000 | bonus: 0
+2026-06 | base: 16000000 | bonus: 0

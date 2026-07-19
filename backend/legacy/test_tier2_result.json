@@ -1,0 +1,184 @@
+{
+  "case_id": "case-shb-2026-001",
+  "current_round": 3,
+  "max_debate_rounds": 3,
+  "status": "MAX_ROUNDS_REACHED",
+  "specialist_outputs": {
+    "CustomerRelationship": {
+      "agent_id": "CustomerRelationship",
+      "status": "COMPLETED",
+      "borrower_profile": {
+        "company_name": "Công ty Cổ phần Tập đoàn Dệt may Việt Á",
+        "industry": "Sản xuất & Xuất khẩu Dệt may",
+        "segment": "SME",
+        "cic_group": 1
+      },
+      "requested_loan_amount": 150000000000.0,
+      "loan_purpose": "Bổ sung vốn lưu động thu mua nguyên liệu dệt",
+      "cic_status": "NORMAL",
+      "risk_flags": [],
+      "evidence": [
+        {
+          "source": "CIC Report",
+          "quote": "Nhóm nợ CIC: 1"
+        },
+        {
+          "source": "Tờ trình đề xuất",
+          "quote": "Nhu cầu vay: 150,000,000,000 VND - Mục đích: Bổ sung vốn lưu động thu mua nguyên liệu dệt"
+        }
+      ]
+    },
+    "Credit": {
+      "agent_id": "Credit",
+      "status": "COMPLETED",
+      "dscr": 1.4,
+      "current_ratio": 1.5,
+      "leverage_de": 2.33,
+      "is_dscr_valid": true,
+      "is_leverage_valid": true,
+      "risk_flags": [],
+      "calculation_notes": [
+        "DSCR đạt 1.4x (Vượt ngưỡng tối thiểu 1.25x).",
+        "Tỷ lệ D/E đạt 2.33x (Trong giới hạn an toàn <= 3.0x)."
+      ],
+      "evidence": [
+        {
+          "source": "Báo cáo tài chính",
+          "quote": "Doanh thu thuần / NOI: 35,000,000,000 VND"
+        },
+        {
+          "source": "Quy chế tín dụng RAG",
+          "quote": "Điều 1: DSCR tối thiểu >= 1.25x"
+        }
+      ]
+    },
+    "RiskManagement": {
+      "agent_id": "RiskManagement",
+      "status": "COMPLETED",
+      "risk_tier": "LOW",
+      "industry_risk": "LOW",
+      "concentration_limit_ok": true,
+      "risk_flags": [],
+      "mitigation_suggestions": [],
+      "evidence": [
+        {
+          "source": "Chính sách hạn mức tín dụng RAG",
+          "quote": "Giới hạn cấp tín dụng đơn lẻ tối đa 500 tỷ VND"
+        },
+        {
+          "source": "Danh mục rủi ro ngành",
+          "quote": "Ngành đánh giá: Sản xuất & Xuất khẩu Dệt may"
+        }
+      ]
+    },
+    "Compliance": {
+      "agent_id": "Compliance",
+      "status": "COMPLETED",
+      "kyc_passed": true,
+      "aml_sanctions_passed": true,
+      "data_privacy_consent": true,
+      "risk_flags": [],
+      "evidence": [
+        {
+          "source": "Hệ thống tra cứu AML/Sanctions",
+          "quote": "Blacklist check: PASS"
+        },
+        {
+          "source": "Quy định NĐ 13/2023 RAG",
+          "quote": "Điều khoản xử lý dữ liệu cá nhân bắt buộc có sự đồng ý"
+        }
+      ]
+    },
+    "Legal": {
+      "agent_id": "Legal",
+      "status": "WARNING",
+      "corporate_capacity_valid": true,
+      "signatory_authority_valid": true,
+      "litigation_status": "PENDING_LITIGATION",
+      "risk_flags": [
+        "Doanh nghiệp đang có vụ kiện tranh chấp tài sản / hợp đồng chưa giải quyết tại Tòa án."
+      ],
+      "evidence": [
+        {
+          "source": "Điều lệ SHB & Điều lệ DN RAG",
+          "quote": "Người ký hợp đồng: Tổng Giám Đốc - Đúng thẩm quyền"
+        },
+        {
+          "source": "Cổng thông tin Tòa án",
+          "quote": "Trạng thái tranh chấp: PENDING_LITIGATION"
+        }
+      ]
+    },
+    "CollateralAppraisal": {
+      "agent_id": "CollateralAppraisal",
+      "status": "WARNING",
+      "total_collateral_value": 200000000000.0,
+      "eligible_collateral_value": 140000000000.0,
+      "ltv": 107.14,
+      "is_ltv_valid": false,
+      "collateral_types": [
+        "Bất động sản"
+      ],
+      "risk_flags": [
+        "Tỷ lệ cho vay trên giá trị TSBĐ (LTV 107.14%) vượt ngưỡng tối đa cho phép 70.0%."
+      ],
+      "evidence": [
+        {
+          "source": "Biên bản định giá TSBĐ",
+          "quote": "Tổng giá trị định giá: 200,000,000,000 VND - Giá trị quy đổi: 140,000,000,000 VND"
+        },
+        {
+          "source": "Quy định LTV RAG",
+          "quote": "LTV tính toán: 107.14% (Hạn mức max: 70.0%)"
+        }
+      ]
+    },
+    "BankingOperations": {
+      "agent_id": "BankingOperations",
+      "status": "COMPLETED",
+      "account_opening_eligible": true,
+      "disbursement_sop_passed": true,
+      "fee_schedule_applied": "Biểu phí dịch vụ KHTC 2026",
+      "risk_flags": [],
+      "evidence": [
+        {
+          "source": "Quy trình giải ngân SOP RAG",
+          "quote": "Phương thức giải ngân: Chuyển khoản tài khoản thanh toán"
+        },
+        {
+          "source": "Quy định tài khoản thanh toán SHB",
+          "quote": "Trạng thái TKTT: Đã mở"
+        }
+      ]
+    }
+  },
+  "debate_logs": [
+    {
+      "round_number": 1,
+      "critic_agent": "ReviewerAgent",
+      "target_agent": "Credit",
+      "error_identified": "Mâu thuẫn phòng ban: Legal Agent phát hiện doanh nghiệp đang có tranh chấp Tòa án, nhưng Credit Agent vẫn đánh giá loại COMPLETED.",
+      "resolution_applied": "Yêu cầu Credit Agent đánh giá lại mức độ rủi ro tín dụng khi có tranh chấp pháp lý.",
+      "created_at": "2026-07-18T15:47:00.135259"
+    },
+    {
+      "round_number": 2,
+      "critic_agent": "ReviewerAgent",
+      "target_agent": "Credit",
+      "error_identified": "Mâu thuẫn phòng ban: Legal Agent phát hiện doanh nghiệp đang có tranh chấp Tòa án, nhưng Credit Agent vẫn đánh giá loại COMPLETED.",
+      "resolution_applied": "Yêu cầu Credit Agent đánh giá lại mức độ rủi ro tín dụng khi có tranh chấp pháp lý.",
+      "created_at": "2026-07-18T15:47:00.135337"
+    },
+    {
+      "round_number": 3,
+      "critic_agent": "ReviewerAgent",
+      "target_agent": "Credit",
+      "error_identified": "Mâu thuẫn phòng ban: Legal Agent phát hiện doanh nghiệp đang có tranh chấp Tòa án, nhưng Credit Agent vẫn đánh giá loại COMPLETED.",
+      "resolution_applied": "Yêu cầu Credit Agent đánh giá lại mức độ rủi ro tín dụng khi có tranh chấp pháp lý.",
+      "created_at": "2026-07-18T15:47:00.135364"
+    }
+  ],
+  "reanalysis_targets": [
+    "Credit"
+  ]
+}

@@ -16,10 +16,11 @@ class Settings(BaseSettings):
 
     app_name: str = "Digital Expert Agents API"
     api_v1_prefix: str = "/api/v1"
-    database_url: str = (
-        "postgresql+psycopg2://postgres:postgres@localhost:5433/"
-        "digital_expert_agents"
-    )
+    # The demo must run without Docker. PostgreSQL remains supported by setting
+    # DATABASE_URL, while the local default is a persistent SQLite database.
+    database_url: str = "sqlite:///./data/income_verification.db"
+    document_storage_root: str = "./data/case_documents"
+    max_document_size_bytes: int = 25 * 1024 * 1024
     backend_cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:3000"]
     )
@@ -37,6 +38,10 @@ class Settings(BaseSettings):
     fpt_api_key: str = ""
     fpt_base_url: str = "https://mkp-api.fptcloud.com"
     fpt_request_timeout_seconds: float = 60.0
+    llm_provider: str = "fpt"
+    llm_model: str = ""
+    llm_max_attempts: int = 2
+    llm_temperature: float = 0.1
     embedding_provider: str = "fpt"
     embedding_model: str = "Vietnamese_Embedding"
     embedding_dimensions: int = 512
@@ -49,4 +54,3 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-

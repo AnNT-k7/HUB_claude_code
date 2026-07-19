@@ -10,6 +10,7 @@ langchain>=0.2
 langchain-text-splitters>=0.2
 langgraph>=0.2
 python-dotenv>=1.0
+python-multipart>=0.0.9
 minio>=7.2.0
 langchain-openai>=0.1.0
 sentence-transformers>=5.0

@@ -1,0 +1,8 @@
+Họ và tên: Lý Kim Thảo
+Công ty: Công ty Đông Á
+2026-01 | base: 19000000 | bonus: 0
+2026-02 | base: 19000000 | bonus: 0
+2026-03 | base: 19000000 | bonus: 0
+2026-04 | base: 19000000 | bonus: 0
+2026-05 | base: 19000000 | bonus: 0
+2026-06 | base: 19000000 | bonus: 0

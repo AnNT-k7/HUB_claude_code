@@ -107,6 +107,10 @@ class DocumentRecord(IncomeVerificationModel):
     document_type: str = Field(min_length=1)
     checksum: str = Field(min_length=1)
     status: DocumentStatus = DocumentStatus.AVAILABLE
+    content_type: str = "application/octet-stream"
+    page_count: int | None = Field(default=None, ge=1)
+    processing_status: str = "UPLOADED"
+    size_bytes: int = Field(default=0, ge=0)
 
 
 class EvidenceCitation(IncomeVerificationModel):
@@ -118,6 +122,9 @@ class EvidenceCitation(IncomeVerificationModel):
     quote: str = Field(min_length=1)
     source_checksum: str | None = None
     location: str | None = None
+    field_name: str = "unknown"
+    confidence: float = Field(default=1.0, ge=0, le=1)
+    extraction_method: str = "unknown"
 
 
 class PolicyCitation(IncomeVerificationModel):
@@ -260,6 +267,8 @@ class Recommendation(IncomeVerificationModel):
     missing_documents: list[str] = Field(default_factory=list)
     policy_citations: list[PolicyCitation] = Field(default_factory=list)
     unresolved_issues: list[str] = Field(default_factory=list)
+    critic_summary: str | None = None
+    llm_used: bool = False
 
 
 class HumanReviewRecord(IncomeVerificationModel):
@@ -359,6 +368,7 @@ class CaseContext(IncomeVerificationModel):
     workflow_state: WorkflowState = WorkflowState.OPEN_CASE
     state_version: int = Field(default=0, ge=0)
     workflow_version: str = "income-verification-v1"
+    runtime_mode: str = "DETERMINISTIC_FALLBACK"
     documents: list[DocumentRecord] = Field(default_factory=list)
     extracted_fields: ExtractedFields | None = None
     income_analysis: IncomeAnalysisResult | None = None

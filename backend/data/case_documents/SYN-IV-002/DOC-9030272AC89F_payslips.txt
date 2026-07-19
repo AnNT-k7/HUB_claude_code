@@ -1,0 +1,8 @@
+Họ và tên: Trần Thu Bình
+Công ty: Công ty Sao Việt
+2026-01 | base: 22000000 | bonus: 0
+2026-02 | base: 22000000 | bonus: 0
+2026-03 | base: 22000000 | bonus: 0
+2026-04 | base: 22000000 | bonus: 0
+2026-05 | base: 22000000 | bonus: 0
+2026-06 | base: 22000000 | bonus: 0

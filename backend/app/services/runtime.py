@@ -1,40 +1,34 @@
-"""MVP runtime wiring for the income-verification API."""
+"""Persistent multi-case runtime for the Income Verification Expert MVP."""
 
 from __future__ import annotations
 
 import asyncio
 import json
+from functools import lru_cache
 from pathlib import Path
 
 from app.agents.income_verification import (
     CaseContext,
     IncomeAnalysisAgent,
     IncomeVerificationOrchestrator,
-    InMemoryCheckpointStore,
-    MarkdownDocumentAgent,
     PolicyAgent,
     WorkflowDependencies,
 )
-from app.agents.income_verification.orchestrator import CheckpointStore
-from app.agents.income_verification.human_review import (
-    HumanReviewCommand,
-    apply_human_review,
-)
+from app.agents.income_verification.human_review import HumanReviewCommand, apply_human_review
+from app.agents.income_verification.orchestrator import CheckpointStore, ConcurrentStateError
+from app.agents.income_verification.policy_agent import NamespacePolicyRetriever
+from app.agents.income_verification.state import WorkflowState
+from app.config import Settings, get_settings
 from app.services.action_executor import ActionExecutor
+from app.services.case_repository import CaseNotFound, CaseRepository
+from app.services.document_processing import DocumentProcessor
+from app.services.llm import LLMProvider, build_llm_provider
 from app.services.namespace_rag import NamespaceHit, NamespaceQuery, RagNamespace
+from app.services.report_synthesis import enrich_report_with_fpt
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
-PROJECT_ROOT = BACKEND_ROOT.parent
-DEFAULT_DOCUMENT_FIXTURE = (
-    PROJECT_ROOT
-    / "dataset"
-    / "document_extraction_agent"
-    / "synthetic_income_verification_documents_case_001.md"
-)
 DEFAULT_POLICY_CORPUS = BACKEND_ROOT / "data" / "rag" / "three_rag_fpt_corpus.json"
-DEMO_CASE_ID = "SYN-IV-001"
-DEMO_APPLICATION_ID = "SYN-SHB-2026-0001"
 
 
 class RuntimeCaseNotFound(LookupError):
@@ -42,11 +36,11 @@ class RuntimeCaseNotFound(LookupError):
 
 
 class UnsupportedDemoApplication(ValueError):
-    pass
+    """Kept for backward-compatible imports from older clients."""
 
 
 class EmbeddedDemoPolicyRetriever:
-    """Offline demo retriever over the already built, isolated 512-D corpus."""
+    """Offline fallback over the same chunked corpus used by vector RAG."""
 
     def __init__(self, corpus_path: Path = DEFAULT_POLICY_CORPUS) -> None:
         self.corpus_path = corpus_path
@@ -54,14 +48,12 @@ class EmbeddedDemoPolicyRetriever:
     async def retrieve(self, query: NamespaceQuery) -> list[NamespaceHit]:
         document = json.loads(self.corpus_path.read_text(encoding="utf-8"))
         namespace = document["namespaces"].get(query.namespace.value, {"chunks": []})
-        hits = []
+        hits: list[NamespaceHit] = []
         for chunk in namespace["chunks"]:
             metadata = chunk["metadata"]
             if metadata.get("rag_namespace") != RagNamespace.POLICY.value:
                 continue
-            if metadata.get("domain") != query.domain:
-                continue
-            if metadata.get("product") != query.product:
+            if metadata.get("domain") != query.domain or metadata.get("product") != query.product:
                 continue
             if query.chunk_types and metadata.get("chunk_type") not in query.chunk_types:
                 continue
@@ -84,100 +76,151 @@ class EmbeddedDemoPolicyRetriever:
                     domain=metadata.get("domain", ""),
                     product=metadata.get("product", ""),
                     effective_date=metadata.get("effective_date"),
-                    expiry_date=metadata.get("expiry_date")
-                    or metadata.get("effective_to"),
+                    expiry_date=metadata.get("expiry_date") or metadata.get("effective_to"),
                     approval_status=metadata.get("approval_status"),
                 )
             )
         return hits[: query.top_k]
 
 
-class IncomeVerificationRuntime:
-    """Own demo case state, workflow wiring, review and safe action execution."""
+class RepositoryCheckpointStore(CheckpointStore):
+    def __init__(self, repository: CaseRepository) -> None:
+        self.repository = repository
+        self._lock = asyncio.Lock()
 
-    def __init__(self, *, checkpoints: CheckpointStore | None = None) -> None:
-        self.checkpoints = checkpoints or InMemoryCheckpointStore()
-        self.document_agent = MarkdownDocumentAgent(DEFAULT_DOCUMENT_FIXTURE)
+    async def load(self, case_id: str) -> CaseContext | None:
+        try:
+            return await asyncio.to_thread(self.repository.load_context, case_id)
+        except CaseNotFound:
+            return None
+
+    async def save(self, context: CaseContext, *, expected_version: int) -> None:
+        async with self._lock:
+            existing = await self.load(context.case_id)
+            current_version = existing.state_version if existing is not None else 0
+            if current_version != expected_version:
+                raise ConcurrentStateError(f"Case {context.case_id} checkpoint version changed")
+            await asyncio.to_thread(self.repository.save_context, context)
+
+
+class IncomeVerificationRuntime:
+    """Wire uploaded evidence, deterministic agents, policy RAG and human-gated actions."""
+
+    def __init__(
+        self,
+        *,
+        repository: CaseRepository | None = None,
+        llm: LLMProvider | None = None,
+        settings: Settings | None = None,
+    ) -> None:
+        self.settings = settings or (repository.settings if repository is not None else get_settings())
+        self.repository = repository or CaseRepository(settings=self.settings)
+        self.llm = llm or build_llm_provider(self.settings)
+        self.document_processor = DocumentProcessor(self.repository, self.llm)
+        # Tests and disconnected development still use the exact chunked corpus,
+        # while configured demo mode performs a real embedding query over it.
+        policy_retriever = (
+            NamespacePolicyRetriever()
+            if self.llm.available and self.settings.embedding_provider.lower() == "fpt"
+            else EmbeddedDemoPolicyRetriever()
+        )
+        self.checkpoints = RepositoryCheckpointStore(self.repository)
         self.orchestrator = IncomeVerificationOrchestrator(
             WorkflowDependencies(
-                fetch_documents=self.document_agent.fetch_documents,
-                extract_documents=self.document_agent,
+                fetch_documents=self.document_processor.fetch_documents,
+                extract_documents=self.document_processor,
                 analyze_income=IncomeAnalysisAgent(),
-                retrieve_policy=PolicyAgent(EmbeddedDemoPolicyRetriever()),
+                retrieve_policy=PolicyAgent(policy_retriever),
             ),
             checkpoint_store=self.checkpoints,
         )
         self.action_executor = ActionExecutor()
-        self._application_cases: dict[str, str] = {}
         self._lock = asyncio.Lock()
 
-    async def start(self, application_id: str) -> CaseContext:
-        if application_id != DEMO_APPLICATION_ID:
-            raise UnsupportedDemoApplication(
-                "MVP demo currently accepts only the normalized synthetic application."
-            )
+    def runtime_info(self) -> dict[str, object]:
+        live_llm = self.llm.available
+        live_vector = live_llm and self.settings.embedding_provider.lower() == "fpt"
+        return {
+            "llm_provider": self.llm.provider_name if live_llm else "deterministic_fallback",
+            "llm_model": self.llm.model_name if live_llm else "",
+            "llm_mode": "FPT_LLM" if live_llm else "DETERMINISTIC_FALLBACK",
+            "rag_mode": "FPT_VECTOR_RAG" if live_vector else "EMBEDDED_POLICY_RAG",
+            "embedding_provider": self.settings.embedding_provider,
+            "embedding_model": self.settings.embedding_model,
+            "embedding_dimensions": self.settings.embedding_dimensions,
+            "policy_corpus": str(DEFAULT_POLICY_CORPUS),
+            "synthetic_policy_notice": "Corpus chính sách tổng hợp chỉ dùng cho demo cuộc thi.",
+        }
+
+    async def start_case(self, case_id: str, *, rerun: bool = False) -> CaseContext:
         async with self._lock:
-            existing_case_id = self._application_cases.get(application_id)
-            if existing_case_id:
-                existing = await self.checkpoints.load(existing_case_id)
-                if existing is not None:
-                    return existing
-            context = CaseContext(
-                case_id=DEMO_CASE_ID,
-                application_id=application_id,
+            try:
+                case = self.repository.get_case(case_id)
+            except CaseNotFound as exc:
+                raise RuntimeCaseNotFound(case_id) from exc
+            existing = self.repository.load_context(case_id)
+            if rerun and existing is not None:
+                self.repository.reset_context(case_id)
+                existing = None
+            context = existing or CaseContext(
+                case_id=case.id,
+                application_id=case.application_id,
+                runtime_mode=("FPT_LLM" if self.llm.available else "DETERMINISTIC_FALLBACK"),
             )
             result = await self.orchestrator.run(context)
-            self._application_cases[application_id] = result.case_id
+            if result.workflow_state is WorkflowState.HUMAN_REVIEW:
+                result = await enrich_report_with_fpt(
+                    result,
+                    llm=self.llm,
+                    repository=self.repository,
+                )
+                self.repository.save_context(result)
             return result
 
+    async def start(self, application_id: str) -> CaseContext:
+        case = self.repository.get_by_application(application_id)
+        if case is None:
+            raise UnsupportedDemoApplication("Application does not exist.")
+        return await self.start_case(case.id)
+
     async def get(self, case_id: str) -> CaseContext:
-        context = await self.checkpoints.load(case_id)
+        try:
+            context = self.repository.load_context(case_id)
+        except CaseNotFound as exc:
+            raise RuntimeCaseNotFound(case_id) from exc
         if context is None:
             raise RuntimeCaseNotFound(case_id)
         return context
 
-    async def review(
-        self,
-        case_id: str,
-        command: HumanReviewCommand,
-        *,
-        reviewer_id: str,
-    ) -> CaseContext:
+    async def review(self, case_id: str, command: HumanReviewCommand, *, reviewer_id: str) -> CaseContext:
         async with self._lock:
             previous = await self.get(case_id)
             reviewed = apply_human_review(previous, command, reviewer_id=reviewer_id)
-            await self.checkpoints.save(reviewed, expected_version=previous.state_version)
+            self.repository.save_context(reviewed)
             if command.outcome.value == "EDIT_AND_RERUN":
-                return await self.orchestrator.run(reviewed)
+                result = await self.orchestrator.run(reviewed)
+                self.repository.save_context(result)
+                return result
             if command.outcome.value != "ACCEPT_ACTIONS":
                 return reviewed
             executed = await self.action_executor.execute(reviewed)
-            await self.checkpoints.save(executed, expected_version=reviewed.state_version)
+            self.repository.save_context(executed)
             return executed
 
     async def retry_actions(self, case_id: str) -> CaseContext:
         async with self._lock:
             previous = await self.get(case_id)
             executed = await self.action_executor.execute(previous)
-            await self.checkpoints.save(executed, expected_version=previous.state_version)
+            self.repository.save_context(executed)
             return executed
 
     async def reset(self, application_id: str) -> None:
-        """Demo-only: forget the in-memory checkpoint so the sample case can rerun."""
-
-        if application_id != DEMO_APPLICATION_ID:
-            raise UnsupportedDemoApplication(
-                "MVP demo currently accepts only the normalized synthetic application."
-            )
-        async with self._lock:
-            case_id = self._application_cases.pop(application_id, None) or DEMO_CASE_ID
-            forget = getattr(self.checkpoints, "forget", None)
-            if forget is not None:
-                await forget(case_id)
+        case = self.repository.get_by_application(application_id)
+        if case is None:
+            raise UnsupportedDemoApplication("Application does not exist.")
+        self.repository.reset_context(case.id)
 
 
-_runtime = IncomeVerificationRuntime()
-
-
+@lru_cache
 def get_runtime() -> IncomeVerificationRuntime:
-    return _runtime
+    return IncomeVerificationRuntime()

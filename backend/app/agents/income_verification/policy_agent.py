@@ -208,11 +208,23 @@ class PolicyAgent:
         recognized, _ = select_recognized_transactions(context)
         try:
             metrics = calculate_income_metrics(recognized)
-            variable_average, variable_fact_ids = calculate_average_variable_income(
-                extracted.variable_income_records,
-                required_periods=statement_months,
-                minimum_positive_periods=minimum_variable_periods,
-            )
+            # A dossier that declares no variable income does not fail the
+            # positive-period rule; it contributes exactly zero. The minimum
+            # positive-period requirement applies only when variable income is
+            # claimed and included in eligible income.
+            if extracted.variable_income_records and not any(
+                record.amount > 0 for record in extracted.variable_income_records
+            ):
+                variable_average = Decimal("0")
+                variable_fact_ids = tuple(
+                    record.evidence_id for record in extracted.variable_income_records
+                )
+            else:
+                variable_average, variable_fact_ids = calculate_average_variable_income(
+                    extracted.variable_income_records,
+                    required_periods=statement_months,
+                    minimum_positive_periods=minimum_variable_periods,
+                )
             eligible_income = calculate_eligible_income(
                 average_income=metrics.average_income,
                 contract_salary=extracted.contract_salary,

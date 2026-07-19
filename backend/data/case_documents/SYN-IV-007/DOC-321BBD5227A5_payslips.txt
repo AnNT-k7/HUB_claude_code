@@ -1,0 +1,8 @@
+Họ và tên: Đỗ Minh Hạnh
+Công ty: Công ty Phú Gia
+2026-01 | base: 24000000 | bonus: 0
+2026-02 | base: 24000000 | bonus: 0
+2026-03 | base: 24000000 | bonus: 0
+2026-04 | base: 24000000 | bonus: 0
+2026-05 | base: 24000000 | bonus: 0
+2026-06 | base: 24000000 | bonus: 0

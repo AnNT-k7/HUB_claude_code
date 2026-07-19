@@ -3,7 +3,7 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PostgreSQLUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -191,3 +191,102 @@ class VerificationAuditEvent(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
+
+# Target MVP persistence. These tables intentionally use portable SQLAlchemy
+# types so the competition demo can run on SQLite without Docker, while also
+# remaining compatible with PostgreSQL.
+class IncomeCase(Base):
+    __tablename__ = "income_cases"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    application_id: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+    customer_name: Mapped[str] = mapped_column(String, nullable=False)
+    customer_code: Mapped[str] = mapped_column(String, nullable=False)
+    company: Mapped[str] = mapped_column(String, nullable=False)
+    requested_amount: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="VND")
+    status: Mapped[str] = mapped_column(String, nullable=False, default="DRAFT")
+    pipeline_status: Mapped[str] = mapped_column(String, nullable=False, default="OPEN_CASE")
+    state_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    context_payload: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class IncomeDocument(Base):
+    __tablename__ = "income_documents"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    case_id: Mapped[str] = mapped_column(String, ForeignKey("income_cases.id"), index=True, nullable=False)
+    file_name: Mapped[str] = mapped_column(String, nullable=False)
+    content_type: Mapped[str] = mapped_column(String, nullable=False)
+    document_type: Mapped[str] = mapped_column(String, nullable=False)
+    storage_path: Mapped[str] = mapped_column(String, nullable=False)
+    checksum: Mapped[str] = mapped_column(String, nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    page_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    processing_status: Mapped[str] = mapped_column(String, nullable=False)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class AgentRunRecord(Base):
+    __tablename__ = "income_agent_runs"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    case_id: Mapped[str] = mapped_column(String, ForeignKey("income_cases.id"), index=True, nullable=False)
+    agent_name: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    llm_provider: Mapped[str] = mapped_column(String, nullable=False)
+    model_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    warnings: Mapped[list[object]] = mapped_column(JSON, nullable=False, default=list)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class AgentResultRecord(Base):
+    __tablename__ = "income_agent_results"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    case_id: Mapped[str] = mapped_column(String, ForeignKey("income_cases.id"), index=True, nullable=False)
+    agent_run_id: Mapped[str] = mapped_column(String, ForeignKey("income_agent_runs.id"), nullable=False)
+    result_payload: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class EvidenceRecord(Base):
+    __tablename__ = "income_evidence"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    case_id: Mapped[str] = mapped_column(String, ForeignKey("income_cases.id"), index=True, nullable=False)
+    document_id: Mapped[str] = mapped_column(String, nullable=False)
+    field_name: Mapped[str] = mapped_column(String, nullable=False)
+    page_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    text_quote: Mapped[str] = mapped_column(Text, nullable=False)
+    location: Mapped[str | None] = mapped_column(String, nullable=True)
+    extraction_method: Mapped[str] = mapped_column(String, nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    source_checksum: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class FinalReportRecord(Base):
+    __tablename__ = "income_final_reports"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    case_id: Mapped[str] = mapped_column(String, ForeignKey("income_cases.id"), unique=True, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    report_payload: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class IncomeAuditLog(Base):
+    __tablename__ = "income_audit_logs"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    case_id: Mapped[str] = mapped_column(String, ForeignKey("income_cases.id"), index=True, nullable=False)
+    actor_type: Mapped[str] = mapped_column(String, nullable=False)
+    actor_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    details: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

@@ -32,8 +32,8 @@
 
       <section class="view active" id="view-command">
         <section class="case-hero glass-panel">
-          <div class="case-main"><div class="company-logo" id="heroLogo">MA</div><div><div class="case-kicker"><span id="heroCaseId">HỒ SƠ #SYN-IV-001</span><b id="heroStatus">SẴN SÀNG</b></div><h2 id="heroCompany">Nguyễn Minh Anh</h2><div class="case-meta"><span>Khoản vay đề nghị <strong id="heroAmount">300 triệu ₫</strong></span><i></i><span>Kỳ hạn <strong id="heroTerm">36 tháng</strong></span><i></i><span id="heroFile">loan_application.md · application SYN-SHB-2026-0001</span></div></div></div>
-          <div class="hero-actions"><button class="button ghost" id="resetBtn"><svg viewBox="0 0 24 24"><path d="M4 4v6h6M20 20v-6h-6M6 17a8 8 0 0 0 12-2M18 7A8 8 0 0 0 6 9"/></svg>Đặt lại</button><button class="button primary" id="runBtn"><span>✦</span> Bắt đầu xác minh</button></div>
+          <div class="case-main"><div class="company-logo" id="heroLogo">IV</div><div><div class="case-kicker"><span id="heroCaseId">CHƯA CHỌN HỒ SƠ</span><b id="heroStatus">SẴN SÀNG</b></div><h2 id="heroCompany">Đang tải danh sách hồ sơ…</h2><div class="case-meta"><span>Khoản vay đề nghị <strong id="heroAmount">—</strong></span><i></i><span>Công ty <strong id="heroTerm">—</strong></span><i></i><span id="heroFile">Dữ liệu trực tiếp từ backend</span></div></div></div>
+          <div class="hero-actions"><button class="button ghost" id="addDocsBtn">＋ Tải tài liệu</button><button class="button ghost" id="resetBtn"><svg viewBox="0 0 24 24"><path d="M4 4v6h6M20 20v-6h-6M6 17a8 8 0 0 0 12-2M18 7A8 8 0 0 0 6 9"/></svg>Làm mới</button><button class="button primary" id="runBtn"><span>✦</span> Chạy pipeline</button></div>
         </section>
 
         <div class="workspace-grid">
@@ -60,7 +60,7 @@
 
                 <article class="pipeline-node pipeline-executor agent-card" id="executorNode"><div class="agent-avatar ops-avatar">AX</div><div class="agent-copy"><strong>Action Executor</strong></div><div class="agent-status locked" data-status><i></i><b>KHÓA</b></div><div class="status-track"><span></span></div></article>
 
-                <article class="pipeline-node systems-node" id="systemsNode"><div class="system-chips"><span>LOS</span><span>DMS</span><span>Workflow</span><span>Notification</span><span>Audit</span></div></article>
+                <article class="pipeline-node systems-node" id="systemsNode"><div class="system-chips"><button data-system-output="los">LOS</button><button data-system-output="dms">DMS</button><button data-system-output="workflow">Workflow</button><button data-system-output="notification">Notification</button><button data-system-output="audit">Audit</button></div></article>
               </div>
               <div class="edge-popover" id="edgePopover" hidden><button aria-label="Đóng">×</button><span id="edgeTitle">Tương tác</span><strong id="edgeStatus">Đang chờ</strong><small id="edgeDetail">Chưa có dữ liệu trao đổi.</small></div>
             </div>
@@ -75,9 +75,9 @@
       </section>
 
       <section class="view" id="view-cases">
-        <div class="section-heading cases-toolbar"><p>MVP demo hiện chỉ chạy trên một hồ sơ mẫu cố định do backend truy xuất; xem chi tiết trong <strong>Trung tâm điều phối</strong>.</p></div>
-        <div class="case-summary"><div class="glass-panel"><span>Tổng hồ sơ</span><strong id="totalCases">1</strong><small>Hồ sơ mẫu SYN-IV-001</small></div><div class="glass-panel"><span>Trạng thái workflow</span><strong id="caseWorkflowState">OPEN_CASE</strong><small>Cập nhật trực tiếp từ backend</small></div><div class="glass-panel"><span>Số sự kiện audit</span><strong id="caseAuditCount">0</strong><small>Ghi nhận append-only</small></div></div>
-        <section class="case-table glass-panel"><header><div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="caseSearch" placeholder="Tìm theo khách hàng hoặc mã hồ sơ..." disabled></div><span>Cập nhật trực tiếp</span></header><div class="table-head"><span>Khách hàng / Hồ sơ</span><span>Khoản vay</span><span>Kỳ hạn</span><span>Trạng thái</span><span></span></div><div id="caseRows"></div></section>
+        <div class="section-heading cases-toolbar"><button class="button primary" id="newCaseBtn">＋ Tạo hồ sơ mới</button></div>
+        <div class="case-summary"><div class="glass-panel"><span>Tổng hồ sơ</span><strong id="totalCases">0</strong><small>Dữ liệu SQLite trực tiếp</small></div><div class="glass-panel"><span>Trạng thái hồ sơ đang chọn</span><strong id="caseWorkflowState">—</strong><small>Cập nhật trực tiếp từ backend</small></div><div class="glass-panel"><span>Số sự kiện audit</span><strong id="caseAuditCount">0</strong><small>Ghi nhận append-only</small></div></div>
+        <section class="case-table glass-panel"><header><div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="caseSearch" placeholder="Tìm theo khách hàng hoặc mã hồ sơ..."></div><span id="caseTableStatus">Cập nhật trực tiếp</span></header><div class="table-head"><span>Khách hàng / Hồ sơ</span><span>Khoản vay</span><span>Tài liệu</span><span>Trạng thái</span><span></span></div><div id="caseRows"></div></section>
       </section>
     </main>
   </div>
@@ -94,6 +94,33 @@
 
   <div class="modal-backdrop" id="evidenceModal" hidden>
     <div class="modal glass-panel evidence-modal"><button class="modal-close" data-close="evidenceModal">×</button><span class="modal-kicker">BẰNG CHỨNG XÁC MINH</span><h2 id="evidenceTitle">Trích dẫn chính sách</h2><div class="document-ref"><span>DOC</span><div><strong id="evidenceDoc">—</strong><small id="evidencePage">—</small></div></div><blockquote id="evidenceQuote">—</blockquote><div class="confidence"><span>Nguồn</span><strong id="evidenceConfidence">Case-scoped evidence</strong></div></div>
+  </div>
+
+  <div class="modal-backdrop" id="createCaseModal" hidden>
+    <form class="modal glass-panel case-form create-case-form" id="createCaseForm">
+      <button class="modal-close" type="button" data-close="createCaseModal">×</button>
+      <span class="modal-kicker">HỒ SƠ MỚI</span>
+      <h2>Tạo hồ sơ xác minh thu nhập</h2>
+      <p>Mã hồ sơ, application ID và mã tham chiếu khách hàng sẽ được hệ thống tự sinh. Chuyên viên chỉ cần nhập thông tin nghiệp vụ và đính kèm chứng từ.</p>
+      <div class="form-grid">
+        <label class="form-field"><span>Họ tên khách hàng</span><input name="customer_name" required placeholder="Ví dụ: Nguyễn Văn An"></label>
+        <label class="form-field"><span>Công ty / đơn vị công tác</span><input name="company" required placeholder="Ví dụ: Công ty ABC Việt Nam"></label>
+      </div>
+      <label class="form-field"><span>Số tiền vay đề nghị (VND)</span><input name="requested_amount" required type="number" min="1" placeholder="300000000"></label>
+      <div class="document-upload-heading"><div><span class="modal-kicker">TÀI LIỆU HỒ SƠ</span><h3>Đính kèm chứng từ để có thể chạy pipeline ngay</h3></div><small>PDF, PNG/JPG, TXT, Markdown hoặc CSV</small></div>
+      <div class="document-upload-grid">
+        <label class="file-drop" data-document-type="LOAN_APPLICATION"><input type="file" accept=".pdf,.png,.jpg,.jpeg,.txt,.md,.csv"><b>01</b><strong>Đơn vay / phiếu khai</strong><small>Chưa chọn file</small></label>
+        <label class="file-drop" data-document-type="EMPLOYMENT_CONTRACT"><input type="file" accept=".pdf,.png,.jpg,.jpeg,.txt,.md,.csv"><b>02</b><strong>Hợp đồng lao động</strong><small>Chưa chọn file</small></label>
+        <label class="file-drop" data-document-type="PAYSLIP_BUNDLE"><input type="file" accept=".pdf,.png,.jpg,.jpeg,.txt,.md,.csv"><b>03</b><strong>Bảng lương / xác nhận lương</strong><small>Chưa chọn file</small></label>
+        <label class="file-drop" data-document-type="BANK_STATEMENT"><input type="file" accept=".pdf,.png,.jpg,.jpeg,.txt,.md,.csv"><b>04</b><strong>Sao kê ngân hàng</strong><small>Chưa chọn file</small></label>
+      </div>
+      <p class="upload-note" id="pendingDocumentCount">Chưa chọn tài liệu. Bạn vẫn có thể tạo hồ sơ và bổ sung sau.</p>
+      <div class="modal-actions"><button class="button ghost" type="button" data-close="createCaseModal">Hủy</button><button class="button primary" type="submit" id="createCaseSubmit">Tạo hồ sơ và tải tài liệu</button></div>
+    </form>
+  </div>
+
+  <div class="modal-backdrop" id="systemOutputModal" hidden>
+    <div class="modal glass-panel system-output-modal"><button class="modal-close" data-close="systemOutputModal">×</button><span class="modal-kicker success" id="systemOutputKicker">MOCK INTEGRATION OUTPUT</span><h2 id="systemOutputTitle">Kết quả hệ thống</h2><p id="systemOutputSummary">Dữ liệu chỉ được ghi sau Human Review.</p><div id="systemOutputBody"></div></div>
   </div>
 
   <div class="toast-stack" id="toastStack"></div>

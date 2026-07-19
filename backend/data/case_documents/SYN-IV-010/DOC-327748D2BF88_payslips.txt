@@ -1,0 +1,8 @@
+Họ và tên: Ngô Trung Minh
+Công ty: Công ty An Bình
+2026-01 | base: 20000000 | bonus: 0
+2026-02 | base: 20000000 | bonus: 0
+2026-03 | base: 20000000 | bonus: 0
+2026-04 | base: 20000000 | bonus: 0
+2026-05 | base: 20000000 | bonus: 0
+2026-06 | base: 20000000 | bonus: 0

@@ -1,0 +1,8 @@
+Họ và tên: Tạ Tuấn Phong
+Công ty: Công ty TNHH ABC Việt Nam
+2026-01 | base: 28000000 | bonus: 0
+2026-02 | base: 28000000 | bonus: 0
+2026-03 | base: 28000000 | bonus: 0
+2026-04 | base: 28000000 | bonus: 0
+2026-05 | base: 28000000 | bonus: 0
+2026-06 | base: 28000000 | bonus: 0

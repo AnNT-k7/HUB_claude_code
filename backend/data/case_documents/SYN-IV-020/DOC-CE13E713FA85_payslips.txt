@@ -1,0 +1,8 @@
+Họ và tên: Lê Mai Xuân
+Công ty: Công ty Chưa Xác Minh
+2026-01 | base: 24000000 | bonus: 0
+2026-02 | base: 24000000 | bonus: 0
+2026-03 | base: 24000000 | bonus: 0
+2026-04 | base: 24000000 | bonus: 0
+2026-05 | base: 24000000 | bonus: 0
+2026-06 | base: 24000000 | bonus: 0

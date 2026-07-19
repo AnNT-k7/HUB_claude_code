@@ -1,0 +1,8 @@
+Họ và tên: Hoàng Đức Em
+Công ty: Công ty Đại Phát
+2026-01 | base: 20000000 | bonus: 0
+2026-02 | base: 20000000 | bonus: 0
+2026-03 | base: 20000000 | bonus: 0
+2026-04 | base: 20000000 | bonus: 0
+2026-05 | base: 20000000 | bonus: 0
+2026-06 | base: 20000000 | bonus: 0
