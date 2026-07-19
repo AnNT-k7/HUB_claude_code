@@ -30,7 +30,7 @@ def _case_root() -> Path:
     # Mirror app/db/case_session.py's path resolution exactly so uploaded
     # files always land next to the SQLite DB that references them,
     # regardless of the process's current working directory at startup.
-    database_url = _resolve_database_url(settings.case_database_url)
+    database_url = _resolve_database_url(settings.database_url)
     if database_url.startswith("sqlite:///") and database_url != "sqlite:///:memory:":
         db_path = Path(database_url.removeprefix("sqlite:///"))
         root = db_path.parent / "case_documents"

@@ -33,7 +33,7 @@ def _resolve_database_url(raw_url: str) -> str:
 
 
 _settings = get_settings()
-_database_url = _resolve_database_url(_settings.case_database_url)
+_database_url = _resolve_database_url(_settings.database_url)
 _connect_args = {"check_same_thread": False} if _database_url.startswith("sqlite") else {}
 
 if _database_url.startswith("sqlite:///"):

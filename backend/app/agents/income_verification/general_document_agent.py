@@ -19,7 +19,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from app.services.document_processing import (
+from app.services.general_document_processing import (
     DocumentProcessingError,
     ProcessedDocument,
     build_extraction_result,
