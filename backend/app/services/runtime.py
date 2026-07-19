@@ -12,6 +12,7 @@ from app.agents.income_verification import (
     IncomeVerificationOrchestrator,
     InMemoryCheckpointStore,
     MarkdownDocumentAgent,
+    NamespacePolicyRetriever,
     PolicyAgent,
     WorkflowDependencies,
 )
@@ -20,7 +21,9 @@ from app.agents.income_verification.human_review import (
     HumanReviewCommand,
     apply_human_review,
 )
+from app.config import Settings, get_settings
 from app.services.action_executor import ActionExecutor
+from app.services.llm_provider import LLMProvider, build_llm_provider
 from app.services.namespace_rag import NamespaceHit, NamespaceQuery, RagNamespace
 
 
@@ -92,18 +95,50 @@ class EmbeddedDemoPolicyRetriever:
         return hits[: query.top_k]
 
 
+def _select_policy_retriever(settings: Settings) -> tuple[object, str]:
+    """Real embedding-based retrieval when an embedding key is configured;
+    an explicit, audit-logged degraded fallback otherwise. The corpus at
+    DEFAULT_POLICY_CORPUS already carries precomputed 512-d embeddings for
+    every chunk, so this is purely a wiring choice, not a re-indexing one."""
+
+    key_present = (
+        bool(settings.fpt_api_key.strip())
+        if settings.embedding_provider == "fpt"
+        else bool(settings.glm_api_key.strip()) if settings.embedding_provider == "glm" else True
+    )
+    if key_present:
+        return NamespacePolicyRetriever(), "EMBEDDING_RAG"
+    return EmbeddedDemoPolicyRetriever(), "DEGRADED_KEYWORD_MATCH"
+
+
 class IncomeVerificationRuntime:
     """Own demo case state, workflow wiring, review and safe action execution."""
 
-    def __init__(self, *, checkpoints: CheckpointStore | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        checkpoints: CheckpointStore | None = None,
+        llm: LLMProvider | None = None,
+        policy_retriever: object | None = None,
+    ) -> None:
+        """``llm``/``policy_retriever`` overrides exist so tests can force
+        deterministic, network-free behavior (see tests/test_action_executor.py)
+        without changing the real-provider default used by ``get_runtime()``."""
+
         self.checkpoints = checkpoints or InMemoryCheckpointStore()
         self.document_agent = MarkdownDocumentAgent(DEFAULT_DOCUMENT_FIXTURE)
+        settings = get_settings()
+        self.llm = llm or build_llm_provider(settings)
+        if policy_retriever is not None:
+            retriever, self.rag_mode = policy_retriever, "INJECTED"
+        else:
+            retriever, self.rag_mode = _select_policy_retriever(settings)
         self.orchestrator = IncomeVerificationOrchestrator(
             WorkflowDependencies(
                 fetch_documents=self.document_agent.fetch_documents,
                 extract_documents=self.document_agent,
                 analyze_income=IncomeAnalysisAgent(),
-                retrieve_policy=PolicyAgent(EmbeddedDemoPolicyRetriever()),
+                retrieve_policy=PolicyAgent(retriever, llm=self.llm),
             ),
             checkpoint_store=self.checkpoints,
         )
@@ -122,6 +157,13 @@ class IncomeVerificationRuntime:
                 existing = await self.checkpoints.load(existing_case_id)
                 if existing is not None:
                     return existing
+            # Note: RAG/LLM mode is intentionally NOT stamped as a pre-run
+            # audit event here (unlike case_service.py's create_case()) —
+            # doing so would bump state_version to 1 before the very first
+            # checkpoint save, which breaks the optimistic-locking
+            # invariant InMemoryCheckpointStore relies on for a brand-new
+            # case_id (expects current_version == 0). The mode is still
+            # visible via IncomeVerificationRuntime.rag_mode/llm.mode_label.
             context = CaseContext(
                 case_id=DEMO_CASE_ID,
                 application_id=application_id,

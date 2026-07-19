@@ -4,16 +4,17 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const setText = (selector, value, root = document) => { const node = $(selector, root); if (node) node.textContent = value; };
 
 const API_BASE = window.localStorage.getItem('iv_api_base') || 'http://localhost:8000/api/v1';
-const APPLICATION_ID = 'SYN-SHB-2026-0001';
 const REVIEWER_ID = 'LT-01';
 const REVIEWER_NAME = 'Linh Trần';
 
 const flowNodes = ['underwriterNode','orchestratorNode','documentNode','incomeNode','policyNode','consistencyNode','recommendationNode','humanNode','executorNode','systemsNode'];
 const edgeData = new Map();
-let phase = 'idle';
-let runToken = 0;
 let running = false;
 let caseData = null;
+let currentCaseId = null;
+let selectedFiles = [];
+let caseListCache = [];
+let uploadedDocumentCount = 0;
 
 const ACTION_SYSTEM_MAP = {
   UPDATE_INCOME_DRAFT: 'LOS',
@@ -43,11 +44,18 @@ const WORKFLOW_STATE_LABEL = {
   COMPLETED: 'Đã xác minh', AWAITING_DOCUMENTS: 'Chờ bổ sung tài liệu', MANUAL_REVIEW_REQUIRED: 'Cần xử lý thủ công', TECHNICAL_ERROR: 'Lỗi kỹ thuật'
 };
 
+const WORKFLOW_STATE_CSS = {
+  OPEN_CASE: 'state-open', FETCHING_DOCUMENTS: 'state-fetching', EXTRACTING_DOCUMENT_DATA: 'state-extracting',
+  ANALYZING_INCOME_AND_POLICY: 'state-analyzing', CROSS_CHECKING: 'state-crosschecking', BUILDING_RECOMMENDATION: 'state-building',
+  HUMAN_REVIEW: 'state-review', EXECUTING_APPROVED_ACTIONS: 'state-building', VERIFYING_EXECUTION: 'state-building',
+  COMPLETED: 'state-completed', AWAITING_DOCUMENTS: 'state-attention', MANUAL_REVIEW_REQUIRED: 'state-attention', TECHNICAL_ERROR: 'state-error'
+};
+
 async function apiFetch(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(options.body && !(options.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
       'X-Role': 'UNDERWRITER',
       'X-Reviewer-Id': REVIEWER_ID,
       ...(options.headers || {})
@@ -68,8 +76,18 @@ function formatVnd(value) {
   return `${(n / 1e6).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} triệu ₫`;
 }
 
+function initials(name) {
+  if (!name) return '—';
+  return name.split(/\s+/).filter(Boolean).map(x => x[0]).slice(-2).join('').toUpperCase();
+}
+
 function timeNow() {
   return new Date().toLocaleTimeString('vi-VN', { hour12:false });
+}
+
+function formatDateTime(iso) {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleString('vi-VN', { hour12:false }); } catch (_) { return iso; }
 }
 
 function toast(title, detail) {
@@ -81,7 +99,7 @@ function toast(title, detail) {
 }
 
 function addLog(source, message, tag = 'INFO', tone = '', evidenceKey = '') {
-  const stream = $('#logStream');
+  const stream = $('#logStream'); if (!stream) return;
   const item = document.createElement('article'); item.className = 'log-item';
   const icon = document.createElement('span'); icon.className = `log-icon ${tone}`; icon.textContent = source.split(/\s+/).map(x => x[0]).join('').slice(0,2).toUpperCase();
   const content = document.createElement('div');
@@ -211,7 +229,7 @@ function showEdge(def, event) {
   popover.hidden = false;
 }
 
-function sendPacket(fromId, toId, tone = '', duration = 800) {
+function sendPacket(fromId, toId, tone = '', duration = 500) {
   const canvas = $('#flowCanvas'); const fromEl = document.getElementById(fromId); const toEl = document.getElementById(toId);
   if (!canvas || !fromEl || !toEl) return Promise.resolve();
   const rect = canvas.getBoundingClientRect(); const from = nodeCenter(fromEl, rect); const to = nodeCenter(toEl, rect);
@@ -231,20 +249,20 @@ function resetEdgeData() {
 }
 
 function resetFlow(silent = false) {
-  runToken += 1; running = false; phase = 'idle';
+  running = false;
   flowNodes.forEach(id => setNodeMode(id));
   setNodeMode('underwriterNode','ready');
   setAgentState('underwriterNode','idle','SẴN SÀNG','Mở hồ sơ và xác nhận dữ liệu đầu vào');
   setAgentState('orchestratorNode','locked','CHỜ','Điều phối state · task · retry · routing, không ghi dữ liệu');
-  setAgentState('documentNode','locked','CHỜ','Đọc và trích xuất tài liệu');
+  setAgentState('documentNode','locked','CHỜ','Đọc và trích xuất tài liệu (LLM/RAG hoặc regex tất định)');
   setAgentState('incomeNode','locked','CHỜ','Phân tích tiền lương và dòng tiền');
-  setAgentState('policyNode','locked','CHỜ','Tra cứu quy định tín chấp ngân hàng');
+  setAgentState('policyNode','locked','CHỜ','Tra cứu quy định tín chấp ngân hàng qua RAG');
   setAgentState('consistencyNode','locked','CHỜ','Đối chiếu chéo, phát hiện thiếu và bất thường');
   setAgentState('recommendationNode','locked','CHỜ','Tạo kết quả xác minh và hành động đề xuất');
   setAgentState('humanNode','locked','CHỜ');
   setAgentState('executorNode','locked','KHÓA','Chờ quyết định của chuyên viên');
   $('#verifyBtn').disabled = true; $('#verifyBtn').textContent = 'Mở kiểm duyệt';
-  $('#runBtn').disabled = false; $('#runBtn').innerHTML = '<span>✦</span> Bắt đầu xác minh';
+  $('#runBtn').disabled = false; $('#runBtn').innerHTML = '<span>✦</span> Chạy pipeline';
   setText('#stagePill','Sẵn sàng'); setText('#heroStatus','SẴN SÀNG');
   resetEdgeData(); $('#edgePopover').hidden = true; drawEdges();
   if (!silent) {
@@ -253,79 +271,359 @@ function resetFlow(silent = false) {
   }
 }
 
-function validRun(token) { return token === runToken; }
+// ---------------------------------------------------------------------------
+// Router
+// ---------------------------------------------------------------------------
 
-function updateCaseSummary() {
-  if (!caseData) return;
-  setText('#caseWorkflowState', caseData.workflow_state);
-  setText('#caseAuditCount', caseData.audit_events.length);
-  const rows = $('#caseRows'); rows.innerHTML = '';
-  const row = document.createElement('div'); row.className = 'table-row';
-  const caseCell = document.createElement('div'); caseCell.className = 'case-cell';
-  const logo = document.createElement('div'); logo.className = 'company-logo'; logo.textContent = 'MA';
-  const copy = document.createElement('div'); const name = document.createElement('strong'); name.textContent = caseData.extracted_fields?.customer_name || 'Nguyễn Minh Anh';
-  const meta = document.createElement('small'); meta.textContent = `#${caseData.case_id} · ${APPLICATION_ID}`; copy.append(name,meta); caseCell.append(logo,copy);
-  const amount = document.createElement('strong'); amount.textContent = '300 triệu ₫';
-  const term = document.createElement('span'); term.textContent = '36 tháng';
-  const status = document.createElement('span'); status.className = 'status-badge'; status.textContent = WORKFLOW_STATE_LABEL[caseData.workflow_state] || caseData.workflow_state;
-  const open = document.createElement('button'); open.className = 'open-case'; open.textContent = 'Xem →';
-  open.addEventListener('click', () => switchView('command'));
-  row.append(caseCell, amount, term, status, open); rows.append(row);
+function parseRoute() {
+  const hash = window.location.hash.replace(/^#\/?/, '');
+  const parts = hash.split('/').filter(Boolean);
+  if (parts[0] === 'cases' && parts[1] === 'new') return { view: 'create' };
+  if (parts[0] === 'cases' && parts[1]) return { view: 'command', caseId: parts[1] };
+  return { view: 'cases' };
 }
 
-async function runAssessment() {
-  if (running) return;
-  resetFlow(true); const token = runToken; running = true; phase = 'underwriter';
-  $('#logStream').innerHTML = ''; setText('#eventCount','0'); $('#runBtn').disabled = true;
-  setText('#heroStatus','ĐANG XÁC MINH'); setText('#stagePill','Tiếp nhận hồ sơ');
+async function handleRoute() {
+  const route = parseRoute();
+  $$('.view').forEach(item => item.classList.toggle('active', item.id === `view-${route.view}`));
+  $$('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.view === route.view || (route.view === 'command' && item.dataset.view === 'cases')));
 
-  setNodeMode('underwriterNode','active'); setAgentState('underwriterNode','running','ĐANG MỞ','Đang kiểm tra dữ liệu đầu vào');
-  addLog('Chuyên viên thẩm định', `Đã mở hồ sơ #SYN-IV-001 (application ${APPLICATION_ID}) và xác nhận bộ chứng từ đầu vào.`, 'ĐÃ MỞ');
+  if (route.view === 'cases') {
+    setText('#pageTitle', 'Danh sách hồ sơ xác minh thu nhập');
+    await loadCaseList();
+  } else if (route.view === 'create') {
+    setText('#pageTitle', 'Tạo hồ sơ xác minh mới');
+    resetCreateForm();
+  } else if (route.view === 'command') {
+    setText('#pageTitle', 'Chi tiết hồ sơ xác minh thu nhập');
+    currentCaseId = route.caseId;
+    await openCaseDetail(route.caseId);
+  }
+}
 
+function navigate(hash) {
+  window.location.hash = hash;
+}
+
+// ---------------------------------------------------------------------------
+// System status (LLM / RAG mode)
+// ---------------------------------------------------------------------------
+
+async function loadSystemStatus() {
   try {
-    await apiFetch(`/applications/${APPLICATION_ID}/income-verification/reset`, { method: 'POST' });
-  } catch (_) { /* first run: nothing to reset yet */ }
-  await sleep(500); if (!validRun(token)) return;
-  setNodeMode('underwriterNode','complete'); setAgentState('underwriterNode','done','ĐÃ XÁC NHẬN');
-  phase = 'orchestrating'; setText('#stagePill','Lập workflow');
-  setNodeMode('orchestratorNode','active'); setAgentState('orchestratorNode','running','ĐIỀU PHỐI');
-  updateEdge('underwriter-orchestrator','Đang mở workflow','Metadata hồ sơ và phạm vi xác minh được gửi tới Orchestrator.','active');
-  await sendPacket('underwriterNode','orchestratorNode'); if (!validRun(token)) return;
-
-  let startResult;
-  try {
-    startResult = await apiFetch(`/applications/${APPLICATION_ID}/income-verification`, { method: 'POST', body: JSON.stringify({}) });
-    caseData = await apiFetch(`/income-verifications/${startResult.case_id}`);
+    const status = await apiFetch('/cases/system/status');
+    const isLive = /\(live\)/i.test(status.llm_mode);
+    const pill = $('#llmModePill');
+    pill.textContent = isLive ? `LLM TRỰC TIẾP · ${status.llm_mode.split(':')[0]}` : 'CHẾ ĐỘ MOCK (KHÔNG CÓ LLM)';
+    pill.classList.toggle('mode-live', isLive);
+    pill.classList.toggle('mode-mock', !isLive);
+    setText('#systemHealthLabel', isLive ? 'LLM + RAG trực tiếp' : 'Chế độ mock / rule-based');
+    setText('#systemHealthDetail', `${status.llm_mode} · RAG: ${status.rag_mode}`);
+    $('.system-health').classList.toggle('status-live', isLive);
+    $('.system-health').classList.toggle('status-mock', !isLive);
   } catch (err) {
-    running = false; $('#runBtn').disabled = false;
+    setText('#llmModePill', 'KHÔNG KẾT NỐI ĐƯỢC BACKEND');
+    setText('#systemHealthLabel', 'Không kết nối được backend');
+    setText('#systemHealthDetail', API_BASE);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Case list view
+// ---------------------------------------------------------------------------
+
+function statusBadge(workflowState) {
+  const span = document.createElement('span');
+  span.className = `status-badge ${WORKFLOW_STATE_CSS[workflowState] || ''}`;
+  span.textContent = WORKFLOW_STATE_LABEL[workflowState] || workflowState;
+  return span;
+}
+
+function renderCaseRows(cases) {
+  const rows = $('#caseRows'); rows.innerHTML = '';
+  if (!cases.length) {
+    const empty = document.createElement('div'); empty.className = 'empty-state';
+    empty.textContent = 'Chưa có hồ sơ nào. Bấm "Tạo hồ sơ mới" để bắt đầu.';
+    rows.append(empty);
+    return;
+  }
+  cases.forEach(item => {
+    const row = document.createElement('div'); row.className = 'table-row';
+    const caseCell = document.createElement('div'); caseCell.className = 'case-cell';
+    const logo = document.createElement('div'); logo.className = 'company-logo'; logo.textContent = initials(item.customer_name) || 'HS';
+    const copy = document.createElement('div');
+    const name = document.createElement('strong'); name.textContent = item.customer_name || '(Chưa có tên khách hàng)';
+    const meta = document.createElement('small'); meta.textContent = `#${item.case_id} · ${item.application_id} · ${item.document_count} tài liệu`;
+    copy.append(name, meta); caseCell.append(logo, copy);
+    const amount = document.createElement('strong'); amount.textContent = item.requested_amount ? formatVnd(item.requested_amount) : '—';
+    const term = document.createElement('span'); term.textContent = item.loan_term_months ? `${item.loan_term_months} tháng` : '—';
+    const status = statusBadge(item.workflow_state);
+    const open = document.createElement('button'); open.className = 'open-case'; open.type = 'button'; open.textContent = 'Xem →';
+    open.addEventListener('click', () => navigate(`#/cases/${item.case_id}`));
+    row.addEventListener('click', (event) => { if (event.target === row || event.target === caseCell || caseCell.contains(event.target)) navigate(`#/cases/${item.case_id}`); });
+    row.append(caseCell, amount, term, status, open); rows.append(row);
+  });
+}
+
+async function loadCaseList() {
+  try {
+    const result = await apiFetch('/cases');
+    caseListCache = result.cases;
+    setText('#totalCases', caseListCache.length);
+    setText('#caseCount', caseListCache.length);
+    setText('#pendingCases', caseListCache.filter(c => ['OPEN_CASE','FETCHING_DOCUMENTS','EXTRACTING_DOCUMENT_DATA','ANALYZING_INCOME_AND_POLICY','CROSS_CHECKING','BUILDING_RECOMMENDATION'].includes(c.workflow_state)).length);
+    setText('#reviewCases', caseListCache.filter(c => c.workflow_state === 'HUMAN_REVIEW').length);
+    setText('#caseListUpdatedAt', `Cập nhật ${timeNow()}`);
+    renderCaseRows(caseListCache);
+  } catch (err) {
     toast('Không kết nối được backend', err.message);
-    addLog('Hệ thống', `Lỗi gọi API: ${err.message}. Kiểm tra backend đang chạy tại ${API_BASE}.`, 'LỖI', 'warn');
+    renderCaseRows([]);
+  }
+}
+
+$('#caseSearch').addEventListener('input', (event) => {
+  const query = event.target.value.trim().toLowerCase();
+  if (!query) { renderCaseRows(caseListCache); return; }
+  renderCaseRows(caseListCache.filter(item =>
+    (item.customer_name || '').toLowerCase().includes(query) ||
+    item.case_id.toLowerCase().includes(query) ||
+    item.application_id.toLowerCase().includes(query)
+  ));
+});
+
+// ---------------------------------------------------------------------------
+// Create case view
+// ---------------------------------------------------------------------------
+
+function resetCreateForm() {
+  selectedFiles = [];
+  $('#newCustomerName').value = ''; $('#newCustomerCode').value = ''; $('#newEmployer').value = '';
+  $('#newLoanTerm').value = ''; $('#newRequestedAmount').value = '';
+  $('#newDocumentsInput').value = '';
+  renderFileList();
+}
+
+function renderFileList() {
+  const list = $('#fileList'); list.innerHTML = '';
+  selectedFiles.forEach((file, index) => {
+    const chip = document.createElement('span'); chip.className = 'file-chip';
+    const label = document.createElement('span'); label.textContent = `${file.name} (${(file.size/1024).toFixed(0)} KB)`;
+    const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×';
+    remove.addEventListener('click', () => { selectedFiles.splice(index, 1); renderFileList(); });
+    chip.append(label, remove); list.append(chip);
+  });
+}
+
+$('#newDocumentsInput').addEventListener('change', (event) => {
+  selectedFiles = selectedFiles.concat(Array.from(event.target.files));
+  renderFileList();
+});
+
+$('#cancelCreateBtn').addEventListener('click', () => navigate('#/cases'));
+
+$('#submitCreateBtn').addEventListener('click', async () => {
+  const customerName = $('#newCustomerName').value.trim();
+  if (!customerName) { toast('Thiếu thông tin', 'Vui lòng nhập họ tên khách hàng.'); return; }
+  const button = $('#submitCreateBtn'); button.disabled = true; button.textContent = 'Đang tạo hồ sơ…';
+  try {
+    const payload = {
+      customer_name: customerName,
+      customer_code: $('#newCustomerCode').value.trim() || null,
+      employer: $('#newEmployer').value.trim() || null,
+      requested_amount: $('#newRequestedAmount').value ? Number($('#newRequestedAmount').value) : null,
+      loan_term_months: $('#newLoanTerm').value ? Number($('#newLoanTerm').value) : null,
+    };
+    const created = await apiFetch('/cases', { method: 'POST', body: JSON.stringify(payload) });
+    button.textContent = `Đang tải ${selectedFiles.length} tài liệu…`;
+    for (const file of selectedFiles) {
+      const form = new FormData(); form.append('file', file);
+      await apiFetch(`/cases/${created.case_id}/documents`, { method: 'POST', body: form });
+    }
+    toast('Đã tạo hồ sơ', `${created.case_id} — sẵn sàng chạy pipeline.`);
+    navigate(`#/cases/${created.case_id}`);
+  } catch (err) {
+    toast('Lỗi khi tạo hồ sơ', err.message);
+  } finally {
+    button.disabled = false; button.textContent = 'Tạo hồ sơ & tải tài liệu';
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Case detail view
+// ---------------------------------------------------------------------------
+
+async function openCaseDetail(caseId) {
+  resetFlow(true); $('#logStream').innerHTML = '';
+  try {
+    caseData = await apiFetch(`/cases/${caseId}`);
+    const docs = await apiFetch(`/cases/${caseId}/documents`);
+    uploadedDocumentCount = docs.documents.length;
+  } catch (err) {
+    toast('Không tìm thấy hồ sơ', err.message);
+    navigate('#/cases');
+    return;
+  }
+  addLog('Chuyên viên thẩm định', `Đã mở hồ sơ #${caseData.case_id} (application ${caseData.application_id}).`, 'ĐÃ MỞ');
+  updateHero();
+  updateCaseSummaryFromDetail();
+  if (['HUMAN_REVIEW','COMPLETED','EXECUTING_APPROVED_ACTIONS','VERIFYING_EXECUTION'].includes(caseData.workflow_state)) {
+    revealResultsInstantly();
+  } else if (['AWAITING_DOCUMENTS','MANUAL_REVIEW_REQUIRED','TECHNICAL_ERROR'].includes(caseData.workflow_state)) {
+    revealAttentionState();
+  }
+}
+
+function updateHero() {
+  if (!caseData) return;
+  const extracted = caseData.extracted_fields || {};
+  const summary = caseListCache.find(c => c.case_id === caseData.case_id);
+  const customerName = extracted.customer_name || summary?.customer_name || null;
+  setText('#heroLogo', initials(customerName) || '—');
+  setText('#heroCaseId', `HỒ SƠ #${caseData.case_id}`);
+  setText('#heroStatus', WORKFLOW_STATE_LABEL[caseData.workflow_state] || caseData.workflow_state);
+  setText('#heroCompany', customerName || '(Chưa trích xuất được tên khách hàng)');
+  setText('#heroAmount', summary?.requested_amount ? formatVnd(summary.requested_amount) : '—');
+  setText('#heroTerm', summary?.loan_term_months ? `${summary.loan_term_months} tháng` : '—');
+  setText('#heroFile', `${uploadedDocumentCount} tài liệu đã tải lên · application ${caseData.application_id}`);
+}
+
+function updateCaseSummaryFromDetail() {
+  // Keep the cached list row (if any) in sync so navigating back to the list
+  // reflects the latest workflow_state without a full re-fetch.
+  const row = caseListCache.find(c => c.case_id === caseData.case_id);
+  if (row) row.workflow_state = caseData.workflow_state;
+}
+
+$('#backToListBtn').addEventListener('click', () => navigate('#/cases'));
+$('#resetBtn').addEventListener('click', async () => {
+  if (!currentCaseId) return;
+  try { caseData = await apiFetch(`/cases/${currentCaseId}`); updateHero(); toast('Đã tải lại', 'Dữ liệu hồ sơ đã được đồng bộ từ backend.'); }
+  catch (err) { toast('Lỗi', err.message); }
+});
+
+$('#documentsBtn').addEventListener('click', async () => {
+  if (!currentCaseId) return;
+  const list = $('#documentsList'); list.innerHTML = '<div class="empty-state">Đang tải…</div>';
+  openModal('documentsModal');
+  try {
+    const result = await apiFetch(`/cases/${currentCaseId}/documents`);
+    list.innerHTML = '';
+    if (!result.documents.length) { list.innerHTML = '<div class="empty-state">Chưa có tài liệu nào được tải lên.</div>'; return; }
+    result.documents.forEach(doc => {
+      const item = document.createElement('div'); item.className = 'document-item';
+      const copy = document.createElement('div');
+      const name = document.createElement('strong'); name.textContent = doc.file_name;
+      const meta = document.createElement('small');
+      meta.textContent = `${doc.document_type || 'CHƯA PHÂN LOẠI'} · ${doc.classification_method || '—'} · ${(doc.size_bytes/1024).toFixed(0)} KB · tải lúc ${formatDateTime(doc.uploaded_at)}`;
+      copy.append(name, meta);
+      const link = document.createElement('a');
+      link.href = `${API_BASE}/cases/${currentCaseId}/documents/${doc.document_id}/download`;
+      link.target = '_blank'; link.rel = 'noopener'; link.textContent = 'Mở tài liệu ↗';
+      item.append(copy, link); list.append(item);
+    });
+  } catch (err) {
+    list.innerHTML = `<div class="empty-state">Lỗi tải danh sách: ${err.message}</div>`;
+  }
+});
+
+$('#auditBtn').addEventListener('click', async () => {
+  if (!currentCaseId) return;
+  const list = $('#auditList'); list.innerHTML = '<div class="empty-state">Đang tải…</div>';
+  openModal('auditModal');
+  try {
+    const result = await apiFetch(`/cases/${currentCaseId}/audit`);
+    list.innerHTML = '';
+    if (!result.audit_events.length) { list.innerHTML = '<div class="empty-state">Chưa có sự kiện audit nào.</div>'; return; }
+    [...result.audit_events].reverse().forEach(event => {
+      const item = document.createElement('div'); item.className = 'audit-item';
+      const head = document.createElement('div'); head.className = 'audit-head';
+      const strong = document.createElement('strong'); strong.textContent = event.event_type;
+      const time = document.createElement('time'); time.textContent = formatDateTime(event.created_at);
+      head.append(strong, time);
+      const small = document.createElement('small');
+      const transition = event.from_state && event.to_state ? `${event.from_state} → ${event.to_state} · ` : '';
+      small.textContent = `${transition}actor: ${event.actor_type}${event.actor_id ? ` (${event.actor_id})` : ''}${Object.keys(event.details||{}).length ? ' · ' + JSON.stringify(event.details) : ''}`;
+      item.append(head, small); list.append(item);
+    });
+  } catch (err) {
+    list.innerHTML = `<div class="empty-state">Lỗi tải audit trail: ${err.message}</div>`;
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Run pipeline — honest waiting state (real multi-second LLM/RAG calls) then
+// a quick, clearly-labelled reveal of already-known results.
+// ---------------------------------------------------------------------------
+
+async function runAssessment() {
+  if (running || !currentCaseId) return;
+  resetFlow(true); running = true;
+  $('#logStream').innerHTML = ''; setText('#eventCount','0'); $('#runBtn').disabled = true;
+  setText('#heroStatus','ĐANG XỬ LÝ'); setText('#stagePill','Đang gọi pipeline (LLM + RAG thật, có thể mất 10–40 giây)…');
+
+  setNodeMode('underwriterNode','complete'); setAgentState('underwriterNode','done','ĐÃ MỞ');
+  setNodeMode('orchestratorNode','active'); setAgentState('orchestratorNode','running','ĐANG ĐIỀU PHỐI');
+  updateEdge('underwriter-orchestrator','Đang mở workflow','Metadata hồ sơ và phạm vi xác minh được gửi tới Orchestrator.','active');
+  addLog('Orchestrator Agent', 'Đã nhận yêu cầu chạy pipeline. Document/Income/Policy Agent sẽ gọi LLM/RAG thật — vui lòng chờ, đây không phải hoạt ảnh giả lập.', 'ĐANG XỬ LÝ');
+
+  const waitStarted = Date.now();
+  const waitTimer = setInterval(() => {
+    const elapsed = ((Date.now() - waitStarted) / 1000).toFixed(0);
+    setText('#stagePill', `Đang xử lý thật (đã ${elapsed}s)… LLM trích xuất tài liệu, RAG tra cứu chính sách`);
+  }, 1000);
+
+  let result;
+  try {
+    result = await apiFetch(`/cases/${currentCaseId}/run`, { method: 'POST' });
+  } catch (err) {
+    clearInterval(waitTimer);
+    running = false; $('#runBtn').disabled = false;
+    toast('Lỗi gọi pipeline', err.message);
+    addLog('Hệ thống', `Lỗi gọi API: ${err.message}`, 'LỖI', 'warn');
+    return;
+  }
+  clearInterval(waitTimer);
+  caseData = result;
+  updateHero();
+
+  setNodeMode('orchestratorNode','complete'); setAgentState('orchestratorNode','done','ĐÃ ĐIỀU PHỐI');
+  updateEdge('underwriter-orchestrator','Workflow đã tạo','Orchestrator đã nhận đủ context, không thực hiện tính toán chuyên môn.','approved');
+
+  if (caseData.workflow_state === 'AWAITING_DOCUMENTS') {
+    revealAttentionState();
+    running = false; $('#runBtn').disabled = false;
+    return;
+  }
+  if (caseData.workflow_state === 'MANUAL_REVIEW_REQUIRED') {
+    revealAttentionState();
+    running = false; $('#runBtn').disabled = false;
     return;
   }
 
-  addLog('Orchestrator Agent', `Đã tạo workflow ${caseData.case_id}; tách 3 tác vụ chuyên môn độc lập (Document, Income, Policy).`, 'ĐIỀU PHỐI');
-  await sleep(700); if (!validRun(token)) return;
-  setNodeMode('orchestratorNode','complete'); setAgentState('orchestratorNode','done','ĐÃ GIAO VIỆC','Theo dõi state, retry và timeout');
-  updateEdge('underwriter-orchestrator','Workflow đã tạo','Orchestrator đã nhận đủ context, không thực hiện tính toán chuyên môn.','approved');
+  await revealPipelineResults();
+  running = false;
+}
 
-  phase = 'parallel'; setText('#stagePill','Phân tích song song');
+async function revealPipelineResults() {
   const extracted = caseData.extracted_fields || {};
   const income = caseData.income_analysis || {};
   const policy = caseData.policy_result || {};
+
+  setText('#stagePill','Phân tích song song (Document · Income · Policy)');
   const dispatches = [
-    ['documentNode','orchestrator-document', `Trích xuất hợp đồng, bảng lương và sao kê của ${extracted.customer_name || 'khách hàng'}`],
+    ['documentNode','orchestrator-document', `Trích xuất hồ sơ của ${extracted.customer_name || 'khách hàng'}`],
     ['incomeNode','orchestrator-income','Tính thu nhập ròng và dòng tiền lương'],
-    ['policyNode','orchestrator-policy','Tra cứu điều kiện xác minh thu nhập tín chấp']
+    ['policyNode','orchestrator-policy','Tra cứu điều kiện xác minh thu nhập tín chấp qua RAG']
   ];
   dispatches.forEach(([node, edge, detail]) => {
     setNodeMode(node,'active'); setAgentState(node,'running','ĐANG LÀM',detail); updateEdge(edge,'Đã giao nhiệm vụ',detail,'active');
   });
-  await Promise.all(dispatches.map(([node]) => sendPacket('orchestratorNode',node))); if (!validRun(token)) return;
-  await sleep(1100); if (!validRun(token)) return;
+  await Promise.all(dispatches.map(([node]) => sendPacket('orchestratorNode',node)));
+  await sleep(200);
 
   const documentEvidenceId = (caseData.evidence[0] || {}).evidence_id || '';
   setNodeMode('documentNode','complete');
-  setAgentState('documentNode','done','HOÀN TẤT', `${caseData.documents.length} tài liệu · ${(extracted.salary_transactions||[]).length} giao dịch lương trích xuất`);
+  setAgentState('documentNode','done','HOÀN TẤT', `${caseData.documents.length} tài liệu · ${(extracted.salary_transactions||[]).length} giao dịch lương · độ tin cậy ${((extracted.extraction_confidence||0)*100).toFixed(0)}%`);
   addLog('Document Agent', `Đã trích xuất hồ sơ của ${extracted.customer_name || '—'} tại ${extracted.employer || '—'}; thu nhập khai báo ${formatVnd(extracted.declared_income)}/tháng.`, 'ĐÃ TRÍCH XUẤT', '', documentEvidenceId);
 
   const incomeEvidenceId = (income.recognized_evidence_ids || [])[0] || '';
@@ -336,43 +634,86 @@ async function runAssessment() {
   const policyCitationId = (policy.citations || [])[0]?.chunk_id || '';
   setNodeMode('policyNode','complete');
   setAgentState('policyNode','done','HOÀN TẤT', `Thu nhập đủ điều kiện theo chính sách: ${formatVnd(policy.eligible_income)}/tháng`);
-  addLog('Policy Agent', `Đã truy xuất ${(policy.citations||[]).length} trích dẫn chính sách xác minh thu nhập áp dụng cho hồ sơ.`, 'CHÍNH SÁCH', '', policyCitationId);
+  addLog('Policy Agent', `Đã truy xuất ${(policy.citations||[]).length} trích dẫn chính sách (phương pháp tham số: ${policy.parameter_extraction_method || '—'}).`, 'CHÍNH SÁCH', '', policyCitationId);
 
-  phase = 'consistency'; setText('#stagePill','Đối chiếu nhất quán');
+  setText('#stagePill','Đối chiếu nhất quán');
   setNodeMode('consistencyNode','active'); setAgentState('consistencyNode','reviewing','ĐANG ĐỐI CHIẾU');
-  [['documentNode','document-consistency'],['incomeNode','income-consistency'],['policyNode','policy-consistency']].forEach(([node,edge]) => updateEdge(edge,'Đang chuyển kết quả','Output có cấu trúc được chuyển để đối chiếu chéo.','active'));
+  ['document-consistency','income-consistency','policy-consistency'].forEach(edge => updateEdge(edge,'Đang chuyển kết quả','Output có cấu trúc được chuyển để đối chiếu chéo.','active'));
   await Promise.all([
     sendPacket('documentNode','consistencyNode'), sendPacket('incomeNode','consistencyNode'), sendPacket('policyNode','consistencyNode')
-  ]); if (!validRun(token)) return;
-
-  addLog('Consistency Agent', `Đang kiểm tra chéo ${(caseData.findings||[]).length} phát hiện tiềm ẩn giữa 3 bộ kết quả.`, 'ĐỐI CHIẾU', 'review');
-  await sleep(900); if (!validRun(token)) return;
+  ]);
+  await sleep(200);
   setNodeMode('consistencyNode','complete');
-  setAgentState('consistencyNode','done', (caseData.findings||[]).length ? 'CÓ CẢNH BÁO' : 'NHẤT QUÁN', `${(caseData.findings||[]).length} phát hiện · không phát hiện thiếu hồ sơ nghiêm trọng`);
+  setAgentState('consistencyNode','done', (caseData.findings||[]).length ? 'CÓ CẢNH BÁO' : 'NHẤT QUÁN', `${(caseData.findings||[]).length} phát hiện`);
   ['document-consistency','income-consistency','policy-consistency'].forEach(edge => updateEdge(edge,'Đã đối chiếu','Kết quả hợp lệ và có nguồn bằng chứng truy vết.','approved'));
   (caseData.findings || []).forEach(finding => {
-    const tone = finding.severity === 'CRITICAL' ? 'warn' : finding.severity === 'WARNING' ? 'warn' : '';
+    const tone = finding.severity === 'CRITICAL' || finding.severity === 'WARNING' ? 'warn' : '';
     addLog('Consistency Agent', `[${finding.severity}] ${finding.message}`, finding.code, tone, (finding.evidence_ids||[])[0] || '');
   });
 
-  phase = 'recommendation'; setText('#stagePill','Tạo khuyến nghị');
+  setText('#stagePill','Tạo khuyến nghị');
   setNodeMode('recommendationNode','active'); setAgentState('recommendationNode','reviewing','ĐANG TỔNG HỢP');
   updateEdge('consistency-recommendation','Đang tạo đề xuất','Kết quả đã chuẩn hóa được chuyển sang Recommendation Builder.','review');
-  await sendPacket('consistencyNode','recommendationNode','review'); if (!validRun(token)) return;
-  await sleep(800); if (!validRun(token)) return;
+  await sendPacket('consistencyNode','recommendationNode','review');
+  await sleep(200);
 
   const rec = caseData.recommendation || {};
   setNodeMode('recommendationNode','complete'); setAgentState('recommendationNode','done','ĐÃ ĐỀ XUẤT');
   addLog('Recommendation Builder', `${RECOMMENDATION_STATUS_LABEL[rec.status] || rec.status}. Thu nhập khai báo ${formatVnd(rec.declared_income)} · trung bình ${formatVnd(rec.average_income)} · đủ điều kiện ${formatVnd(rec.eligible_income)}.`, 'ĐỀ XUẤT', 'review', policyCitationId);
-  phase = 'human'; setText('#stagePill','Chờ chuyên viên duyệt'); setText('#heroStatus','CHỜ KIỂM DUYỆT');
+  setText('#stagePill','Chờ chuyên viên duyệt'); setText('#heroStatus','CHỜ KIỂM DUYỆT');
   setNodeMode('humanNode','ready'); setAgentState('humanNode','reviewing','CHỜ DUYỆT');
   updateEdge('recommendation-human','Chờ chuyên viên quyết định','Đề xuất kèm kết quả, hành động và bằng chứng đã sẵn sàng.','review');
-  await sendPacket('recommendationNode','humanNode','review'); if (!validRun(token)) return;
+  await sendPacket('recommendationNode','humanNode','review');
 
-  running = false;
   $('#verifyBtn').disabled = false; $('#verifyBtn').textContent = 'Mở kiểm duyệt';
   addLog('Cổng kiểm duyệt','Đề xuất đã khóa phiên bản và chờ chuyên viên quyết định.','KIỂM DUYỆT','review');
-  updateCaseSummary();
+}
+
+function revealResultsInstantly() {
+  // Case was already processed in a previous session — render final state
+  // without replaying the dispatch animation.
+  setNodeMode('underwriterNode','complete'); setAgentState('underwriterNode','done','ĐÃ MỞ');
+  setNodeMode('orchestratorNode','complete'); setAgentState('orchestratorNode','done','ĐÃ ĐIỀU PHỐI');
+  ['documentNode','incomeNode','policyNode','consistencyNode','recommendationNode'].forEach(id => setNodeMode(id,'complete'));
+  const rec = caseData.recommendation || {};
+  setAgentState('documentNode','done','HOÀN TẤT');
+  setAgentState('incomeNode','done','HOÀN TẤT', `Thu nhập ròng: ${formatVnd((caseData.income_analysis||{}).average_income)}/tháng`);
+  setAgentState('policyNode','done','HOÀN TẤT', `Đủ điều kiện: ${formatVnd((caseData.policy_result||{}).eligible_income)}/tháng`);
+  setAgentState('consistencyNode','done', (caseData.findings||[]).length ? 'CÓ CẢNH BÁO' : 'NHẤT QUÁN');
+  setAgentState('recommendationNode','done','ĐÃ ĐỀ XUẤT');
+  addLog('Hệ thống', 'Hồ sơ này đã được xử lý trước đó — hiển thị kết quả đã lưu từ backend.', 'ĐÃ LƯU');
+  (caseData.findings || []).forEach(finding => {
+    const tone = finding.severity === 'CRITICAL' || finding.severity === 'WARNING' ? 'warn' : '';
+    addLog('Consistency Agent', `[${finding.severity}] ${finding.message}`, finding.code, tone, (finding.evidence_ids||[])[0] || '');
+  });
+  if (caseData.workflow_state === 'HUMAN_REVIEW') {
+    setNodeMode('humanNode','ready'); setAgentState('humanNode','reviewing','CHỜ DUYỆT');
+    $('#verifyBtn').disabled = false;
+    setText('#stagePill','Chờ chuyên viên duyệt'); setText('#heroStatus','CHỜ KIỂM DUYỆT');
+  } else {
+    setNodeMode('humanNode','complete'); setAgentState('humanNode','done','ĐÃ XỬ LÝ');
+    setNodeMode('executorNode','complete'); setAgentState('executorNode','done','HOÀN TẤT');
+    setNodeMode('systemsNode','complete');
+    setText('#stagePill','Hoàn tất'); setText('#heroStatus','ĐÃ XÁC MINH');
+    $('#runBtn').innerHTML = '<span>↻</span> Chạy lại pipeline';
+    (caseData.execution_results || []).forEach(result => {
+      const action = (caseData.proposed_actions || []).find(a => a.action_id === result.action_id);
+      addLog('Action Executor', `${action ? action.description : result.action_id} → ${EXECUTION_STATUS_LABEL[result.status] || result.status}`, result.status, result.status === 'FAILED' ? 'warn' : 'done');
+    });
+  }
+}
+
+function revealAttentionState() {
+  setNodeMode('underwriterNode','complete'); setAgentState('underwriterNode','done','ĐÃ MỞ');
+  setNodeMode('orchestratorNode','complete'); setAgentState('orchestratorNode','done','ĐÃ ĐIỀU PHỐI');
+  setText('#heroStatus', WORKFLOW_STATE_LABEL[caseData.workflow_state] || caseData.workflow_state);
+  setText('#stagePill', caseData.workflow_state === 'AWAITING_DOCUMENTS' ? 'Chờ bổ sung tài liệu' : 'Cần chuyên viên xử lý thủ công');
+  setNodeMode('documentNode','active');
+  setAgentState('documentNode','conflict', caseData.workflow_state === 'AWAITING_DOCUMENTS' ? 'THIẾU TÀI LIỆU' : 'CẦN XEM XÉT');
+  const lastEvent = (caseData.audit_events || []).slice(-1)[0];
+  const reason = lastEvent ? lastEvent.event_type : caseData.workflow_state;
+  addLog('Hệ thống', `Pipeline dừng ở trạng thái ${caseData.workflow_state} (${reason}). Kiểm tra tài liệu đã tải lên hoặc xem audit trail để biết chi tiết.`, caseData.workflow_state, 'warn');
+  (caseData.errors || []).forEach(error => addLog('Hệ thống', `${error.component}: ${error.message}`, error.code, 'warn'));
 }
 
 function populateVerifyModal() {
@@ -400,31 +741,30 @@ async function approveAndExecute() {
   if (!caseData) return;
   const reason = $('#reviewReason').value.trim() || 'Đã kiểm tra hồ sơ và đồng ý cập nhật kết quả xác minh.';
   const approvedActionIds = (caseData.proposed_actions || []).map(a => a.action_id);
-  closeModal('verifyModal'); phase = 'executing'; running = true; const token = runToken;
+  closeModal('verifyModal'); running = true;
   setNodeMode('humanNode','complete'); setAgentState('humanNode','done','ĐÃ DUYỆT'); $('#verifyBtn').disabled = true;
   setText('#stagePill','Thực thi có kiểm soát'); setNodeMode('executorNode','active');
   setAgentState('executorNode','running','ĐANG THỰC THI');
   updateEdge('human-executor','Đã phê duyệt','Quyết định có danh tính người duyệt và dấu thời gian được gửi để thực thi.','approved');
   addLog(REVIEWER_NAME, `Đã chấp thuận ${approvedActionIds.length} hành động đề xuất: "${reason}"`, 'ĐÃ DUYỆT','done');
-  await sendPacket('humanNode','executorNode','approve'); if (!validRun(token)) return;
+  await sendPacket('humanNode','executorNode','approve');
   addLog('Action Executor','Đã kiểm tra quyền và chuẩn bị cập nhật hệ thống đích.','ĐANG THỰC THI');
 
   try {
-    await apiFetch(`/income-verifications/${caseData.case_id}/review`, {
+    await apiFetch(`/cases/${caseData.case_id}/review`, {
       method: 'POST',
       body: JSON.stringify({ outcome: 'ACCEPT_ACTIONS', reason, approved_action_ids: approvedActionIds })
     });
-    caseData = await apiFetch(`/income-verifications/${caseData.case_id}`);
+    caseData = await apiFetch(`/cases/${caseData.case_id}`);
   } catch (err) {
     running = false; toast('Lỗi thực thi', err.message);
     addLog('Hệ thống', `Lỗi gọi review API: ${err.message}`, 'LỖI', 'warn');
     return;
   }
-  await sleep(600); if (!validRun(token)) return;
 
   setNodeMode('executorNode','complete'); setAgentState('executorNode','done','HOÀN TẤT','Đã thực thi đúng phạm vi được phê duyệt');
   setNodeMode('systemsNode','active'); updateEdge('executor-systems','Đang cập nhật','Ghi kết quả tới LOS, DMS, Workflow và Notification.','approved');
-  await sendPacket('executorNode','systemsNode','approve'); if (!validRun(token)) return;
+  await sendPacket('executorNode','systemsNode','approve');
 
   (caseData.execution_results || []).forEach(result => {
     const action = (caseData.proposed_actions || []).find(a => a.action_id === result.action_id);
@@ -432,13 +772,13 @@ async function approveAndExecute() {
     const tone = result.status === 'FAILED' ? 'warn' : 'done';
     addLog('Action Executor', `${system}: ${action ? action.description : result.action_id} → ${EXECUTION_STATUS_LABEL[result.status] || result.status}`, result.status, tone);
   });
-  await sleep(400); if (!validRun(token)) return;
-  setNodeMode('systemsNode','complete'); phase = 'complete'; running = false;
+  setNodeMode('systemsNode','complete'); running = false;
   setText('#stagePill','Hoàn tất'); setText('#heroStatus', caseData.workflow_state === 'COMPLETED' ? 'ĐÃ XÁC MINH' : caseData.workflow_state);
-  $('#runBtn').disabled = false; $('#runBtn').innerHTML = '<span>↻</span> Chạy lại xác minh';
+  $('#runBtn').disabled = false; $('#runBtn').innerHTML = '<span>↻</span> Chạy lại pipeline';
   addLog('Hệ thống','LOS, DMS, Workflow, Notification và Audit đã cập nhật thành công.','HOÀN TẤT','done');
   toast('Xác minh hoàn tất','Kết quả đã được ghi nhận và lưu dấu vết kiểm toán (audit_events).');
-  updateCaseSummary();
+  updateHero();
+  const row = caseListCache.find(c => c.case_id === caseData.case_id); if (row) row.workflow_state = caseData.workflow_state;
 }
 
 async function requestRevision() {
@@ -447,24 +787,23 @@ async function requestRevision() {
   const editedTrieu = parseFloat($('#editIncomeInput').value);
   if (Number.isNaN(editedTrieu) || editedTrieu < 0) { toast('Giá trị không hợp lệ','Vui lòng nhập thu nhập đủ điều kiện hợp lệ.'); return; }
   const editedVnd = Math.round(editedTrieu * 1e6);
-  closeModal('verifyModal'); const token = runToken; phase = 'revision';
+  closeModal('verifyModal');
   setNodeMode('humanNode'); setNodeMode('recommendationNode','active');
   setAgentState('recommendationNode','reviewing','ĐANG SỬA','Áp dụng điều chỉnh thu nhập đủ điều kiện theo yêu cầu chuyên viên');
   setText('#stagePill','Đang chỉnh sửa đề xuất');
   addLog('Cổng kiểm duyệt', `Yêu cầu chỉnh sửa: "${reason}" (thu nhập đủ điều kiện → ${formatVnd(editedVnd)})`, 'CHỈNH SỬA','warn');
 
   try {
-    await apiFetch(`/income-verifications/${caseData.case_id}/review`, {
+    await apiFetch(`/cases/${caseData.case_id}/review`, {
       method: 'POST',
       body: JSON.stringify({ outcome: 'EDIT_AND_RERUN', reason, edited_eligible_income: editedVnd })
     });
-    caseData = await apiFetch(`/income-verifications/${caseData.case_id}`);
+    caseData = await apiFetch(`/cases/${caseData.case_id}`);
   } catch (err) {
     toast('Lỗi khi chỉnh sửa', err.message);
     addLog('Hệ thống', `Lỗi gọi review API: ${err.message}`, 'LỖI', 'warn');
     return;
   }
-  await sleep(700); if (!validRun(token)) return;
 
   const rec = caseData.recommendation || {};
   setNodeMode('recommendationNode','complete');
@@ -474,20 +813,19 @@ async function requestRevision() {
   setText('#stagePill','Chờ chuyên viên duyệt');
   addLog('Recommendation Builder', `Đã cập nhật thu nhập đủ điều kiện theo yêu cầu chuyên viên: ${formatVnd(rec.eligible_income)}/tháng.`, 'ĐÃ CẬP NHẬT','done');
   toast('Đề xuất đã cập nhật','Cổng kiểm duyệt đã nhận phiên bản mới.');
-  updateCaseSummary();
 }
 
 async function rejectProposal() {
   if (!caseData) return;
   const reason = $('#reviewReason').value.trim() || 'Từ chối kết quả xác minh, chuyển xử lý thủ công.';
-  closeModal('verifyModal'); phase = 'rejected'; running = false;
+  closeModal('verifyModal'); running = false;
 
   try {
-    await apiFetch(`/income-verifications/${caseData.case_id}/review`, {
+    await apiFetch(`/cases/${caseData.case_id}/review`, {
       method: 'POST',
       body: JSON.stringify({ outcome: 'MANUAL_HANDLING', reason })
     });
-    caseData = await apiFetch(`/income-verifications/${caseData.case_id}`);
+    caseData = await apiFetch(`/cases/${caseData.case_id}`);
   } catch (err) {
     toast('Lỗi khi từ chối', err.message);
     addLog('Hệ thống', `Lỗi gọi review API: ${err.message}`, 'LỖI', 'warn');
@@ -496,31 +834,23 @@ async function rejectProposal() {
 
   setNodeMode('humanNode','complete'); setAgentState('humanNode','conflict','TỪ CHỐI');
   $('#verifyBtn').disabled = true; setText('#stagePill','Đã từ chối'); setText('#heroStatus','TỪ CHỐI');
-  $('#runBtn').disabled = false; $('#runBtn').innerHTML = '<span>↻</span> Chạy lại xác minh';
+  $('#runBtn').disabled = false; $('#runBtn').innerHTML = '<span>↻</span> Chạy lại pipeline';
   addLog(REVIEWER_NAME, `Đã từ chối đề xuất: "${reason}". Action Executor không được kích hoạt.`, 'ĐÃ TỪ CHỐI','warn');
   toast('Đề xuất đã bị từ chối','Không có dữ liệu nào được ghi sang hệ thống nghiệp vụ.');
-  updateCaseSummary();
 }
 
-function switchView(view) {
-  $$('.view').forEach(item => item.classList.toggle('active', item.id === `view-${view}`));
-  $$('.nav-item').forEach(item => item.classList.toggle('active', item.dataset.view === view));
-  setText('#pageTitle','Trợ lý xác minh thu nhập tín chấp');
-  if (view === 'command') requestAnimationFrame(drawEdges);
-}
+// ---------------------------------------------------------------------------
+// Wiring
+// ---------------------------------------------------------------------------
 
 $('#runBtn').addEventListener('click', runAssessment);
-$('#resetBtn').addEventListener('click', async () => {
-  try { await apiFetch(`/applications/${APPLICATION_ID}/income-verification/reset`, { method: 'POST' }); } catch (_) { /* ignore */ }
-  caseData = null; resetFlow(); toast('Đã đặt lại','Luồng xử lý và trạng thái backend đã trở về ban đầu.');
-});
 $('#verifyBtn').addEventListener('click', () => { $$('.verify-check').forEach(box => box.checked = false); $('#confirmApprove').disabled = true; populateVerifyModal(); openModal('verifyModal'); });
 $('#confirmApprove').addEventListener('click', approveAndExecute);
 $('#requestEditBtn').addEventListener('click', requestRevision);
 $('#rejectProposalBtn').addEventListener('click', rejectProposal);
 $('#edgePopover button').addEventListener('click', () => $('#edgePopover').hidden = true);
 $('#clearLog').addEventListener('click', () => { $('#logStream').innerHTML = ''; addLog('Hệ thống','Nhật ký đã được làm mới.','SẴN SÀNG'); });
-$$('.nav-item').forEach(item => item.addEventListener('click', () => switchView(item.dataset.view)));
+$$('.nav-item').forEach(item => item.addEventListener('click', () => navigate(`#/${item.dataset.view === 'cases' ? 'cases' : 'cases/new'}`)));
 $$('[data-close]').forEach(button => button.addEventListener('click', () => closeModal(button.dataset.close)));
 $$('.modal-backdrop').forEach(backdrop => backdrop.addEventListener('click', event => { if (event.target === backdrop) backdrop.hidden = true; }));
 $$('.verify-check').forEach(box => box.addEventListener('change', () => { $('#confirmApprove').disabled = !$$('.verify-check').every(item => item.checked); }));
@@ -528,16 +858,11 @@ $$('.verify-check').forEach(box => box.addEventListener('change', () => { $('#co
 let resizeTimer;
 window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(drawEdges, 100); });
 setInterval(() => setText('#liveClock', timeNow()), 1000);
+window.addEventListener('hashchange', handleRoute);
 
 async function bootstrap() {
-  setText('#onlineCount','8'); resetFlow(); setText('#liveClock', timeNow());
-  try {
-    caseData = await apiFetch(`/income-verifications/SYN-IV-001`);
-    setText('#caseWorkflowState', caseData.workflow_state);
-    setText('#caseAuditCount', caseData.audit_events.length);
-    toast('Đã tìm thấy hồ sơ trước đó', `Trạng thái backend: ${WORKFLOW_STATE_LABEL[caseData.workflow_state] || caseData.workflow_state}. Nhấn "Bắt đầu xác minh" để chạy lại từ đầu.`);
-  } catch (_) {
-    /* no case yet — fresh demo state, nothing to bootstrap */
-  }
+  resetFlow(true); setText('#liveClock', timeNow());
+  await loadSystemStatus();
+  await handleRoute();
 }
 bootstrap();

@@ -10,6 +10,9 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Protocol
 
+from pydantic import BaseModel, ConfigDict, Field as PydField
+
+from app.services.llm_provider import LLMProvider, MockLLMProvider
 from app.services.namespace_rag import (
     DEFAULT_CORPUS_PATH,
     NamespaceHit,
@@ -75,6 +78,87 @@ def _parse_integer_rule_value(content: str, pattern: str) -> int | None:
     return int(re.sub(r"[^0-9]", "", match.group(1))) if match else None
 
 
+class _PolicyParameterExtraction(BaseModel):
+    """LLM structured-output target for policy parameter extraction — the
+    exact use case docs/RAG-ARCHITECTURE.md §7 pre-authorizes for the
+    Policy Agent ("chọn đoạn liên quan... diễn giải rule theo structured
+    output"). Every numeric field carries a verbatim quote so a Python
+    validator can reject anything the model didn't actually read off the
+    page; the eligible-income arithmetic itself never touches the LLM
+    (see app/tools/income_calculator.py)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    statement_months: int | None = None
+    statement_months_quote: str | None = None
+    variable_cap: int | None = None
+    variable_cap_quote: str | None = None
+    minimum_variable_periods: int | None = None
+    minimum_variable_periods_quote: str | None = None
+
+
+def _normalize_for_match(text: str) -> str:
+    return re.sub(r"\s+", " ", text).strip().lower()
+
+
+def _quote_verbatim_and_contains_digits(quote: str | None, source: str, digits: int | None) -> bool:
+    if quote is None or digits is None:
+        return False
+    if _normalize_for_match(quote) not in _normalize_for_match(source):
+        return False
+    quote_digits = re.sub(r"[^0-9]", "", quote)
+    return str(digits) in quote_digits
+
+
+async def _extract_policy_parameters(
+    llm: LLMProvider,
+    ivp1_content: str,
+    ivp3_content: str,
+) -> tuple[int | None, int | None, int | None, str]:
+    """Try LLM-assisted structured extraction first, deterministically
+    validated against the source text; fall back to the original regex
+    parser (unchanged) if the LLM is unavailable or every field it proposed
+    fails validation. Returns (statement_months, variable_cap,
+    minimum_variable_periods, method) where method is one of
+    "LLM_VALIDATED" / "REGEX_FALLBACK" for audit."""
+
+    result = await llm.complete_json(
+        system=(
+            "Extract ONLY numeric parameters explicitly stated in this "
+            "Vietnamese bank policy text. Never compute, round, average, or "
+            "infer a value not written verbatim. Each *_quote field must be "
+            "an exact verbatim substring of the source text containing that "
+            "number. Omit a field entirely if it is not explicitly present."
+        ),
+        user=f"IVP-1 (statement months rule):\n{ivp1_content}\n\nIVP-3 (variable income rule):\n{ivp3_content}",
+        schema=_PolicyParameterExtraction,
+    )
+    if result is not None:
+        months_ok = _quote_verbatim_and_contains_digits(
+            result.statement_months_quote, ivp1_content, result.statement_months
+        )
+        cap_ok = _quote_verbatim_and_contains_digits(
+            result.variable_cap_quote, ivp3_content, result.variable_cap
+        )
+        periods_ok = _quote_verbatim_and_contains_digits(
+            result.minimum_variable_periods_quote, ivp3_content, result.minimum_variable_periods
+        )
+        if months_ok and cap_ok and periods_ok:
+            return (
+                result.statement_months,
+                result.variable_cap,
+                result.minimum_variable_periods,
+                "LLM_VALIDATED",
+            )
+
+    months = _parse_integer_rule_value(ivp1_content, r"sao kê của\s+0?(\d+)\s+tháng")
+    cap = _parse_integer_rule_value(ivp3_content, r"tối đa\s+([\d.]+)\s*VND")
+    periods = _parse_integer_rule_value(
+        ivp3_content, r"ít nhất\s+0?(\d+)\s+trong\s+0?\d+\s+tháng"
+    )
+    return months, cap, periods, "REGEX_FALLBACK"
+
+
 def _extract_quote(content: str) -> str:
     match = re.search(
         r"\*\*Trích dẫn thử nghiệm:\*\*\s*(?:“([^”]+)”|\"([^\"]+)\")",
@@ -98,9 +182,11 @@ class PolicyAgent:
         retriever: PolicyRetriever | None = None,
         *,
         config: PolicyAgentConfig | None = None,
+        llm: LLMProvider | None = None,
     ) -> None:
         self.retriever = retriever or NamespacePolicyRetriever()
         self.config = config or PolicyAgentConfig()
+        self.llm = llm or MockLLMProvider()
 
     async def __call__(self, context: CaseContext) -> PolicyResult:
         extracted = context.extracted_fields
@@ -119,7 +205,13 @@ class PolicyAgent:
                 namespace=RagNamespace.POLICY,
                 domain="INCOME_VERIFICATION",
                 product="UNSECURED_PERSONAL_LOAN",
-                top_k=10,
+                # Generous top_k: the corpus now carries several supplementary
+                # POLICY_RULE chunks (IVP-7..12, IVP-14) alongside the 6 core
+                # rules this agent hard-requires (required_rule_ids below);
+                # top_k must comfortably exceed that pool so cosine-similarity
+                # ranking noise never pushes a required rule out of the
+                # returned set.
+                top_k=20,  # NamespaceQuery caps top_k at 30
                 chunk_types=["POLICY_RULE"],
                 allowed_scopes=list(self.config.allowed_scopes),
                 approval_statuses=list(self.config.accepted_approval_statuses),
@@ -151,17 +243,13 @@ class PolicyAgent:
             )
 
         selected = {rule_id: rule_hits[0] for rule_id, rule_hits in by_rule.items()}
-        statement_months = _parse_integer_rule_value(
-            selected["IVP-1"].content,
-            r"sao kê của\s+0?(\d+)\s+tháng",
-        )
-        variable_cap = _parse_integer_rule_value(
-            selected["IVP-3"].content,
-            r"tối đa\s+([\d.]+)\s*VND",
-        )
-        minimum_variable_periods = _parse_integer_rule_value(
-            selected["IVP-3"].content,
-            r"ít nhất\s+0?(\d+)\s+trong\s+0?\d+\s+tháng",
+        (
+            statement_months,
+            variable_cap,
+            minimum_variable_periods,
+            parameter_extraction_method,
+        ) = await _extract_policy_parameters(
+            self.llm, selected["IVP-1"].content, selected["IVP-3"].content
         )
         if (
             statement_months is None
@@ -244,6 +332,7 @@ class PolicyAgent:
             variable_income_cap=variable_cap_decimal,
             calculation_version=CALCULATION_VERSION,
             input_fact_ids=list(metrics.input_fact_ids) + list(variable_fact_ids),
+            parameter_extraction_method=parameter_extraction_method,
         )
 
     def _accepted_hits(self, hits: list[NamespaceHit]) -> list[NamespaceHit]:

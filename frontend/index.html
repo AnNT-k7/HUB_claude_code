@@ -16,24 +16,25 @@
         <span><strong>NEXA BANK AI</strong><small>Hệ thống tác tử chuyên gia</small></span>
       </a>
       <nav class="nav-list" aria-label="Điều hướng chính">
-        <button class="nav-item active" data-view="command"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>Trung tâm điều phối</span></button>
-        <button class="nav-item" data-view="cases"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4zM8 7V4h8v3M8 12h8M8 16h5"/></svg><span>Hồ sơ tín chấp</span><em id="caseCount">1</em></button>
+        <button class="nav-item active" data-view="cases"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4zM8 7V4h8v3M8 12h8M8 16h5"/></svg><span>Danh sách hồ sơ</span><em id="caseCount">0</em></button>
+        <button class="nav-item" data-view="create"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Tạo hồ sơ mới</span></button>
       </nav>
       <div class="sidebar-spacer"></div>
-      <div class="system-health"><span class="health-dot"></span><div><strong>Hệ thống ổn định</strong><small><b id="onlineCount">8</b> tác tử trực tuyến · 38 ms</small></div></div>
+      <div class="system-health"><span class="health-dot" id="systemHealthDot"></span><div><strong id="systemHealthLabel">Đang kiểm tra hệ thống…</strong><small id="systemHealthDetail">LLM · RAG</small></div></div>
       <button class="profile"><span>LT</span><div><strong>Linh Trần</strong><small>Chuyên viên tín dụng cao cấp</small></div></button>
     </aside>
 
     <main class="main-content">
       <header class="topbar">
-        <div><span class="eyebrow">TRỢ LÝ NGHIỆP VỤ TÍN CHẤP</span><h1 id="pageTitle">Trợ lý xác minh thu nhập tín chấp</h1></div>
-        <div class="top-actions"><span class="clock"><i></i><b id="liveClock">--:--:--</b> ICT</span><span class="demo-pill">BACKEND TRỰC TIẾP</span></div>
+        <div><span class="eyebrow">TRỢ LÝ NGHIỆP VỤ TÍN CHẤP</span><h1 id="pageTitle">Danh sách hồ sơ xác minh thu nhập</h1></div>
+        <div class="top-actions"><span class="clock"><i></i><b id="liveClock">--:--:--</b> ICT</span><span class="demo-pill" id="llmModePill" title="Chế độ LLM/RAG hiện tại">ĐANG KIỂM TRA…</span></div>
       </header>
 
-      <section class="view active" id="view-command">
+      <section class="view" id="view-command">
+        <button class="button ghost back-link" id="backToListBtn" type="button"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Danh sách hồ sơ</button>
         <section class="case-hero glass-panel">
-          <div class="case-main"><div class="company-logo" id="heroLogo">MA</div><div><div class="case-kicker"><span id="heroCaseId">HỒ SƠ #SYN-IV-001</span><b id="heroStatus">SẴN SÀNG</b></div><h2 id="heroCompany">Nguyễn Minh Anh</h2><div class="case-meta"><span>Khoản vay đề nghị <strong id="heroAmount">300 triệu ₫</strong></span><i></i><span>Kỳ hạn <strong id="heroTerm">36 tháng</strong></span><i></i><span id="heroFile">loan_application.md · application SYN-SHB-2026-0001</span></div></div></div>
-          <div class="hero-actions"><button class="button ghost" id="resetBtn"><svg viewBox="0 0 24 24"><path d="M4 4v6h6M20 20v-6h-6M6 17a8 8 0 0 0 12-2M18 7A8 8 0 0 0 6 9"/></svg>Đặt lại</button><button class="button primary" id="runBtn"><span>✦</span> Bắt đầu xác minh</button></div>
+          <div class="case-main"><div class="company-logo" id="heroLogo">—</div><div><div class="case-kicker"><span id="heroCaseId">HỒ SƠ #—</span><b id="heroStatus">SẴN SÀNG</b></div><h2 id="heroCompany">—</h2><div class="case-meta"><span>Khoản vay đề nghị <strong id="heroAmount">—</strong></span><i></i><span>Kỳ hạn <strong id="heroTerm">—</strong></span><i></i><span id="heroFile">—</span></div></div></div>
+          <div class="hero-actions"><button class="button ghost" id="documentsBtn">Tài liệu</button><button class="button ghost" id="auditBtn">Audit trail</button><button class="button ghost" id="resetBtn"><svg viewBox="0 0 24 24"><path d="M4 4v6h6M20 20v-6h-6M6 17a8 8 0 0 0 12-2M18 7A8 8 0 0 0 6 9"/></svg>Đặt lại</button><button class="button primary" id="runBtn"><span>✦</span> Chạy pipeline</button></div>
         </section>
 
         <div class="workspace-grid">
@@ -74,10 +75,52 @@
         </div>
       </section>
 
-      <section class="view" id="view-cases">
-        <div class="section-heading cases-toolbar"><p>MVP demo hiện chỉ chạy trên một hồ sơ mẫu cố định do backend truy xuất; xem chi tiết trong <strong>Trung tâm điều phối</strong>.</p></div>
-        <div class="case-summary"><div class="glass-panel"><span>Tổng hồ sơ</span><strong id="totalCases">1</strong><small>Hồ sơ mẫu SYN-IV-001</small></div><div class="glass-panel"><span>Trạng thái workflow</span><strong id="caseWorkflowState">OPEN_CASE</strong><small>Cập nhật trực tiếp từ backend</small></div><div class="glass-panel"><span>Số sự kiện audit</span><strong id="caseAuditCount">0</strong><small>Ghi nhận append-only</small></div></div>
-        <section class="case-table glass-panel"><header><div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="caseSearch" placeholder="Tìm theo khách hàng hoặc mã hồ sơ..." disabled></div><span>Cập nhật trực tiếp</span></header><div class="table-head"><span>Khách hàng / Hồ sơ</span><span>Khoản vay</span><span>Kỳ hạn</span><span>Trạng thái</span><span></span></div><div id="caseRows"></div></section>
+      <section class="view active" id="view-cases">
+        <div class="section-heading cases-toolbar"><p>Danh sách hồ sơ được lưu trong SQLite (<code>iv_cases</code>) — mỗi hồ sơ có <code>case_id</code> riêng, không phụ thuộc dữ liệu mẫu cố định.</p></div>
+        <div class="case-summary"><div class="glass-panel"><span>Tổng hồ sơ</span><strong id="totalCases">0</strong><small>Cập nhật trực tiếp từ backend</small></div><div class="glass-panel"><span>Đang chờ xử lý</span><strong id="pendingCases">0</strong><small>OPEN_CASE / FETCHING_DOCUMENTS</small></div><div class="glass-panel"><span>Chờ chuyên viên duyệt</span><strong id="reviewCases">0</strong><small>HUMAN_REVIEW</small></div></div>
+        <section class="case-table glass-panel"><header><div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="caseSearch" placeholder="Tìm theo khách hàng hoặc mã hồ sơ..."></div><span id="caseListUpdatedAt">—</span></header><div class="table-head"><span>Khách hàng / Hồ sơ</span><span>Khoản vay</span><span>Kỳ hạn</span><span>Trạng thái</span><span></span></div><div id="caseRows"></div></section>
+      </section>
+
+      <section class="view" id="view-create">
+        <div class="section-heading"><div><h2>Tạo hồ sơ xác minh mới</h2><p>Nhập thông tin cơ bản, tải lên tài liệu, sau đó chạy pipeline đa tác tử.</p></div></div>
+        <div class="workspace-grid create-grid">
+          <section class="glass-panel create-form-card">
+            <header class="panel-header compact"><div><h3>1. Thông tin khách hàng</h3></div></header>
+            <div class="create-form-body">
+              <div class="form-grid">
+                <label class="form-field"><span>Họ và tên khách hàng</span><input id="newCustomerName" type="text" placeholder="Nguyễn Văn A"></label>
+                <label class="form-field"><span>Mã khách hàng (tuỳ chọn)</span><input id="newCustomerCode" type="text" placeholder="KH-000123"></label>
+              </div>
+              <div class="form-grid">
+                <label class="form-field"><span>Đơn vị công tác</span><input id="newEmployer" type="text" placeholder="Công ty TNHH ABC"></label>
+                <label class="form-field"><span>Kỳ hạn vay (tháng)</span><input id="newLoanTerm" type="number" min="1" placeholder="24"></label>
+              </div>
+              <label class="form-field input-affix"><span>Khoản vay đề nghị</span><input id="newRequestedAmount" type="number" min="0" placeholder="200000000"><b>VND</b></label>
+
+              <header class="panel-header compact" style="padding-left:0;padding-right:0;border-top:1px solid var(--line);margin-top:14px"><div><h3>2. Tài liệu hồ sơ</h3><p>PDF, PNG, JPG, TXT, MD hoặc CSV — mỗi file tối đa 25MB.</p></div></header>
+              <label class="file-drop" id="fileDropZone">
+                <input id="newDocumentsInput" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.txt,.md,.csv">
+                <span class="upload-icon"><svg viewBox="0 0 24 24"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg></span>
+                <strong>Kéo thả hoặc bấm để chọn nhiều tài liệu</strong>
+                <small>Đơn đề nghị vay · Hợp đồng lao động · Bảng lương · Sao kê ngân hàng</small>
+              </label>
+              <div id="fileList" class="file-chip-list"></div>
+
+              <div class="modal-actions" style="margin-top:18px">
+                <button class="button ghost" id="cancelCreateBtn" type="button">Huỷ</button>
+                <button class="button primary" id="submitCreateBtn" type="button">Tạo hồ sơ &amp; tải tài liệu</button>
+              </div>
+            </div>
+          </section>
+          <aside class="log-panel glass-panel create-help-card">
+            <header class="panel-header compact"><div><h3>Sau khi tạo hồ sơ</h3></div></header>
+            <div class="create-help-body">
+              <p>Hồ sơ sẽ được tạo ở trạng thái <code>OPEN_CASE</code> và lưu vào cơ sở dữ liệu ngay lập tức.</p>
+              <p>Bạn sẽ được chuyển tới màn hình chi tiết hồ sơ, nơi có thể bấm <strong>“Chạy pipeline”</strong> để Document/Income/Policy/Consistency/Recommendation Agent xử lý tài liệu vừa tải lên.</p>
+              <p>Nếu thiếu tài liệu bắt buộc (đơn vay, hợp đồng lao động, bảng lương, sao kê), hệ thống sẽ dừng ở trạng thái <code>AWAITING_DOCUMENTS</code> thay vì đoán dữ liệu còn thiếu.</p>
+            </div>
+          </aside>
+        </div>
       </section>
     </main>
   </div>
@@ -94,6 +137,14 @@
 
   <div class="modal-backdrop" id="evidenceModal" hidden>
     <div class="modal glass-panel evidence-modal"><button class="modal-close" data-close="evidenceModal">×</button><span class="modal-kicker">BẰNG CHỨNG XÁC MINH</span><h2 id="evidenceTitle">Trích dẫn chính sách</h2><div class="document-ref"><span>DOC</span><div><strong id="evidenceDoc">—</strong><small id="evidencePage">—</small></div></div><blockquote id="evidenceQuote">—</blockquote><div class="confidence"><span>Nguồn</span><strong id="evidenceConfidence">Case-scoped evidence</strong></div></div>
+  </div>
+
+  <div class="modal-backdrop" id="documentsModal" hidden>
+    <div class="modal glass-panel"><button class="modal-close" data-close="documentsModal">×</button><span class="modal-kicker">TÀI LIỆU HỒ SƠ</span><h2>Tài liệu đã tải lên</h2><div id="documentsList" class="document-list"></div></div>
+  </div>
+
+  <div class="modal-backdrop" id="auditModal" hidden>
+    <div class="modal glass-panel"><button class="modal-close" data-close="auditModal">×</button><span class="modal-kicker">AUDIT TRAIL</span><h2>Nhật ký kiểm toán (append-only)</h2><div id="auditList" class="audit-list"></div></div>
   </div>
 
   <div class="toast-stack" id="toastStack"></div>

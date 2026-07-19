@@ -1,7 +1,7 @@
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import income_verifications
+from app.api.v1 import cases, income_verifications
 from app.config import get_settings
 
 
@@ -18,5 +18,6 @@ app.add_middleware(
 
 api_v1_router = APIRouter()
 api_v1_router.include_router(income_verifications.router)
+api_v1_router.include_router(cases.router)
 app.include_router(api_v1_router, prefix=settings.api_v1_prefix)
 

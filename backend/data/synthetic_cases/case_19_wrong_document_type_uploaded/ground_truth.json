@@ -1,0 +1,21 @@
+{
+  "case_no": 19,
+  "slug": "wrong_document_type_uploaded",
+  "title": "Người dùng upload nhầm loại tài liệu",
+  "customer_name": "Dinh Van Uy",
+  "employer": "Cong ty TNHH Uy Tin",
+  "declared_income": 18000000,
+  "contract_salary": 18000000,
+  "currency": "VND",
+  "documents": [
+    "bank_statement.txt",
+    "employment_contract.txt",
+    "loan_application.txt"
+  ],
+  "expected_status": "insufficient",
+  "expected_flags": [],
+  "expected_missing_documents": [
+    "PAYSLIP_BUNDLE"
+  ],
+  "notes": "Customer uploaded a duplicate bank statement instead of the payslip bundle."
+}

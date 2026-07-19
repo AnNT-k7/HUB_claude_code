@@ -35,7 +35,7 @@ class NamespaceQuery(BaseModel):
     namespace: RagNamespace
     domain: str = "INCOME_VERIFICATION"
     product: str = "UNSECURED_PERSONAL_LOAN"
-    top_k: int = Field(default=3, ge=1, le=10)
+    top_k: int = Field(default=3, ge=1, le=30)
     chunk_types: list[str] = Field(default_factory=list)
     allowed_scopes: list[str] = Field(
         default_factory=lambda: ["REVIEW_ONLY", "DEMO_ONLY", "GLOBAL_POLICY"]

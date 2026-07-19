@@ -318,3 +318,37 @@
   .cases-toolbar{min-height:58px;padding-bottom:12px}.cases-toolbar .button{width:100%}
   .toast-stack{right:12px;bottom:78px}.toast{padding:15px 16px}.toast strong{font-size:14px}.toast small{font-size:11px}
 }
+
+/* Multi-case management additions: list/create/detail views, mode badges, document + audit panels. */
+.back-link{margin-bottom:12px;display:inline-flex}
+.cases-toolbar code,.create-help-body code{background:rgba(255,255,255,.06);padding:1px 5px;border-radius:5px;font-size:.92em;color:#a9c6f5}
+.status-badge.state-open,.status-badge.state-fetching,.status-badge.state-extracting,.status-badge.state-analyzing,.status-badge.state-crosschecking,.status-badge.state-building{color:#8fb8fa;background:rgba(47,123,255,.08)}
+.status-badge.state-review{color:#c0a8ff;background:rgba(141,103,255,.12)}
+.status-badge.state-completed{color:#71dfaf;background:rgba(72,223,161,.1)}
+.status-badge.state-attention{color:#ffc37d;background:rgba(255,180,90,.1)}
+.status-badge.state-error{color:#ff8fa3;background:rgba(255,100,125,.1)}
+#llmModePill.mode-live{color:#71dfaf;background:rgba(72,223,161,.08);border-color:rgba(72,223,161,.22)}
+#llmModePill.mode-mock{color:#ffc37d;background:rgba(255,180,90,.08);border-color:rgba(255,180,90,.22)}
+.system-health.status-live .health-dot{background:var(--green);box-shadow:0 0 10px var(--green)}
+.system-health.status-mock .health-dot{background:var(--amber);box-shadow:0 0 10px var(--amber)}
+
+.create-grid{grid-template-columns:minmax(0,1.55fr) minmax(260px,.65fr)}
+.create-form-card,.create-help-card{border-radius:19px;overflow:hidden}
+.create-form-body{padding:18px 22px 22px}
+.create-help-body{padding:16px 20px;display:grid;gap:12px}
+.create-help-body p{margin:0;font-size:11px;line-height:1.6;color:var(--muted)}
+.file-chip-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.file-chip{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:6px 8px 6px 12px;font-size:10px;background:rgba(255,255,255,.02);color:#c3d0e2}
+.file-chip button{border:0;background:rgba(255,255,255,.06);color:#aebccf;width:18px;height:18px;border-radius:50%;cursor:pointer;line-height:1;font-size:11px}
+.document-list,.audit-list{display:grid;gap:9px;max-height:60vh;overflow:auto;margin-top:6px}
+.document-item,.audit-item{border:1px solid var(--line);border-radius:12px;padding:11px 13px;background:rgba(255,255,255,.02)}
+.document-item{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.document-item strong,.audit-item strong{display:block;font-size:11px;color:#dbe5f2}
+.document-item small,.audit-item small{display:block;font-size:9.5px;color:var(--muted);margin-top:4px}
+.document-item a{font-size:10px;color:#79aaff;text-decoration:none;white-space:nowrap}
+.audit-item time{font-size:9px;color:#6c809c;font-variant-numeric:tabular-nums}
+.audit-item .audit-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.empty-state{padding:26px;text-align:center;color:var(--muted);font-size:11px}
+.polling-note{display:flex;align-items:center;gap:8px;font-size:10px;color:#8ab0e6;margin-top:10px}
+.polling-note i{width:6px;height:6px;border-radius:50%;background:#4acfff;box-shadow:0 0 8px #4acfff;animation:pulse 1.2s infinite}
+@media(max-width:900px){.create-grid{grid-template-columns:1fr}}

@@ -1,0 +1,22 @@
+{
+  "case_no": 16,
+  "slug": "statement_missing_months",
+  "title": "Sao kê thiếu tháng",
+  "customer_name": "Phan Thi Rang",
+  "employer": "Cong ty TNHH Rang Dong",
+  "declared_income": 19000000,
+  "contract_salary": 19000000,
+  "currency": "VND",
+  "documents": [
+    "bank_statement.txt",
+    "employment_contract.txt",
+    "loan_application.txt",
+    "payslip.txt"
+  ],
+  "expected_status": "insufficient",
+  "expected_flags": [],
+  "expected_missing_documents": [
+    "BANK_STATEMENT"
+  ],
+  "notes": "Only 4 of the required 6 statement months are present (IVP-1)."
+}

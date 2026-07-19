@@ -139,6 +139,203 @@ lương, bảng lương hoặc chứng từ tương đương giải thích phầ
 
 <!-- Trang 4 -->
 
+## IVP-7 — Thời gian làm việc tối thiểu
+
+**Section ID:** `IVP-7`
+**Chunk type:** `POLICY_RULE`
+
+- **Điều kiện:** Khách hàng đang trong thời gian thử việc hoặc mới ký hợp đồng
+  chính thức tại đơn vị công tác hiện tại.
+- **Ngưỡng:** Phải có tối thiểu 03 tháng làm việc liên tục tại đơn vị hiện tại
+  tính đến ngày xác minh, xác định qua ngày bắt đầu hợp đồng hoặc phụ lục.
+- **Ngoại lệ:** Trường hợp chuyển đổi loại hợp đồng (thử việc sang chính thức)
+  tại cùng đơn vị được cộng dồn thời gian làm việc.
+- **Hành động:** Nếu chưa đủ 03 tháng, trả `MANUAL_REVIEW_REQUIRED` và nêu rõ
+  ngày bắt đầu hợp đồng làm căn cứ.
+
+**Trích dẫn thử nghiệm:** "Phải có tối thiểu 03 tháng làm việc liên tục tại đơn
+vị hiện tại tính đến ngày xác minh."
+
+## IVP-8 — Chênh lệch giữa thu nhập khai báo và thu nhập trên sao kê
+
+**Section ID:** `IVP-8`
+**Chunk type:** `POLICY_RULE`
+
+- **Điều kiện:** Đã tính được thu nhập bình quân từ giao dịch lương hợp lệ trên
+  sao kê.
+- **Ngưỡng:** Nếu thu nhập khai báo cao hơn thu nhập bình quân trên sao kê quá
+  10%, hồ sơ được đánh dấu cảnh báo chênh lệch khai báo.
+- **Ngoại lệ:** Chênh lệch do tháng có thưởng/phụ cấp đã được ghi nhận trong
+  thu nhập biến đổi theo IVP-3 không tính là bất thường.
+- **Hành động:** Trả finding `INCOME_MISMATCH` mức độ `WARNING`; nếu chênh lệch
+  trên 30%, nâng mức độ `CRITICAL` và đề xuất `MANUAL_REVIEW_REQUIRED`.
+
+**Trích dẫn thử nghiệm:** "Nếu thu nhập khai báo cao hơn thu nhập bình quân
+trên sao kê quá 10%, hồ sơ được đánh dấu cảnh báo chênh lệch khai báo."
+
+## IVP-9 — Xác minh tên đơn vị chuyển lương
+
+**Section ID:** `IVP-9`
+**Chunk type:** `POLICY_RULE`
+
+- **Điều kiện:** Có giao dịch ghi Có nghi ngờ là lương nhưng tên bên chuyển
+  không khớp hoàn toàn với tên đơn vị công tác trên hợp đồng lao động.
+- **Ngưỡng:** Chấp nhận khớp gần đúng khi tên viết tắt, không dấu, hoặc thiếu
+  loại hình doanh nghiệp (Cty/Ltd/JSC) vẫn giữ tối thiểu 60% token trùng khớp
+  với tên đầy đủ trên hợp đồng.
+- **Ngoại lệ:** Chuyển lương qua bên thứ ba (công ty trả lương thuê ngoài,
+  payroll outsourcing) chỉ được chấp nhận khi có văn bản ủy quyền trả lương.
+- **Hành động:** Không khớp và không có văn bản ủy quyền → trả finding
+  `EMPLOYER_MISMATCH` mức độ `CRITICAL` và chuyển `MANUAL_REVIEW_REQUIRED`.
+
+**Trích dẫn thử nghiệm:** "Chuyển lương qua bên thứ ba chỉ được chấp nhận khi
+có văn bản ủy quyền trả lương."
+
+<!-- Trang 5 -->
+
+## IVP-10 — Nhiều nguồn thu nhập
+
+**Section ID:** `IVP-10`
+**Chunk type:** `POLICY_RULE`
+
+- **Điều kiện:** Khách hàng khai báo từ 02 nguồn thu nhập trở lên (ví dụ lương
+  chính và hợp đồng lao động thời vụ thứ hai).
+- **Ngưỡng:** Chỉ nguồn thu nhập chính (thu nhập cao nhất, có hợp đồng lao động
+  không xác định thời hạn hoặc còn thời hạn dài nhất) được đưa vào công thức
+  IVP-3; nguồn phụ chỉ ghi nhận tham khảo, không cộng dồn tự động.
+- **Ngoại lệ:** Nếu chính sách sản phẩm cho phép cộng dồn nguồn phụ, phải có
+  quyết định rõ ràng của chuyên viên kèm lý do, không được suy đoán.
+- **Hành động:** Gắn nhãn nguồn thu nhập phụ là `SECONDARY_INCOME_NOTED`,
+  không tự động đưa vào `eligible_income`.
+
+**Trích dẫn thử nghiệm:** "Chỉ nguồn thu nhập chính được đưa vào công thức
+IVP-3; nguồn phụ chỉ ghi nhận tham khảo, không cộng dồn tự động."
+
+## IVP-11 — Thu nhập trả bằng tiền mặt
+
+**Section ID:** `IVP-11`
+**Chunk type:** `POLICY_RULE`
+
+- **Điều kiện:** Khách hàng khai báo nhận lương một phần hoặc toàn bộ bằng tiền
+  mặt, không thể hiện trên sao kê ngân hàng.
+- **Ngưỡng:** Phần lương tiền mặt không được tính vào thu nhập đủ điều kiện nếu
+  không có xác nhận thu nhập từ đơn vị công tác kèm chữ ký/con dấu hợp lệ.
+- **Ngoại lệ:** Không áp dụng ngoại lệ; đây là ngành nghề có rủi ro xác minh
+  cao và luôn yêu cầu chứng từ bổ sung.
+- **Hành động:** Thiếu giấy xác nhận thu nhập → trả `MISSING_DOCUMENTS` với mã
+  tài liệu `INCOME_CONFIRMATION`; không suy đoán số tiền mặt nhận được.
+
+**Trích dẫn thử nghiệm:** "Phần lương tiền mặt không được tính vào thu nhập đủ
+điều kiện nếu không có xác nhận thu nhập từ đơn vị công tác kèm chữ ký/con dấu
+hợp lệ."
+
+## IVP-12 — Thu nhập bằng ngoại tệ
+
+**Section ID:** `IVP-12`
+**Chunk type:** `POLICY_RULE`
+
+- **Điều kiện:** Giao dịch lương hoặc lương hợp đồng ghi nhận bằng đơn vị tiền
+  tệ khác VND.
+- **Ngưỡng:** Không tự quy đổi ngoại tệ sang VND bằng deterministic tool hoặc
+  LLM nếu chưa có tỷ giá tham chiếu chính thức được chuyên viên xác nhận cho
+  ngày giao dịch tương ứng.
+- **Ngoại lệ:** Nếu toàn bộ chứng từ (hợp đồng, sao kê, bảng lương) cùng dùng
+  một loại ngoại tệ thống nhất, có thể giữ nguyên đơn vị tiền tệ đó cho báo cáo
+  nhưng vẫn phải gắn cảnh báo `CURRENCY_NOT_VND`.
+- **Hành động:** Có nguồn thu nhập khác loại tiền tệ với nguồn còn lại → trả
+  `MANUAL_REVIEW_REQUIRED`, mã `CURRENCY_MISMATCH`; không gộp giá trị khác đơn
+  vị tiền tệ vào cùng một phép tính.
+
+**Trích dẫn thử nghiệm:** "Không tự quy đổi ngoại tệ sang VND bằng
+deterministic tool hoặc LLM nếu chưa có tỷ giá tham chiếu chính thức."
+
+<!-- Trang 6 -->
+
+## IVP-13 — Bộ tài liệu bắt buộc theo sản phẩm
+
+**Section ID:** `IVP-13`
+**Chunk type:** `VERIFICATION_PROCEDURE`
+
+```json
+{
+  "step": "Kiểm tra bộ tài liệu bắt buộc",
+  "inputs": ["LOAN_APPLICATION", "EMPLOYMENT_CONTRACT", "PAYSLIP_BUNDLE", "BANK_STATEMENT"],
+  "checks": ["document_set_completeness", "document_owner_matches_customer"],
+  "output": "DOCUMENT_SET_STATUS",
+  "exception": "Chuyển MISSING_DOCUMENTS nếu thiếu bất kỳ loại tài liệu bắt buộc nào"
+}
+```
+
+- **Điều kiện:** Mọi hồ sơ vay tín chấp cá nhân thuộc phạm vi Income
+  Verification Expert.
+- **Ngưỡng:** Bộ tài liệu tối thiểu gồm đơn đề nghị vay, hợp đồng lao động
+  (kèm phụ lục nếu có), bảng lương và sao kê ngân hàng đúng số kỳ theo IVP-1.
+- **Ngoại lệ:** Giấy xác nhận thu nhập có thể thay thế bảng lương khi đơn vị
+  công tác không phát hành bảng lương chi tiết, nhưng phải nêu rõ lý do.
+- **Hành động:** Thiếu tài liệu bắt buộc → trả `MISSING_DOCUMENTS` kèm danh
+  sách tài liệu còn thiếu theo mã loại tài liệu.
+
+**Trích dẫn thử nghiệm:** "Bộ tài liệu tối thiểu gồm đơn đề nghị vay, hợp đồng
+lao động, bảng lương và sao kê ngân hàng đúng số kỳ."
+
+## IVP-14 — Ngưỡng chất lượng trích xuất và dữ liệu thiếu
+
+**Section ID:** `IVP-14`
+**Chunk type:** `POLICY_RULE`
+
+- **Điều kiện:** Document Agent đã trả `extraction_confidence` cho hồ sơ.
+- **Ngưỡng:** `extraction_confidence` dưới 0.90 hoặc bất kỳ trường thu nhập
+  cốt lõi nào (tên khách hàng, thu nhập khai báo, lương hợp đồng, đơn vị công
+  tác) không trích xuất được đều bắt buộc chuyển human review trước khi Income
+  Analysis Agent hoặc Policy Agent chạy tiếp.
+- **Ngoại lệ:** Ngưỡng minh họa này nằm trong cấu hình runtime, có thể điều
+  chỉnh theo rule version được domain owner phê duyệt; không hard-code trong
+  prompt của bất kỳ agent nào.
+- **Hành động:** Dưới ngưỡng → trả `MANUAL_REVIEW_REQUIRED`, mã
+  `LOW_EXTRACTION_CONFIDENCE`, không suy đoán giá trị còn thiếu.
+
+**Trích dẫn thử nghiệm:** "extraction_confidence dưới 0.90 hoặc bất kỳ trường
+thu nhập cốt lõi nào không trích xuất được đều bắt buộc chuyển human review."
+
+## IVP-15 — Danh mục trường hợp bắt buộc chuyển chuyên viên
+
+**Section ID:** `IVP-15`
+**Chunk type:** `VERIFICATION_PROCEDURE`
+
+```json
+{
+  "step": "Routing ngoại lệ sang human review",
+  "inputs": ["income_analysis", "policy_result", "consistency_findings"],
+  "checks": [
+    "policy_not_found_or_conflict",
+    "employer_mismatch",
+    "currency_mismatch",
+    "income_drop_over_20_percent",
+    "missing_required_documents",
+    "extraction_confidence_below_threshold"
+  ],
+  "output": "ROUTING_DECISION",
+  "exception": "Không tự động coi bất kỳ trường hợp nào trong danh sách là hồ sơ đạt"
+}
+```
+
+- **Điều kiện:** Áp dụng cho mọi bước trong workflow xác minh thu nhập, không
+  giới hạn ở Policy Agent.
+- **Ngưỡng:** Bất kỳ điều kiện nào sau đây cũng bắt buộc chuyển người: không
+  tìm thấy policy hoặc policy mâu thuẫn (IVP không khớp), đơn vị chuyển lương
+  không khớp hợp đồng (IVP-9), khác loại tiền tệ giữa các nguồn (IVP-12),
+  tháng thu nhập giảm trên 20% (IVP-4), thiếu tài liệu bắt buộc (IVP-13), hoặc
+  extraction_confidence dưới ngưỡng (IVP-14).
+- **Ngoại lệ:** Không có ngoại lệ; đây là rule tổng hợp, không thay thế các
+  rule chi tiết ở trên.
+- **Hành động:** Ghi rõ rule_id nào kích hoạt routing trong audit event; không
+  gộp nhiều lý do thành một mã lỗi chung chung.
+
+**Trích dẫn thử nghiệm:** "Không tự động coi bất kỳ trường hợp nào trong danh
+sách là hồ sơ đạt."
+
+<!-- Trang 7 -->
+
 ## Metadata citation bắt buộc
 
 Mọi kết quả áp dụng một điều khoản trong tài liệu này phải trả tối thiểu:

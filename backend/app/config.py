@@ -20,6 +20,10 @@ class Settings(BaseSettings):
         "postgresql+psycopg2://postgres:postgres@localhost:5433/"
         "digital_expert_agents"
     )
+    # Case-management persistence (multi-case API, uploaded documents, audit
+    # log). SQLite by default so the whole MVP runs with zero external
+    # services; point this at a Postgres DSN to move the same schema there.
+    case_database_url: str = "sqlite:///./data/case_management.db"
     backend_cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:3000"]
     )
@@ -30,7 +34,16 @@ class Settings(BaseSettings):
     minio_bucket_name: str = "case-documents"
     minio_secure: bool = False
 
+    # Chat/completions LLM provider — drives app/services/llm_provider.py.
+    # "fpt" is the default because it's the key issued for this competition;
+    # "mock" (no key required) is the deterministic fallback used in tests.
+    llm_provider: str = "fpt"
+    llm_model: str = "SaoLa3.1-medium"
+    llm_request_timeout_seconds: float = 60.0
+    llm_max_retries: int = 2
+
     openai_api_key: str = ""
+    anthropic_api_key: str = ""
     glm_api_key: str = ""
     glm_base_url: str = "https://open.bigmodel.cn/api/paas/v4"
     glm_request_timeout_seconds: float = 60.0

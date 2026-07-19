@@ -1,0 +1,23 @@
+{
+  "case_no": 11,
+  "slug": "foreign_currency_salary",
+  "title": "Lương bằng ngoại tệ",
+  "customer_name": "Kevin Nguyen",
+  "employer": "Cong ty TNHH Global Tech",
+  "declared_income": 1200,
+  "contract_salary": 1100,
+  "currency": "USD",
+  "documents": [
+    "bank_statement.txt",
+    "employment_contract.txt",
+    "loan_application.txt"
+  ],
+  "expected_status": "manual_review",
+  "expected_flags": [
+    "CURRENCY_NOT_VND"
+  ],
+  "expected_missing_documents": [
+    "PAYSLIP_BUNDLE"
+  ],
+  "notes": "Salary denominated in USD (IVP-12): no auto-conversion, must route to manual review."
+}

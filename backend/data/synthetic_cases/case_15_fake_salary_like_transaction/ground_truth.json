@@ -1,0 +1,20 @@
+{
+  "case_no": 15,
+  "slug": "fake_salary_like_transaction",
+  "title": "Giao dịch giả dạng tiền lương",
+  "customer_name": "Nguyen Van Que",
+  "employer": "Cong ty TNHH Que Huong",
+  "declared_income": 21000000,
+  "contract_salary": 21000000,
+  "currency": "VND",
+  "documents": [
+    "bank_statement.txt",
+    "employment_contract.txt",
+    "loan_application.txt",
+    "payslip.txt"
+  ],
+  "expected_status": "verified",
+  "expected_flags": [],
+  "expected_missing_documents": [],
+  "notes": "One large cash-deposit/personal-transfer row must be excluded from recognized salary transactions (IVP-2), not counted as income."
+}

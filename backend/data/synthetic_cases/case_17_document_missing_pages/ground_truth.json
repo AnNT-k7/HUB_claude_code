@@ -1,0 +1,22 @@
+{
+  "case_no": 17,
+  "slug": "document_missing_pages",
+  "title": "Tài liệu bị thiếu trang",
+  "customer_name": "Ho Van Sang",
+  "employer": "Cong ty CP Sang Tao",
+  "declared_income": 24000000,
+  "contract_salary": 23000000,
+  "currency": "VND",
+  "documents": [
+    "bank_statement.txt",
+    "employment_contract.txt",
+    "loan_application.txt",
+    "payslip.txt"
+  ],
+  "expected_status": "manual_review",
+  "expected_flags": [
+    "PAYSLIP_INCOMPLETE"
+  ],
+  "expected_missing_documents": [],
+  "notes": "Payslip bundle only covers 3 of 6 months, as if pages were missing from the scan."
+}

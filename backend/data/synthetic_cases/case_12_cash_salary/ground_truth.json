@@ -1,0 +1,22 @@
+{
+  "case_no": 12,
+  "slug": "cash_salary",
+  "title": "Lương tiền mặt",
+  "customer_name": "Ly Thi Nga",
+  "employer": "Cong ty TNHH Nga Thanh",
+  "declared_income": 18000000,
+  "contract_salary": 18000000,
+  "currency": "VND",
+  "documents": [
+    "employment_contract.txt",
+    "loan_application.txt"
+  ],
+  "expected_status": "insufficient",
+  "expected_flags": [],
+  "expected_missing_documents": [
+    "BANK_STATEMENT",
+    "PAYSLIP_BUNDLE",
+    "INCOME_CONFIRMATION"
+  ],
+  "notes": "Cash salary (IVP-11): requires an income confirmation letter, none supplied."
+}

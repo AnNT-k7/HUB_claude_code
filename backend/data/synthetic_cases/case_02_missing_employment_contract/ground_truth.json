@@ -1,0 +1,21 @@
+{
+  "case_no": 2,
+  "slug": "missing_employment_contract",
+  "title": "Thiếu hợp đồng lao động",
+  "customer_name": "Tran Van Binh",
+  "employer": "Cong ty CP Binh Minh",
+  "declared_income": 20000000,
+  "contract_salary": null,
+  "currency": "VND",
+  "documents": [
+    "bank_statement.txt",
+    "loan_application.txt",
+    "payslip.txt"
+  ],
+  "expected_status": "insufficient",
+  "expected_flags": [],
+  "expected_missing_documents": [
+    "EMPLOYMENT_CONTRACT"
+  ],
+  "notes": "No employment contract uploaded at all."
+}

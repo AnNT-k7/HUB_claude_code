@@ -1,0 +1,23 @@
+{
+  "case_no": 6,
+  "slug": "declared_higher_than_statement",
+  "title": "Lương khai báo cao hơn sao kê",
+  "customer_name": "Vu Van Giang",
+  "employer": "Cong ty TNHH Giang Phat",
+  "declared_income": 30000000,
+  "contract_salary": 22000000,
+  "currency": "VND",
+  "documents": [
+    "bank_statement.txt",
+    "employment_contract.txt",
+    "loan_application.txt",
+    "payslip.txt"
+  ],
+  "expected_status": "inconsistent",
+  "expected_flags": [
+    "INCOME_MISMATCH",
+    "CONTRACT_VS_AVERAGE_MISMATCH"
+  ],
+  "expected_missing_documents": [],
+  "notes": "Declared income (30M) is well above both contract and statement average (~22M)."
+}

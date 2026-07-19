@@ -1,0 +1,22 @@
+{
+  "case_no": 8,
+  "slug": "volatile_income",
+  "title": "Lương biến động mạnh",
+  "customer_name": "Bui Van Khang",
+  "employer": "Cong ty TNHH Bien Dong",
+  "declared_income": 22000000,
+  "contract_salary": 22000000,
+  "currency": "VND",
+  "documents": [
+    "bank_statement.txt",
+    "employment_contract.txt",
+    "loan_application.txt",
+    "payslip.txt"
+  ],
+  "expected_status": "inconsistent",
+  "expected_flags": [
+    "INCOME_PERIOD_ANOMALY"
+  ],
+  "expected_missing_documents": [],
+  "notes": "Two months drop over 20% below reference (IVP-4). This raises a WARNING-severity finding (app/tools/consistency_rules.py only escalates to MANUAL_REVIEW_REQUIRED on CRITICAL findings), so the case still reaches HUMAN_REVIEW with recommendation NEEDS_CLARIFICATION for the underwriter to judge — it does not hard-block the case."
+}

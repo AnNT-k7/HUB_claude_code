@@ -1,0 +1,20 @@
+{
+  "case_no": 18,
+  "slug": "ocr_noisy_fields",
+  "title": "OCR sai một số trường",
+  "customer_name": "Trin Thi Tuyet",
+  "employer": "Cong ty TNHH Tuyet Sang",
+  "declared_income": 20000000,
+  "contract_salary": 19500000,
+  "currency": "VND",
+  "documents": [
+    "bank_statement.txt",
+    "employment_contract.txt",
+    "loan_application.txt",
+    "payslip.txt"
+  ],
+  "expected_status": "verified",
+  "expected_flags": [],
+  "expected_missing_documents": [],
+  "notes": "Simulates OCR noise in the customer name; extraction still succeeds since the field is present, just imperfect — a real OCR pipeline would flag low confidence."
+}

@@ -13,9 +13,39 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.main import app  # noqa: E402
+from app.services.llm_provider import MockLLMProvider  # noqa: E402
+from app.services.runtime import (  # noqa: E402
+    EmbeddedDemoPolicyRetriever,
+    IncomeVerificationRuntime,
+    get_runtime,
+)
+
+
+_TEST_RUNTIME = IncomeVerificationRuntime(
+    llm=MockLLMProvider(), policy_retriever=EmbeddedDemoPolicyRetriever()
+)
+
+
+def _network_free_runtime() -> IncomeVerificationRuntime:
+    """Dependency override so this API test exercises the real request/
+    response contract without a live LLM/embedding call — per
+    docs/PROJECT-RULES.md §10 ("workflow tests pass mà không gọi live
+    LLM"). Production wiring (app/main.py) still uses the real
+    get_runtime() singleton; only the test client's dependency is swapped.
+    Returns the same module-level instance every call so the case created
+    in one request is still there for the next (mirrors what the real
+    singleton does across requests)."""
+
+    return _TEST_RUNTIME
 
 
 class ApiAndActionTests(unittest.TestCase):
+    def setUp(self) -> None:
+        app.dependency_overrides[get_runtime] = _network_free_runtime
+
+    def tearDown(self) -> None:
+        app.dependency_overrides.pop(get_runtime, None)
+
     def test_api_requires_underwriter_identity(self) -> None:
         client = TestClient(app)
         response = client.post(

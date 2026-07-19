@@ -18,12 +18,22 @@ from app.agents.income_verification.human_review import (  # noqa: E402
     apply_human_review,
 )
 from app.services.action_executor import ActionExecutionError, ActionExecutor  # noqa: E402
-from app.services.runtime import get_runtime  # noqa: E402
+from app.services.llm_provider import MockLLMProvider  # noqa: E402
+from app.services.runtime import (  # noqa: E402
+    EmbeddedDemoPolicyRetriever,
+    IncomeVerificationRuntime,
+)
 
 
 class ActionExecutorTests(unittest.IsolatedAsyncioTestCase):
     async def test_review_cannot_approve_unknown_action(self) -> None:
-        context = await get_runtime().start("SYN-SHB-2026-0001")
+        # A fresh, network-free runtime (mock LLM + keyword-match retriever)
+        # per docs/PROJECT-RULES.md §10: workflow tests must pass without
+        # calling a live LLM.
+        runtime = IncomeVerificationRuntime(
+            llm=MockLLMProvider(), policy_retriever=EmbeddedDemoPolicyRetriever()
+        )
+        context = await runtime.start("SYN-SHB-2026-0001")
         # The shared runtime may already be completed from another test; use a fresh
         # synthetic context only to validate the gate's state contract.
         if context.workflow_state.value != "HUMAN_REVIEW":
