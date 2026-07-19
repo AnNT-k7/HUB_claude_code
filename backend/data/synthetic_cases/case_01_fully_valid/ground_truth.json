@@ -1,0 +1,20 @@
+{
+  "case_no": 1,
+  "slug": "fully_valid",
+  "title": "Hồ sơ hợp lệ hoàn toàn",
+  "customer_name": "Nguyen Thi An",
+  "employer": "Cong ty TNHH An Phat",
+  "declared_income": 25000000,
+  "contract_salary": 24000000,
+  "currency": "VND",
+  "documents": [
+    "bank_statement.txt",
+    "employment_contract.txt",
+    "loan_application.txt",
+    "payslip.txt"
+  ],
+  "expected_status": "verified",
+  "expected_flags": [],
+  "expected_missing_documents": [],
+  "notes": "Baseline case: every document present, income stable, no mismatch."
+}

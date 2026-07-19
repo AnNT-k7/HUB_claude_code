@@ -1,0 +1,10 @@
+SAO KÊ TÀI KHOẢN NGÂN HÀNG
+
+| Ngày | Nội dung | Nguồn | Số tiền |
+| 05/01/2026 | Luong thang 1 | Cong ty TNHH Que Huong | 21000000 |
+| 05/02/2026 | Luong thang 2 | Cong ty TNHH Que Huong | 21000000 |
+| 05/03/2026 | Luong thang 3 | Cong ty TNHH Que Huong | 21000000 |
+| 05/04/2026 | Luong thang 4 | Cong ty TNHH Que Huong | 21000000 |
+| 05/05/2026 | Luong thang 5 | Cong ty TNHH Que Huong | 21000000 |
+| 05/06/2026 | Luong thang 6 | Cong ty TNHH Que Huong | 21000000 |
+| 20/03/2026 | Nop tien mat vao tai khoan | CHUYEN KHOAN CA NHAN | 50000000 |

@@ -23,7 +23,16 @@ Read relevant documents in this order:
 5. `docs/WORKFLOW.md`
 6. `docs/PHASES.md`
 
-Docs 2.x define the target architecture. Existing department agents, Reviewer/Debate flow, DSCR/LTV tools, and credit-contract operations are legacy code until migrated; do not treat their presence as current scope.
+Docs 2.x define the original target architecture from the design phase.
+**`docs/architecture-current.md`, `docs/data-model.md`, `docs/agent-contracts.md`,
+`docs/api.md`, `docs/rag-policy.md`, `docs/test-cases.md` and `docs/demo-script.md`
+describe what is actually implemented today** (multi-case management, real
+LLM/RAG via `app/services/llm_provider.py`, 20 synthetic ground-truth
+cases) — read those alongside docs 2.x, and prefer them where the two
+disagree on current state; docs 2.x remain the reference for target
+architecture and guardrails. Existing department agents, Reviewer/Debate
+flow, DSCR/LTV tools, and credit-contract operations are legacy code
+(`app/legacy/`) until migrated; do not treat their presence as current scope.
 
 ## Guardrails
 

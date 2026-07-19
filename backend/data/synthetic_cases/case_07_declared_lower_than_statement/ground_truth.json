@@ -1,0 +1,20 @@
+{
+  "case_no": 7,
+  "slug": "declared_lower_than_statement",
+  "title": "Lương khai báo thấp hơn sao kê",
+  "customer_name": "Dang Thi Hoa",
+  "employer": "Cong ty CP Hoa Binh",
+  "declared_income": 15000000,
+  "contract_salary": 20000000,
+  "currency": "VND",
+  "documents": [
+    "bank_statement.txt",
+    "employment_contract.txt",
+    "loan_application.txt",
+    "payslip.txt"
+  ],
+  "expected_status": "verified",
+  "expected_flags": [],
+  "expected_missing_documents": [],
+  "notes": "Declared income understates actual — not a compliance risk, still verifiable from statement."
+}

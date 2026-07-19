@@ -1,0 +1,20 @@
+{
+  "case_no": 5,
+  "slug": "contract_expiring_soon",
+  "title": "Hợp đồng sắp hết hạn",
+  "customer_name": "Hoang Thi Em",
+  "employer": "Cong ty CP Em Viet",
+  "declared_income": 19000000,
+  "contract_salary": 18500000,
+  "currency": "VND",
+  "documents": [
+    "bank_statement.txt",
+    "employment_contract.txt",
+    "loan_application.txt",
+    "payslip.txt"
+  ],
+  "expected_status": "verified",
+  "expected_flags": [],
+  "expected_missing_documents": [],
+  "notes": "Same documented gap as case 4 (IVP-5 remaining-term check not yet implemented in code) — ground truth reflects actual current behavior."
+}

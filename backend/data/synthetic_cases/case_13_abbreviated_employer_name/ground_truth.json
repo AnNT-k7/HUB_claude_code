@@ -1,0 +1,20 @@
+{
+  "case_no": 13,
+  "slug": "abbreviated_employer_name",
+  "title": "Tên công ty viết tắt trên sao kê",
+  "customer_name": "Truong Van Oanh",
+  "employer": "Cong ty TNHH Phat Trien Cong Nghe Viet Nam",
+  "declared_income": 23000000,
+  "contract_salary": 22000000,
+  "currency": "VND",
+  "documents": [
+    "bank_statement.txt",
+    "employment_contract.txt",
+    "loan_application.txt",
+    "payslip.txt"
+  ],
+  "expected_status": "verified",
+  "expected_flags": [],
+  "expected_missing_documents": [],
+  "notes": "Statement shows a common real-world abbreviation ('Cty' for 'Công ty'); token-overlap matching (IVP-9) accepts it after stripping corporate-suffix stopwords. A more aggressive acronym (e.g. 'CTY PT CNG VN') falls below the 60% overlap threshold and is intentionally NOT covered here — that is a genuine, documented limitation of the heuristic, not a bug."
+}

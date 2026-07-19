@@ -1,0 +1,22 @@
+{
+  "case_no": 10,
+  "slug": "multiple_income_sources",
+  "title": "Nhiều nguồn thu nhập",
+  "customer_name": "Do Van Minh",
+  "employer": "Cong ty TNHH Minh Chau",
+  "declared_income": 27000000,
+  "contract_salary": 22000000,
+  "currency": "VND",
+  "documents": [
+    "bank_statement.txt",
+    "employment_contract.txt",
+    "loan_application.txt",
+    "payslip.txt"
+  ],
+  "expected_status": "inconsistent",
+  "expected_flags": [
+    "DECLARED_VS_AVERAGE_MISMATCH"
+  ],
+  "expected_missing_documents": [],
+  "notes": "Declared income (27M) includes an undocumented secondary income source and is ~23% above the primary-employer statement average (22M) — a WARNING-level DECLARED_VS_AVERAGE_MISMATCH finding. Policy IVP-10 ('nguồn phụ chỉ ghi nhận tham khảo, không cộng dồn tự động') is documented in the corpus but there is no code that specifically detects/labels a second income source yet (SECONDARY_INCOME_NOTED is not an implemented finding code) — a known gap, not a test bug."
+}

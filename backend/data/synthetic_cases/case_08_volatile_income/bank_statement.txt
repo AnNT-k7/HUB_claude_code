@@ -1,0 +1,9 @@
+SAO KÊ TÀI KHOẢN NGÂN HÀNG
+
+| Ngày | Nội dung | Nguồn | Số tiền |
+| 05/01/2026 | Luong chuyen khoan | Cong ty TNHH Bien Dong | 25000000 |
+| 05/02/2026 | Luong chuyen khoan | Cong ty TNHH Bien Dong | 12000000 |
+| 05/03/2026 | Luong chuyen khoan | Cong ty TNHH Bien Dong | 28000000 |
+| 05/04/2026 | Luong chuyen khoan | Cong ty TNHH Bien Dong | 11000000 |
+| 05/05/2026 | Luong chuyen khoan | Cong ty TNHH Bien Dong | 26000000 |
+| 05/06/2026 | Luong chuyen khoan | Cong ty TNHH Bien Dong | 24000000 |

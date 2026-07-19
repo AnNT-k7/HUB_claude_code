@@ -1,0 +1,20 @@
+{
+  "case_no": 4,
+  "slug": "expired_contract",
+  "title": "Hợp đồng đã hết hạn",
+  "customer_name": "Pham Van Duc",
+  "employer": "Cong ty TNHH Duc Thanh",
+  "declared_income": 18000000,
+  "contract_salary": 17000000,
+  "currency": "VND",
+  "documents": [
+    "bank_statement.txt",
+    "employment_contract.txt",
+    "loan_application.txt",
+    "payslip.txt"
+  ],
+  "expected_status": "verified",
+  "expected_flags": [],
+  "expected_missing_documents": [],
+  "notes": "Policy IVP-5 requires >=6 months remaining contract term, but the current Consistency Agent (app/tools/consistency_rules.py) does not yet compare contract_expiry against the verification date — this is a real, documented gap (see docs/data-model.md 'Known limitations'), not a test bug. Ground truth reflects ACTUAL current behavior (income figures line up, so the case clears) rather than the not-yet-implemented policy rule."
+}

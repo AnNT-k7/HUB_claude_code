@@ -1,0 +1,22 @@
+{
+  "case_no": 14,
+  "slug": "employer_name_mismatch",
+  "title": "Tên công ty trên hợp đồng và sao kê khác nhau",
+  "customer_name": "Vo Thi Phuong",
+  "employer": "Cong ty TNHH Phuong Dong",
+  "declared_income": 20000000,
+  "contract_salary": 20000000,
+  "currency": "VND",
+  "documents": [
+    "bank_statement.txt",
+    "employment_contract.txt",
+    "loan_application.txt",
+    "payslip.txt"
+  ],
+  "expected_status": "manual_review",
+  "expected_flags": [
+    "EMPLOYER_MISMATCH"
+  ],
+  "expected_missing_documents": [],
+  "notes": "Statement payer name is unrelated to the contract employer (IVP-9), no authorization letter."
+}

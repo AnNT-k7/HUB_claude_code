@@ -1,0 +1,20 @@
+{
+  "case_no": 9,
+  "slug": "unusual_bonus",
+  "title": "Có bonus bất thường",
+  "customer_name": "Ngo Thi Lan",
+  "employer": "Cong ty CP Lan Anh",
+  "declared_income": 21000000,
+  "contract_salary": 20000000,
+  "currency": "VND",
+  "documents": [
+    "bank_statement.txt",
+    "employment_contract.txt",
+    "loan_application.txt",
+    "payslip.txt"
+  ],
+  "expected_status": "verified",
+  "expected_flags": [],
+  "expected_missing_documents": [],
+  "notes": "One-off bonus month capped at the IVP-3 variable-income ceiling (1,000,000 VND/month), so it does not inflate eligible_income beyond the cap."
+}

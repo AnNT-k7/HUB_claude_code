@@ -1,0 +1,21 @@
+{
+  "case_no": 3,
+  "slug": "missing_bank_statement",
+  "title": "Thiếu sao kê ngân hàng",
+  "customer_name": "Le Thi Cham",
+  "employer": "Cong ty TNHH Cham Phat",
+  "declared_income": 22000000,
+  "contract_salary": 21000000,
+  "currency": "VND",
+  "documents": [
+    "employment_contract.txt",
+    "loan_application.txt",
+    "payslip.txt"
+  ],
+  "expected_status": "insufficient",
+  "expected_flags": [],
+  "expected_missing_documents": [
+    "BANK_STATEMENT"
+  ],
+  "notes": "No bank statement uploaded — cannot verify actual salary receipt."
+}

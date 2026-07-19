@@ -68,7 +68,7 @@ class ProcessedChunkEmbeddingTests(unittest.TestCase):
         expected_counts = {
             "DOCUMENT_EXTRACTION": 21,
             "INCOME_ANALYSIS": 43,
-            "POLICY": 41,
+            "POLICY": 50,
         }
         all_ids: list[str] = []
         for namespace, expected_count in expected_counts.items():
@@ -130,8 +130,10 @@ class ProcessedChunkEmbeddingTests(unittest.TestCase):
         corpus = build_corpus(include_demo=True)
         chunks = corpus["chunks"]
 
-        self.assertEqual(len(chunks), 6)
-        self.assertTrue(all(chunk["chunk_type"] == "POLICY_RULE" for chunk in chunks))
+        self.assertEqual(len(chunks), 15)
+        self.assertTrue(
+            all(chunk["chunk_type"] in ("POLICY_RULE", "VERIFICATION_PROCEDURE") for chunk in chunks)
+        )
         for chunk in chunks:
             metadata = chunk["metadata"]
             self.assertEqual(metadata["domain"], "INCOME_VERIFICATION")

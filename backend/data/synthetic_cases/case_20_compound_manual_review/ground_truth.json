@@ -1,0 +1,26 @@
+{
+  "case_no": 20,
+  "slug": "compound_manual_review",
+  "title": "Hồ sơ cần manual review (nhiều vấn đề cộng dồn)",
+  "customer_name": "Chu Thi Van",
+  "employer": "Cong ty TNHH Van Phat",
+  "declared_income": 35000000,
+  "contract_salary": 20000000,
+  "currency": "VND",
+  "documents": [
+    "bank_statement.txt",
+    "employment_contract.txt",
+    "loan_application.txt",
+    "payslip.txt"
+  ],
+  "expected_status": "manual_review",
+  "expected_flags": [
+    "INCOME_MISMATCH",
+    "EMPLOYER_MISMATCH",
+    "CONTRACT_EXPIRED_OR_INSUFFICIENT_REMAINING_TERM"
+  ],
+  "expected_missing_documents": [
+    "BANK_STATEMENT"
+  ],
+  "notes": "Compound scenario: declared income far above contract, payer name unrelated, contract expiring soon, and statement short of the required 6 months."
+}

@@ -227,6 +227,7 @@ class PolicyResult(IncomeVerificationModel):
     calculation_version: str | None = None
     input_fact_ids: list[str] = Field(default_factory=list)
     reason_code: str | None = None
+    parameter_extraction_method: str | None = None
 
     @field_validator("currency")
     @classmethod
